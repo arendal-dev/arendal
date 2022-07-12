@@ -1,12 +1,13 @@
 type Subject = u64;
 
 use std::cmp::Ordering;
+use std::rc::Rc;
 
 #[derive(PartialEq, Debug)]
 enum UnaryFact {
     UnaryBool(bool),
     UnaryInt(Ordering, u64),
-    UnaryOr(Box<UnaryFact>, Box<UnaryFact>),
+    UnaryOr(Rc<UnaryFact>, Rc<UnaryFact>),
 }
 
 use crate::UnaryFact::*;
@@ -50,7 +51,7 @@ impl UnaryFact {
         match self.assess(&f2) {
             Equal | SelfImpliesOther => Ok(self),
             OtherImpliesSelf => Ok(f2),
-            Compatible => Ok(UnaryOr(Box::new(self), Box::new(f2))),
+            Compatible => Ok(UnaryOr(Rc::new(self), Rc::new(f2))),
             _ => Err(Incompatible),
         }
     }
