@@ -14,7 +14,7 @@ use crate::UnaryFact::*;
 
 #[derive(Debug)]
 enum Fact {
-    Unary(Subject, UnaryFact),
+    Unary(Subject, Rc<UnaryFact>),
 }
 
 use crate::Fact::*;
@@ -47,11 +47,11 @@ impl UnaryFact {
         }
     }
 
-    fn or(self, f2: UnaryFact) -> Result<UnaryFact, Assessment> {
-        match self.assess(&f2) {
-            Equal | SelfImpliesOther => Ok(self),
+    fn or(f1: Rc<UnaryFact>, f2: Rc<UnaryFact>) -> Result<Rc<UnaryFact>, Assessment> {
+        match f1.assess(&f2) {
+            Equal | SelfImpliesOther => Ok(f1),
             OtherImpliesSelf => Ok(f2),
-            Compatible | Incompatible => Ok(UnaryOr(Rc::new(self), Rc::new(f2))),
+            Compatible | Incompatible => Ok(Rc::new(UnaryOr(f1, f2))),
         }
     }
 }
@@ -76,6 +76,7 @@ impl Fact {
 mod tests {
     use std::rc::Rc;
 
+    use crate::Assessment;
     use crate::Assessment::*;
     use crate::Fact;
     use crate::Fact::*;
@@ -83,24 +84,41 @@ mod tests {
     use crate::UnaryFact;
     use crate::UnaryFact::*;
 
-    fn unary_bool(s: Subject, value: bool) -> Fact {
-        Unary(s, UnaryBool(value))
+    fn rcf(value: bool) -> Rc<UnaryFact> {
+        Rc::new(UnaryBool(value))
     }
 
-    fn or(first: bool, second: bool) -> UnaryFact {
-        UnaryOr(Rc::new(UnaryBool(first)), Rc::new(UnaryBool(second)))
+    fn unary_bool(s: Subject, value: bool) -> Fact {
+        Unary(s, rcf(value))
     }
 
     #[test]
-    fn test_unary_bool() {
-        assert_eq!(UnaryBool(true).assess(&UnaryBool(true)), Equal);
-        assert_eq!(UnaryBool(false).assess(&UnaryBool(false)), Equal);
-        assert_eq!(UnaryBool(true).assess(&UnaryBool(false)), Incompatible);
-        assert_eq!(UnaryBool(false).assess(&UnaryBool(true)), Incompatible);
-        assert_eq!(UnaryBool(true).or(UnaryBool(true)), Ok(UnaryBool(true)));
-        assert_eq!(UnaryBool(false).or(UnaryBool(false)), Ok(UnaryBool(false)));
-        assert_eq!(UnaryBool(true).or(UnaryBool(false)), Ok(or(true, false)));
-        assert_eq!(UnaryBool(false).or(UnaryBool(true)), Ok(or(false, true)));
+    fn test_unary_fact_bool() {
+        fn ubt() -> UnaryFact {
+            UnaryBool(true)
+        }
+
+        fn ubf() -> UnaryFact {
+            UnaryBool(false)
+        }
+
+        assert_eq!(ubt().assess(&ubt()), Equal);
+        assert_eq!(ubf().assess(&ubf()), Equal);
+        assert_eq!(ubt().assess(&ubf()), Incompatible);
+        assert_eq!(ubf().assess(&ubt()), Incompatible);
+
+        fn or(f1: bool, f2: bool) -> Result<Rc<UnaryFact>, Assessment> {
+            UnaryFact::or(rcf(f1), rcf(f2))
+        }
+
+        fn or_result(f1: bool, f2: bool) -> Result<Rc<UnaryFact>, Assessment> {
+            Ok(Rc::new(UnaryOr(rcf(f1), rcf(f2))))
+        }
+
+        assert_eq!(or(true, true), Ok(rcf(true)));
+        assert_eq!(or(false, false), Ok(rcf(false)));
+        assert_eq!(or(true, false), or_result(true, false));
+        assert_eq!(or(false, true), or_result(false, true));
     }
 
     #[test]
