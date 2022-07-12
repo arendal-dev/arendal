@@ -51,8 +51,7 @@ impl UnaryFact {
         match self.assess(&f2) {
             Equal | SelfImpliesOther => Ok(self),
             OtherImpliesSelf => Ok(f2),
-            Compatible => Ok(UnaryOr(Rc::new(self), Rc::new(f2))),
-            _ => Err(Incompatible),
+            Compatible | Incompatible => Ok(UnaryOr(Rc::new(self), Rc::new(f2))),
         }
     }
 }
@@ -75,28 +74,33 @@ impl Fact {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
+
     use crate::Assessment::*;
     use crate::Fact;
     use crate::Fact::*;
     use crate::Subject;
+    use crate::UnaryFact;
     use crate::UnaryFact::*;
 
     fn unary_bool(s: Subject, value: bool) -> Fact {
         Unary(s, UnaryBool(value))
     }
 
+    fn or(first: bool, second: bool) -> UnaryFact {
+        UnaryOr(Rc::new(UnaryBool(first)), Rc::new(UnaryBool(second)))
+    }
+
     #[test]
     fn test_unary_bool() {
-        let t = UnaryBool(true);
-        let f = UnaryBool(false);
         assert_eq!(UnaryBool(true).assess(&UnaryBool(true)), Equal);
-        assert_eq!(f.assess(&f), Equal);
-        assert_eq!(UnaryBool(true).assess(&f), Incompatible);
-        assert_eq!(f.assess(&UnaryBool(true)), Incompatible);
+        assert_eq!(UnaryBool(false).assess(&UnaryBool(false)), Equal);
+        assert_eq!(UnaryBool(true).assess(&UnaryBool(false)), Incompatible);
+        assert_eq!(UnaryBool(false).assess(&UnaryBool(true)), Incompatible);
         assert_eq!(UnaryBool(true).or(UnaryBool(true)), Ok(UnaryBool(true)));
         assert_eq!(UnaryBool(false).or(UnaryBool(false)), Ok(UnaryBool(false)));
-        assert_eq!(UnaryBool(true).or(UnaryBool(false)), Err(Incompatible));
-        assert_eq!(UnaryBool(false).or(UnaryBool(true)), Err(Incompatible));
+        assert_eq!(UnaryBool(true).or(UnaryBool(false)), Ok(or(true, false)));
+        assert_eq!(UnaryBool(false).or(UnaryBool(true)), Ok(or(false, true)));
     }
 
     #[test]
