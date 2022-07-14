@@ -1,7 +1,15 @@
+mod ubool;
+mod uint;
+
 type Subject = u64;
 
 use std::cmp::Ordering;
 use std::rc::Rc;
+
+#[derive(PartialEq, Debug)]
+enum CombinationError {
+    Incompatible,
+}
 
 #[derive(PartialEq, Debug)]
 enum UnaryFact {
