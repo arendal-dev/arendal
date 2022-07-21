@@ -1,10 +1,9 @@
 // Internal fact implementation
 #[derive(Debug)]
 enum IFact {
+    Any,
     LT(i64),
-    LET(i64),
     Eq(i64),
-    GET(i64),
     GT(i64),
     And(Box<IFact>, Box<IFact>),
     Or(Box<IFact>, Box<IFact>),
@@ -12,24 +11,21 @@ enum IFact {
 
 use self::IFact::*;
 use super::CombinationError;
+use std::cmp::{max, min};
 
 impl PartialEq for IFact {
     fn eq(&self, other: &IFact) -> bool {
         match self {
+            Any => match other {
+                Any => true,
+                _ => false,
+            },
             LT(v1) => match other {
                 LT(v2) => v1 == v2,
                 _ => false,
             },
-            LET(v1) => match other {
-                LET(v2) => v1 == v2,
-                _ => false,
-            },
             Eq(v1) => match other {
                 Eq(v2) => v1 == v2,
-                _ => false,
-            },
-            GET(v1) => match other {
-                GET(v2) => v1 == v2,
                 _ => false,
             },
             GT(v1) => match other {
@@ -50,10 +46,45 @@ impl PartialEq for IFact {
 
 impl std::cmp::Eq for IFact {}
 
+fn lte(x: i64) -> IFact {
+    LT(x + 1)
+}
+
+fn gte(x: i64) -> IFact {
+    GT(x - 1)
+}
+
+fn and(a: IFact, b: IFact) -> IFact {
+    And(Box::new(a), Box::new(b))
+}
+
+fn or(a: IFact, b: IFact) -> IFact {
+    Or(Box::new(a), Box::new(b))
+}
+
 impl IFact {
     fn or(self, other: IFact) -> IFact {
-        match self {
-            _ => Or(Box::new(self), Box::new(other)),
+        if (self == Any || other == Any) {
+            Any
+        } else if (self == other) {
+            self
+        } else {
+            match self {
+                LT(a) => match other {
+                    LT(b) => LT(max(a, b)),
+                    Eq(b) => {
+                        if (b < a) {
+                            self
+                        } else if b == a {
+                            lte(a)
+                        } else {
+                            or(self, other)
+                        }
+                    }
+                    _ => panic!("TODO"),
+                },
+                _ => panic!("TODO"),
+            }
         }
     }
 
@@ -66,25 +97,17 @@ impl IFact {
 
 #[cfg(test)]
 mod tests {
-    use super::IFact;
     use super::IFact::*;
-
-    fn and(f1: IFact, f2: IFact) -> IFact {
-        And(Box::new(f1), Box::new(f2))
-    }
+    use super::{and, gte, lte, or, IFact};
 
     fn and_range(min: i64, max: i64) -> IFact {
         assert!(max > min);
-        and(GET(min), LET(max))
-    }
-
-    fn or(f1: IFact, f2: IFact) -> IFact {
-        Or(Box::new(f1), Box::new(f2))
+        and(gte(min), lte(max))
     }
 
     fn or_range(min: i64, max: i64) -> IFact {
         assert!(max > min);
-        and(LET(min), GET(max))
+        or(lte(min), gte(max))
     }
 
     fn reverse(fact: IFact) -> IFact {
@@ -98,35 +121,26 @@ mod tests {
     #[test]
     fn test_eq() {
         // Same variant
+        assert_eq!(Any, Any);
         assert_eq!(LT(2), LT(2));
         assert_ne!(LT(2), LT(4));
-        assert_eq!(LET(2), LET(2));
-        assert_ne!(LET(2), LET(4));
         assert_eq!(Eq(2), Eq(2));
         assert_ne!(Eq(2), Eq(4));
-        assert_eq!(GET(2), GET(2));
-        assert_ne!(GET(2), GET(4));
         assert_eq!(GT(2), GT(2));
         assert_ne!(GT(2), GT(4));
         // Different variant
-        assert_ne!(LT(2), LET(2));
+        assert_ne!(Any, LT(2));
+        assert_ne!(Any, Eq(2));
+        assert_ne!(Any, GT(2));
+        assert_ne!(Any, and_range(5, 10));
+        assert_ne!(Any, or_range(5, 10));
         assert_ne!(LT(2), Eq(2));
-        assert_ne!(LT(2), GET(2));
         assert_ne!(LT(2), GT(2));
         assert_ne!(LT(2), and_range(5, 10));
         assert_ne!(LT(2), or_range(5, 10));
-        assert_ne!(LET(2), Eq(2));
-        assert_ne!(LET(2), GET(2));
-        assert_ne!(LET(2), GT(2));
-        assert_ne!(LET(2), and_range(5, 10));
-        assert_ne!(LET(2), or_range(5, 10));
-        assert_ne!(Eq(2), GET(2));
         assert_ne!(Eq(2), GT(2));
         assert_ne!(Eq(2), and_range(5, 10));
         assert_ne!(Eq(2), or_range(5, 10));
-        assert_ne!(GET(2), GT(2));
-        assert_ne!(GET(2), and_range(5, 10));
-        assert_ne!(GET(2), or_range(5, 10));
         assert_ne!(GT(2), and_range(5, 10));
         assert_ne!(GT(2), or_range(5, 10));
         assert_ne!(and_range(5, 10), or_range(5, 10));
