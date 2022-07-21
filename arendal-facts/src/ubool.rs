@@ -28,6 +28,14 @@ impl IFact {
             None
         }
     }
+
+    fn proves(self, other: IFact) -> bool {
+        match self {
+            True => other != False,
+            False => other != True,
+            Any => other == Any,
+        }
+    }
 }
 
 /// Public representation of a fact
@@ -37,30 +45,34 @@ pub struct Fact {
 }
 
 impl Fact {
+    #[inline]
+    fn create(fact: IFact) -> Fact {
+        Fact { fact: fact }
+    }
+
     fn new(value: bool) -> Fact {
-        Fact {
-            fact: if value { True } else { False },
-        }
+        Self::create(if value { True } else { False })
     }
 
     fn or(self, other: Fact) -> Fact {
-        Fact {
-            fact: self.fact.or(other.fact),
-        }
+        Self::create(self.fact.or(other.fact))
     }
 
     fn and(self, other: Fact) -> Option<Fact> {
-        self.fact.and(other.fact).map(|f| Fact { fact: f })
+        self.fact.and(other.fact).map(Self::create)
+    }
+
+    fn proves(self, other: Fact) -> bool {
+        self.fact.proves(other.fact)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::IFact;
     use super::IFact::*;
 
     #[test]
-    fn test_internal_or() {
+    fn internal_or() {
         assert_eq!(True.or(True), True);
         assert_eq!(False.or(False), False);
         assert_eq!(True.or(False), Any);
@@ -72,7 +84,7 @@ mod tests {
     }
 
     #[test]
-    fn test_internal_and() {
+    fn internal_and() {
         assert_eq!(True.and(True), Some(True));
         assert_eq!(False.and(False), Some(False));
         assert_eq!(True.and(False), None);
@@ -83,17 +95,44 @@ mod tests {
         assert_eq!(Any.and(False), Some(False));
     }
 
+    #[test]
+    fn proofs() {
+        assert!(True.proves(True));
+        assert!(!True.proves(False));
+        assert!(True.proves(Any));
+        assert!(False.proves(False));
+        assert!(!False.proves(True));
+        assert!(False.proves(Any));
+        assert!(Any.proves(Any));
+        assert!(!Any.proves(True));
+        assert!(!Any.proves(False));
+    }
+
     use super::Fact;
 
-    #[test]
-    fn test_new() {
-        assert_eq!(Fact::new(true).fact, True);
-        assert_eq!(Fact::new(false).fact, False);
+    fn t() -> Fact {
+        Fact::new(true)
+    }
+
+    fn f() -> Fact {
+        Fact::new(false)
     }
 
     #[test]
-    fn test_external_operator() {
-        assert_eq!(Fact::new(true).or(Fact::new(false)).fact, Any);
-        assert_eq!(Fact::new(true).and(Fact::new(false)), None);
+    fn new() {
+        assert_eq!(t().fact, True);
+        assert_eq!(f().fact, False);
+    }
+
+    #[test]
+    fn external_operator() {
+        assert_eq!(t().or(f()).fact, Any);
+        assert_eq!(t().and(f()), None);
+    }
+
+    #[test]
+    fn external_proof() {
+        assert!(t().proves(t()));
+        assert!(!t().proves(f()));
     }
 }
