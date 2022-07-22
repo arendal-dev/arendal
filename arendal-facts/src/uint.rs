@@ -1,5 +1,5 @@
 // Internal fact implementation
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum IFact {
     Any,
     LT(i64),
@@ -10,7 +10,9 @@ enum IFact {
 }
 
 use self::IFact::*;
-use super::CombinationError;
+use super::Proof;
+use super::Proof::*;
+use core::panic;
 use std::cmp::{max, min};
 
 impl PartialEq for IFact {
@@ -63,6 +65,39 @@ fn or(a: IFact, b: IFact) -> IFact {
 }
 
 impl IFact {
+    fn proves(self, other: IFact) -> Proof<IFact> {
+        match self {
+            Any => Proved,
+            LT(a) => match other {
+                Any => Proved,
+                LT(b) => {
+                    if a <= b {
+                        Proved
+                    } else {
+                        Contradiction(self)
+                    }
+                }
+                Eq(_) | GT(_) => Contradiction(self),
+                And(f1, f2) => panic!("TODO"),
+                Or(f1, f2) => panic!("TODO"),
+            },
+            _ => panic!("TODO"),
+        }
+    }
+
+    fn proves_both(self, f1: IFact, f2: IFact) -> Proof<IFact> {
+        let p1 = self.clone().proves(f1);
+        let p2 = self.proves(f2);
+        match p1 {
+            Proved => p2,
+            CannotProve => match p2 {
+                Proved | CannotProve => CannotProve,
+                _ => p2,
+            },
+            _ => p1,
+        }
+    }
+
     fn or(self, other: IFact) -> IFact {
         if (self == Any || other == Any) {
             Any
@@ -88,9 +123,9 @@ impl IFact {
         }
     }
 
-    fn and(self, other: IFact) -> Result<IFact, CombinationError> {
+    fn and(self, other: IFact) -> Result<IFact, IFact> {
         match self {
-            _ => Err(CombinationError::Incompatible),
+            _ => Err(self),
         }
     }
 }
