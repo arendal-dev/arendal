@@ -108,7 +108,7 @@ impl IFact {
                 LT(a) => match other {
                     LT(b) => LT(max(a, b)),
                     Eq(b) => {
-                        if (b < a) {
+                        if b < a {
                             self
                         } else if b == a {
                             lte(a)

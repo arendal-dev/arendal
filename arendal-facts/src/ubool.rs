@@ -1,51 +1,66 @@
 /// Internal representation of a fact
 #[derive(PartialEq, Eq, Debug)]
-enum IFact {
+pub enum Fact {
+    Empty,
     True,
     False,
     Any,
 }
 
-use self::IFact::*;
+use self::Fact::*;
 use super::Proof;
 use super::Proof::*;
 
-impl IFact {
-    fn or(self, other: IFact) -> IFact {
-        if self == other {
-            self
-        } else {
-            Any
-        }
-    }
-
-    fn and(self, other: IFact) -> Result<IFact, IFact> {
+impl Fact {
+    pub fn or(self, other: Fact) -> Fact {
         match self {
+            Empty => other,
             True => match other {
-                True => Ok(True),
-                False => Err(True),
-                Any => Ok(True),
+                Empty | True => True,
+                _ => Any,
             },
             False => match other {
-                True => Err(False),
-                False => Ok(False),
-                Any => Ok(False),
+                Empty | False => False,
+                _ => Any,
             },
-            Any => Ok(other),
+            Any => Any,
         }
     }
 
-    fn proves(self, other: IFact) -> Proof<IFact> {
+    pub fn and(self, other: Fact) -> Fact {
         match self {
+            Empty => Empty,
+            True => match other {
+                Empty | False => Empty,
+                True | Any => True,
+            },
+            False => match other {
+                Empty | True => Empty,
+                False | Any => False,
+            },
+            Any => match other {
+                Empty => Empty,
+                _ => other,
+            },
+        }
+    }
+
+    pub fn proves(self, other: Fact) -> Proof<Fact> {
+        match self {
+            Empty => match other {
+                Empty => Proved,
+                _ => Contradiction(Empty),
+            },
             True => match other {
                 True | Any => Proved,
-                False => Contradiction(True),
+                Empty | False => Contradiction(True),
             },
             False => match other {
                 False | Any => Proved,
-                True => Contradiction(False),
+                Empty | True => Contradiction(False),
             },
             Any => match other {
+                Empty => Contradiction(Any),
                 True | False => CannotProve,
                 Any => Proved,
             },
@@ -53,45 +68,20 @@ impl IFact {
     }
 }
 
-/// Public representation of a fact
-#[derive(PartialEq, Eq, Debug)]
-pub struct Fact {
-    fact: IFact,
-}
-
-impl Fact {
-    #[inline]
-    fn create(fact: IFact) -> Fact {
-        Fact { fact: fact }
-    }
-
-    fn new(value: bool) -> Fact {
-        Self::create(if value { True } else { False })
-    }
-
-    fn or(self, other: Fact) -> Fact {
-        Self::create(self.fact.or(other.fact))
-    }
-
-    fn and(self, other: Fact) -> Result<Fact, Fact> {
-        self.fact
-            .and(other.fact)
-            .map(Self::create)
-            .map_err(Self::create)
-    }
-
-    fn proves(self, other: Fact) -> Proof<Fact> {
-        self.fact.proves(other.fact).map(Self::create)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::IFact::*;
+    use super::Fact::*;
     use super::Proof::*;
 
     #[test]
-    fn internal_or() {
+    fn or() {
+        assert_eq!(Empty.or(Empty), Empty);
+        assert_eq!(Empty.or(True), True);
+        assert_eq!(Empty.or(False), False);
+        assert_eq!(Empty.or(Any), Any);
+        assert_eq!(True.or(Empty), True);
+        assert_eq!(False.or(Empty), False);
+        assert_eq!(Any.or(Empty), Any);
         assert_eq!(True.or(True), True);
         assert_eq!(False.or(False), False);
         assert_eq!(True.or(False), Any);
@@ -103,19 +93,33 @@ mod tests {
     }
 
     #[test]
-    fn internal_and() {
-        assert_eq!(True.and(True), Ok(True));
-        assert_eq!(False.and(False), Ok(False));
-        assert_eq!(True.and(False), Err(True));
-        assert_eq!(False.and(True), Err(False));
-        assert_eq!(True.and(Any), Ok(True));
-        assert_eq!(False.and(Any), Ok(False));
-        assert_eq!(Any.and(True), Ok(True));
-        assert_eq!(Any.and(False), Ok(False));
+    fn and() {
+        assert_eq!(Empty.and(Empty), Empty);
+        assert_eq!(Empty.and(True), Empty);
+        assert_eq!(Empty.and(False), Empty);
+        assert_eq!(Empty.and(Any), Empty);
+        assert_eq!(True.and(Empty), Empty);
+        assert_eq!(False.and(Empty), Empty);
+        assert_eq!(Any.and(Empty), Empty);
+        assert_eq!(True.and(True), True);
+        assert_eq!(False.and(False), False);
+        assert_eq!(True.and(False), Empty);
+        assert_eq!(False.and(True), Empty);
+        assert_eq!(True.and(Any), True);
+        assert_eq!(False.and(Any), False);
+        assert_eq!(Any.and(True), True);
+        assert_eq!(Any.and(False), False);
     }
 
     #[test]
     fn proofs() {
+        assert_eq!(Empty.proves(Empty), Proved);
+        assert_eq!(Empty.proves(True), Contradiction(Empty));
+        assert_eq!(Empty.proves(False), Contradiction(Empty));
+        assert_eq!(Empty.proves(Any), Contradiction(Empty));
+        assert_eq!(True.proves(Empty), Contradiction(True));
+        assert_eq!(False.proves(Empty), Contradiction(False));
+        assert_eq!(Any.proves(Empty), Contradiction(Any));
         assert_eq!(True.proves(True), Proved);
         assert_eq!(True.proves(False), Contradiction(True));
         assert_eq!(True.proves(Any), Proved);
@@ -125,33 +129,5 @@ mod tests {
         assert_eq!(Any.proves(Any), Proved);
         assert_eq!(Any.proves(True), CannotProve);
         assert_eq!(Any.proves(False), CannotProve);
-    }
-
-    use super::Fact;
-
-    fn t() -> Fact {
-        Fact::new(true)
-    }
-
-    fn f() -> Fact {
-        Fact::new(false)
-    }
-
-    #[test]
-    fn new() {
-        assert_eq!(t().fact, True);
-        assert_eq!(f().fact, False);
-    }
-
-    #[test]
-    fn external_operator() {
-        assert_eq!(t().or(f()).fact, Any);
-        assert_eq!(t().and(f()), Err(t()));
-    }
-
-    #[test]
-    fn external_proof() {
-        assert_eq!(t().proves(t()), Proved);
-        assert_eq!(t().proves(f()), Contradiction(t()));
     }
 }
