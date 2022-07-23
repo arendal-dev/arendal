@@ -1,6 +1,7 @@
 // Internal fact implementation
 #[derive(Debug, Clone)]
 enum IFact {
+    Empty,
     Any,
     LT(i64),
     Eq(i64),
@@ -18,6 +19,10 @@ use std::cmp::{max, min};
 impl PartialEq for IFact {
     fn eq(&self, other: &IFact) -> bool {
         match self {
+            Empty => match other {
+                Empty => true,
+                _ => false,
+            },
             Any => match other {
                 Any => true,
                 _ => false,
@@ -67,8 +72,13 @@ fn or(a: IFact, b: IFact) -> IFact {
 impl IFact {
     fn proves(self, other: IFact) -> Proof<IFact> {
         match self {
+            Empty => match other {
+                Empty => Proved,
+                _ => Contradiction(Empty),
+            },
             Any => Proved,
             LT(a) => match other {
+                Empty => Contradiction(self),
                 Any => Proved,
                 LT(b) => {
                     if a <= b {
@@ -78,10 +88,68 @@ impl IFact {
                     }
                 }
                 Eq(_) | GT(_) => Contradiction(self),
-                And(f1, f2) => panic!("TODO"),
-                Or(f1, f2) => panic!("TODO"),
+                And(f1, f2) => self.proves_both(*f1, *f2),
+                Or(f1, f2) => self.proves_any(*f1, *f2),
             },
-            _ => panic!("TODO"),
+            Eq(a) => match other {
+                Empty => Contradiction(self),
+                Any => Proved,
+                Eq(b) => {
+                    if a == b {
+                        Proved
+                    } else {
+                        Contradiction(self)
+                    }
+                }
+                LT(_) | GT(_) => Contradiction(self),
+                And(f1, f2) => self.proves_both(*f1, *f2),
+                Or(f1, f2) => self.proves_any(*f1, *f2),
+            },
+            GT(a) => match other {
+                Empty => Contradiction(self),
+                Any => Proved,
+                GT(b) => {
+                    if a >= b {
+                        Proved
+                    } else {
+                        Contradiction(self)
+                    }
+                }
+                Eq(_) | LT(_) => Contradiction(self),
+                And(f1, f2) => self.proves_both(*f1, *f2),
+                Or(f1, f2) => self.proves_any(*f1, *f2),
+            },
+            And(f1, f2) => {
+                let p1 = f1.clone().proves(other.clone());
+                let p2 = f2.clone().proves(other);
+                match p1 {
+                    Proved => Proved,
+                    CannotProve => p2,
+                    Contradiction(c1) => match p2 {
+                        Proved => Proved,
+                        CannotProve => Contradiction(c1),
+                        Contradiction(c2) => Contradiction(c1.and(c2)),
+                    },
+                }
+            }
+            Or(f1, f2) => {
+                let p1 = f1.clone().proves(other.clone());
+                let p2 = f2.clone().proves(other);
+                match p1 {
+                    Proved => match p2 {
+                        Proved => Proved,
+                        _ => p2,
+                    },
+                    CannotProve => match p2 {
+                        Proved | CannotProve => p1,
+                        _ => p2,
+                    },
+                    Contradiction(c1) => match p2 {
+                        Proved | CannotProve => Contradiction(c1),
+                        Contradiction(c2) => Contradiction(c1.or(c2)),
+                    },
+                }
+            }
         }
     }
 
@@ -98,10 +166,27 @@ impl IFact {
         }
     }
 
+    fn proves_any(self, f1: IFact, f2: IFact) -> Proof<IFact> {
+        let p1 = self.clone().proves(f1);
+        let p2 = self.proves(f2);
+        match p1 {
+            Proved => Proved,
+            CannotProve => match p2 {
+                Proved => Proved,
+                CannotProve | Contradiction(_) => CannotProve,
+            },
+            Contradiction(c1) => match p2 {
+                Proved => Proved,
+                CannotProve => CannotProve,
+                Contradiction(c2) => Contradiction(c1.and(c2)),
+            },
+        }
+    }
+
     fn or(self, other: IFact) -> IFact {
-        if (self == Any || other == Any) {
+        if self == Any || other == Any {
             Any
-        } else if (self == other) {
+        } else if self == other {
             self
         } else {
             match self {
@@ -123,10 +208,8 @@ impl IFact {
         }
     }
 
-    fn and(self, other: IFact) -> Result<IFact, IFact> {
-        match self {
-            _ => Err(self),
-        }
+    fn and(self, other: IFact) -> IFact {
+        panic!("TODO");
     }
 }
 
