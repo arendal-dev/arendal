@@ -13,7 +13,6 @@ enum IFact {
 use self::IFact::*;
 use super::Proof;
 use super::Proof::*;
-use core::panic;
 use std::{
     borrow::Borrow,
     cmp::{max, min, Ordering},
@@ -34,6 +33,11 @@ impl PartialOrd for IFact {
             _ => self.proof_based_cmp(other),
         }
     }
+}
+
+#[inline]
+fn operator_eq(f1: &IFact, f11: &IFact, f12: &IFact, f2: &IFact, f21: &IFact, f22: &IFact) -> bool {
+    (f11 == f21 && f12 == f22) || (f11 == f22 && f12 == f21) || f1.proof_based_eq(f2)
 }
 
 impl PartialEq for IFact {
@@ -59,7 +63,28 @@ impl PartialEq for IFact {
                 GT(v2) => v1 == v2,
                 _ => self.proof_based_eq(other),
             },
-            _ => self.proof_based_eq(other),
+            And(f11, f12) => match other {
+                And(f21, f22) => operator_eq(
+                    self,
+                    f11.borrow(),
+                    f12.borrow(),
+                    other,
+                    f21.borrow(),
+                    f22.borrow(),
+                ),
+                _ => self.proof_based_eq(other),
+            },
+            Or(f11, f12) => match other {
+                Or(f21, f22) => operator_eq(
+                    self,
+                    f11.borrow(),
+                    f12.borrow(),
+                    other,
+                    f21.borrow(),
+                    f22.borrow(),
+                ),
+                _ => self.proof_based_eq(other),
+            },
         }
     }
 }
@@ -78,6 +103,64 @@ fn and(a: IFact, b: IFact) -> IFact {
 
 fn or(a: IFact, b: IFact) -> IFact {
     Or(Box::new(a), Box::new(b))
+}
+
+#[inline]
+fn or_lt_eq(flt: IFact, vlt: i64, feq: IFact, veq: i64) -> IFact {
+    if veq < vlt {
+        flt
+    } else if veq == vlt {
+        lte(vlt)
+    } else {
+        or(flt, feq)
+    }
+}
+
+#[inline]
+fn or_lt_gt(flt: IFact, vlt: i64, fgt: IFact, vgt: i64) -> IFact {
+    if vgt < vlt {
+        Any
+    } else {
+        or(flt, fgt)
+    }
+}
+
+#[inline]
+fn or_eq_gt(feq: IFact, veq: i64, fgt: IFact, vgt: i64) -> IFact {
+    if vgt < veq {
+        fgt
+    } else if veq == vgt {
+        gte(veq)
+    } else {
+        or(feq, fgt)
+    }
+}
+
+#[inline]
+fn and_lt_eq(vlt: i64, veq: i64) -> IFact {
+    if veq < vlt {
+        Eq(veq)
+    } else {
+        Empty
+    }
+}
+
+#[inline]
+fn and_lt_gt(vlt: i64, vgt: i64) -> IFact {
+    if (vlt - vgt) > 1 {
+        Any
+    } else {
+        Empty
+    }
+}
+
+#[inline]
+fn and_eq_gt(veq: i64, vgt: i64) -> IFact {
+    if veq > vgt {
+        Eq(veq)
+    } else {
+        Empty
+    }
 }
 
 impl IFact {
@@ -228,36 +311,14 @@ impl IFact {
                 Empty => self,
                 Any => Any,
                 LT(b) => LT(max(a, b)),
-                Eq(b) => {
-                    if b < a {
-                        self
-                    } else if b == a {
-                        lte(a)
-                    } else {
-                        or(self, other)
-                    }
-                }
-                GT(b) => {
-                    if b <= a {
-                        Any
-                    } else {
-                        or(self, other)
-                    }
-                }
+                Eq(b) => or_lt_eq(self, a, other, b),
+                GT(b) => or_lt_gt(self, a, other, b),
                 _ => self.proof_based_or(other),
             },
             Eq(a) => match other {
                 Empty => self,
                 Any => Any,
-                LT(b) => {
-                    if a < b {
-                        other
-                    } else if a == b {
-                        lte(a)
-                    } else {
-                        or(self, other)
-                    }
-                }
+                LT(b) => or_lt_eq(other, b, self, a),
                 Eq(b) => {
                     if a == b {
                         self
@@ -265,40 +326,22 @@ impl IFact {
                         or(self, other)
                     }
                 }
-                GT(b) => {
-                    if b < a {
-                        other
-                    } else if a == b {
-                        gte(a)
-                    } else {
-                        or(self, other)
-                    }
-                }
+                GT(b) => or_eq_gt(self, a, other, b),
                 _ => self.proof_based_or(other),
             },
             GT(a) => match other {
                 Empty => self,
                 Any => Any,
-                LT(b) => {
-                    if a <= b {
-                        Any
-                    } else {
-                        or(self, other)
-                    }
-                }
-                Eq(b) => {
-                    if b > a {
-                        self
-                    } else if a == b {
-                        gte(a)
-                    } else {
-                        or(self, other)
-                    }
-                }
+                LT(b) => or_lt_gt(other, b, self, a),
+                Eq(b) => or_eq_gt(other, b, self, a),
                 GT(b) => GT(min(a, b)),
                 _ => self.proof_based_or(other),
             },
-            _ => self.proof_based_or(other),
+            _ => match other {
+                Empty => self,
+                Any => Any,
+                _ => self.proof_based_or(other),
+            },
         }
     }
 
@@ -311,7 +354,45 @@ impl IFact {
     }
 
     fn and(self, other: IFact) -> IFact {
-        self.proof_based_and(other)
+        match self {
+            Empty => Empty,
+            Any => other,
+            LT(vlt) => match other {
+                Empty => Empty,
+                Any => self,
+                LT(vlt2) => LT(min(vlt, vlt2)),
+                Eq(veq) => and_lt_eq(vlt, veq),
+                GT(vgt) => and_lt_gt(vlt, vgt),
+                _ => self.proof_based_and(other),
+            },
+            Eq(veq) => match other {
+                Empty => Empty,
+                Any => self,
+                LT(vlt) => and_lt_eq(vlt, veq),
+                Eq(veq2) => {
+                    if veq == veq2 {
+                        self
+                    } else {
+                        Empty
+                    }
+                }
+                GT(vgt) => and_eq_gt(veq, vgt),
+                _ => self.proof_based_and(other),
+            },
+            GT(vgt) => match other {
+                Empty => Empty,
+                Any => self,
+                LT(vlt) => and_lt_gt(vlt, vgt),
+                Eq(veq) => and_eq_gt(veq, vgt),
+                GT(vgt2) => GT(max(vgt, vgt2)),
+                _ => self.proof_based_and(other),
+            },
+            _ => match other {
+                Empty => Empty,
+                Any => self,
+                _ => self.proof_based_and(other),
+            },
+        }
     }
 
     fn proof_based_and(self, other: IFact) -> IFact {
@@ -346,17 +427,23 @@ mod tests {
         }
     }
 
-    //#[test]
-    fn test_eq() {
-        // Same variant
+    #[test]
+    fn eq_simple_variant() {
         assert_eq!(Any, Any);
         assert_eq!(LT(2), LT(2));
-        assert_ne!(LT(2), LT(4));
         assert_eq!(Eq(2), Eq(2));
-        assert_ne!(Eq(2), Eq(4));
         assert_eq!(GT(2), GT(2));
+    }
+
+    #[test]
+    fn ne_simple_variant() {
+        assert_ne!(LT(2), LT(4));
+        assert_ne!(Eq(2), Eq(4));
         assert_ne!(GT(2), GT(4));
-        // Different variant
+    }
+
+    #[test]
+    fn ne_different_variant() {
         assert_ne!(Any, LT(2));
         assert_ne!(Any, Eq(2));
         assert_ne!(Any, GT(2));
@@ -372,7 +459,10 @@ mod tests {
         assert_ne!(GT(2), and_range(5, 10));
         assert_ne!(GT(2), or_range(5, 10));
         assert_ne!(and_range(5, 10), or_range(5, 10));
-        // Operations are commutative
+    }
+
+    #[test]
+    fn eq_commutative_ops() {
         assert_eq!(and_range(5, 10), reverse(and_range(5, 10)));
         assert_eq!(or_range(5, 10), reverse(or_range(5, 10)));
     }
