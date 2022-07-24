@@ -1,8 +1,6 @@
 mod ubool;
 mod uint;
 
-type Subject = u64;
-
 #[derive(PartialEq, Debug)]
 enum Proof<T> {
     Proved,
@@ -26,21 +24,24 @@ impl<T: Eq> Proof<T> {
     }
 }
 
-#[derive(Debug)]
-enum Fact {
-    UnaryBool(Subject, ubool::Fact),
+#[derive(PartialEq, Debug)]
+enum Fact<S: PartialEq + std::fmt::Debug> {
+    UnaryBool(S, ubool::Fact),
 }
 
 use self::Fact::*;
 
+impl<S: PartialEq + std::fmt::Debug> Fact<S> {}
+
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
 
-    use super::Fact;
+    type Fact = super::Fact<usize>;
+    use super::ubool::Fact as BoolFact;
     use super::Fact::*;
-    use super::Subject;
 
     #[test]
-    fn test() {}
+    fn eq() {
+        assert_eq!(UnaryBool(1, BoolFact::True), UnaryBool(1, BoolFact::True));
+    }
 }
