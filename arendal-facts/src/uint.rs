@@ -5,6 +5,7 @@ enum IFact {
     Any,
     LT(i64),
     Eq(i64),
+    NE(i64),
     GT(i64),
     And(Box<IFact>, Box<IFact>),
     Or(Box<IFact>, Box<IFact>),
@@ -57,6 +58,10 @@ impl PartialEq for IFact {
             },
             Eq(v1) => match other {
                 Eq(v2) => v1 == v2,
+                _ => self.proof_based_eq(other),
+            },
+            NE(v1) => match other {
+                NE(v2) => v1 == v2,
                 _ => self.proof_based_eq(other),
             },
             GT(v1) => match other {
@@ -117,11 +122,29 @@ fn or_lt_eq(flt: IFact, vlt: i64, feq: IFact, veq: i64) -> IFact {
 }
 
 #[inline]
+fn or_lt_ne(vlt: i64, fne: IFact, vne: i64) -> IFact {
+    if vne < vlt {
+        Any
+    } else {
+        fne
+    }
+}
+
+#[inline]
 fn or_lt_gt(flt: IFact, vlt: i64, fgt: IFact, vgt: i64) -> IFact {
     if vgt < vlt {
         Any
     } else {
         or(flt, fgt)
+    }
+}
+
+#[inline]
+fn or_eq_ne(veq: i64, fne: IFact, vne: i64) -> IFact {
+    if veq == vne {
+        Any
+    } else {
+        fne
     }
 }
 
@@ -137,11 +160,29 @@ fn or_eq_gt(feq: IFact, veq: i64, fgt: IFact, vgt: i64) -> IFact {
 }
 
 #[inline]
+fn or_ne_gt(fne: IFact, vne: i64, vgt: i64) -> IFact {
+    if vne > vgt {
+        Any
+    } else {
+        fne
+    }
+}
+
+#[inline]
 fn and_lt_eq(vlt: i64, veq: i64) -> IFact {
     if veq < vlt {
         Eq(veq)
     } else {
         Empty
+    }
+}
+
+#[inline]
+fn and_lt_ne(flt: IFact, vlt: i64, fne: IFact, vne: i64) -> IFact {
+    if vne >= vlt {
+        LT(vlt)
+    } else {
+        and(flt, fne)
     }
 }
 
@@ -155,11 +196,29 @@ fn and_lt_gt(vlt: i64, vgt: i64) -> IFact {
 }
 
 #[inline]
+fn and_eq_ne(veq: i64, vne: i64) -> IFact {
+    if veq != vne {
+        Eq(veq)
+    } else {
+        Empty
+    }
+}
+
+#[inline]
 fn and_eq_gt(veq: i64, vgt: i64) -> IFact {
     if veq > vgt {
         Eq(veq)
     } else {
         Empty
+    }
+}
+
+#[inline]
+fn and_ne_gt(fne: IFact, vne: i64, fgt: IFact, vgt: i64) -> IFact {
+    if (vne <= vgt) {
+        fgt
+    } else {
+        and(fne, fgt)
     }
 }
 
@@ -177,7 +236,7 @@ impl IFact {
             },
             LT(a) => match other {
                 Empty => Contradiction(self.clone()),
-                Any => CannotProve,
+                Any => Proved,
                 LT(b) => {
                     if a <= b {
                         Proved
@@ -185,13 +244,27 @@ impl IFact {
                         CannotProve
                     }
                 }
-                Eq(_) | GT(_) => Contradiction(self.clone()),
+                Eq(b) => {
+                    if b < a {
+                        CannotProve
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
+                NE(_) | GT(_) => Contradiction(self.clone()),
                 And(f1, f2) => self.proves_both(f1.borrow(), f2.borrow()),
                 Or(f1, f2) => self.proves_any(f1.borrow(), f2.borrow()),
             },
             Eq(a) => match other {
                 Empty => Contradiction(self.clone()),
                 Any => Proved,
+                LT(b) => {
+                    if a < b {
+                        Proved
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
                 Eq(b) => {
                     if a == b {
                         Proved
@@ -199,13 +272,67 @@ impl IFact {
                         Contradiction(self.clone())
                     }
                 }
-                LT(_) | GT(_) => Contradiction(self.clone()),
+                NE(b) => {
+                    if a != b {
+                        Proved
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
+                GT(b) => {
+                    if a > b {
+                        Proved
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
+                And(f1, f2) => self.proves_both(f1.borrow(), f2.borrow()),
+                Or(f1, f2) => self.proves_any(f1.borrow(), f2.borrow()),
+            },
+            NE(a) => match other {
+                Empty => Contradiction(self.clone()),
+                Any => Proved,
+                LT(b) => {
+                    if a >= b {
+                        CannotProve
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
+                Eq(b) => {
+                    if a == b {
+                        CannotProve
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
+                NE(b) => {
+                    if a == b {
+                        Proved
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
+                GT(b) => {
+                    if a <= b {
+                        CannotProve
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
                 And(f1, f2) => self.proves_both(f1.borrow(), f2.borrow()),
                 Or(f1, f2) => self.proves_any(f1.borrow(), f2.borrow()),
             },
             GT(a) => match other {
                 Empty => Contradiction(self.clone()),
                 Any => Proved,
+                Eq(b) => {
+                    if b > a {
+                        CannotProve
+                    } else {
+                        Contradiction(self.clone())
+                    }
+                }
                 GT(b) => {
                     if a >= b {
                         Proved
@@ -213,7 +340,7 @@ impl IFact {
                         CannotProve
                     }
                 }
-                Eq(_) | LT(_) => Contradiction(self.clone()),
+                NE(_) | LT(_) => Contradiction(self.clone()),
                 And(f1, f2) => self.proves_both(f1.borrow(), f2.borrow()),
                 Or(f1, f2) => self.proves_any(f1.borrow(), f2.borrow()),
             },
@@ -307,34 +434,45 @@ impl IFact {
         match self {
             Empty => other,
             Any => Any,
-            LT(a) => match other {
+            LT(vlt) => match other {
                 Empty => self,
                 Any => Any,
-                LT(b) => LT(max(a, b)),
-                Eq(b) => or_lt_eq(self, a, other, b),
-                GT(b) => or_lt_gt(self, a, other, b),
+                LT(b) => LT(max(vlt, b)),
+                Eq(veq) => or_lt_eq(self, vlt, other, veq),
+                NE(vne) => or_lt_ne(vlt, other, vne),
+                GT(vgt) => or_lt_gt(self, vlt, other, vgt),
                 _ => self.proof_based_or(other),
             },
-            Eq(a) => match other {
+            Eq(veq) => match other {
                 Empty => self,
                 Any => Any,
-                LT(b) => or_lt_eq(other, b, self, a),
+                LT(vlt) => or_lt_eq(other, vlt, self, veq),
                 Eq(b) => {
-                    if a == b {
+                    if veq == b {
                         self
                     } else {
                         or(self, other)
                     }
                 }
-                GT(b) => or_eq_gt(self, a, other, b),
+                NE(vne) => or_eq_ne(veq, other, vne),
+                GT(vgt) => or_eq_gt(self, veq, other, vgt),
                 _ => self.proof_based_or(other),
             },
-            GT(a) => match other {
+            NE(vne) => match other {
                 Empty => self,
                 Any => Any,
-                LT(b) => or_lt_gt(other, b, self, a),
-                Eq(b) => or_eq_gt(other, b, self, a),
-                GT(b) => GT(min(a, b)),
+                LT(vlt) => or_lt_ne(vlt, self, vne),
+                Eq(veq) => or_eq_ne(veq, self, vne),
+                GT(vgt) => or_ne_gt(self, vne, vgt),
+                _ => self.proof_based_or(other),
+            },
+            GT(vgt) => match other {
+                Empty => self,
+                Any => Any,
+                LT(vlt) => or_lt_gt(other, vlt, self, vgt),
+                Eq(veq) => or_eq_gt(other, veq, self, vgt),
+                NE(vne) => or_ne_gt(other, vne, vgt),
+                GT(b) => GT(min(vgt, b)),
                 _ => self.proof_based_or(other),
             },
             _ => match other {
@@ -362,6 +500,7 @@ impl IFact {
                 Any => self,
                 LT(vlt2) => LT(min(vlt, vlt2)),
                 Eq(veq) => and_lt_eq(vlt, veq),
+                NE(vne) => and_lt_ne(self, vlt, other, vne),
                 GT(vgt) => and_lt_gt(vlt, vgt),
                 _ => self.proof_based_and(other),
             },
@@ -376,7 +515,23 @@ impl IFact {
                         Empty
                     }
                 }
+                NE(vne) => and_eq_ne(veq, vne),
                 GT(vgt) => and_eq_gt(veq, vgt),
+                _ => self.proof_based_and(other),
+            },
+            NE(vne) => match other {
+                Empty => Empty,
+                Any => self,
+                LT(vlt) => and_lt_ne(other, vlt, self, vne),
+                Eq(veq) => and_eq_ne(veq, vne),
+                NE(vne2) => {
+                    if vne == vne2 {
+                        self
+                    } else {
+                        and(self, other)
+                    }
+                }
+                GT(vgt) => and_ne_gt(self, vne, other, vgt),
                 _ => self.proof_based_and(other),
             },
             GT(vgt) => match other {
@@ -384,6 +539,7 @@ impl IFact {
                 Any => self,
                 LT(vlt) => and_lt_gt(vlt, vgt),
                 Eq(veq) => and_eq_gt(veq, vgt),
+                NE(vne) => and_ne_gt(other, vne, self, vgt),
                 GT(vgt2) => GT(max(vgt, vgt2)),
                 _ => self.proof_based_and(other),
             },
