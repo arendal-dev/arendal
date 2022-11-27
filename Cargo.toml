@@ -2,4 +2,5 @@
 
 members = [
     "arendal-facts",
+    "arendal-ast"
 ]
