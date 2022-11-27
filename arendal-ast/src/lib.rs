@@ -1,13 +1,18 @@
+extern crate num;
+
+use num::BigInt;
 pub enum Expr {
-    IntLiteral(i64),
+    IntLiteral(BigInt),
 }
 
 #[cfg(test)]
 mod tests {
+    use num::bigint::ToBigInt;
+
     use super::*;
 
     #[test]
     fn it_works() {
-        assert!(true);
+        let _ = Expr::IntLiteral(0.to_bigint().unwrap());
     }
 }
