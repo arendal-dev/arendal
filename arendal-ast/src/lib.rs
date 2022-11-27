@@ -1,6 +1,7 @@
 extern crate num;
 
 use num::BigInt;
+#[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
     IntLiteral(BigInt),
 }
