@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 arendal-error = { path= "../arendal-error" }
 arendal-ast = { path= "../arendal-ast" }
-unicode-segmentation = "1.10.0"
+# unicode-segmentation = "1.10.0"
