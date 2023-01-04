@@ -16,6 +16,44 @@ enum TokenType {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    Dot,
+    Greater,
+    Less,
+    Bang,
+    Equal,
+    OpenParens,
+    CloseParens,
+    OpenCBracket,
+    CloseCBracket,
+    OpenSBracket,
+    CloseSBracket,
+}
+
+impl TokenType {
+    fn single(c: char) -> Option<TokenType> {
+        match c {
+            '+' => Some(TokenType::Plus),
+            '-' => Some(TokenType::Minus),
+            '*' => Some(TokenType::Star),
+            '/' => Some(TokenType::Slash),
+            '.' => Some(TokenType::Dot),
+            '>' => Some(TokenType::Greater),
+            '<' => Some(TokenType::Less),
+            '!' => Some(TokenType::Bang),
+            '=' => Some(TokenType::Equal),
+            '(' => Some(TokenType::OpenParens),
+            ')' => Some(TokenType::CloseParens),
+            '{' => Some(TokenType::OpenCBracket),
+            '}' => Some(TokenType::CloseCBracket),
+            '[' => Some(TokenType::OpenSBracket),
+            ']' => Some(TokenType::CloseSBracket),
+            _ => None,
+        }
+    }
 }
 
 impl Token {}
@@ -53,8 +91,13 @@ impl<'a> Tokenizer<'a> {
 
     // Consumes one char, advancing the indices accordingly.
     fn consume(&mut self) {
-        let bytes = self.chars[self.char_index].0;
+        let bytes = self.chars[self.char_index].1.len_utf8();
+        println!(
+            "pos = {:?}, c = {}, bytes = {}",
+            self.pos, self.chars[self.char_index].1, bytes
+        );
         self.pos = self.pos.advance(bytes);
+        println!("pos = {:?}", self.pos);
         self.char_index += 1;
     }
 
@@ -78,10 +121,14 @@ impl<'a> Tokenizer<'a> {
         while !self.is_done() {
             self.token_start = self.pos;
             let c = self.peek();
-            match c {
-                ' ' => self.consume_spaces(),
-                '\t' => self.consume_tabs(),
-                _ => self.tokenize2(c),
+            if let Some(t) = TokenType::single(c) {
+                self.consume_single_char_token(t);
+            } else {
+                match c {
+                    ' ' => self.consume_spaces(),
+                    '\t' => self.consume_tabs(),
+                    _ => self.tokenize2(c),
+                }
             }
         }
         self.errors.to_result(self.tokens)
@@ -91,6 +138,12 @@ impl<'a> Tokenizer<'a> {
         if !self.consume_eol(c) {
             self.add_unexpected_char(c)
         }
+    }
+
+    // Consumes a char, creating the provided token
+    fn consume_single_char_token(&mut self, token_type: TokenType) {
+        self.consume();
+        self.add_token(token_type);
     }
 
     // Consumes a new line if found in the current position
@@ -194,6 +247,10 @@ mod tests {
             self
         }
 
+        fn single(self, token_type: TokenType) -> Self {
+            self.token(token_type, 1)
+        }
+
         fn spaces(self, n: usize) -> Self {
             self.token(TokenType::Spaces(n), n)
         }
@@ -233,6 +290,27 @@ mod tests {
     #[test]
     fn crlf() {
         TestCase::new().newline(CRLF).ok("\r\n");
+    }
+
+    #[test]
+    fn singles() {
+        TestCase::new()
+            .single(TokenType::Plus)
+            .single(TokenType::Minus)
+            .single(TokenType::Star)
+            .single(TokenType::Dot)
+            .single(TokenType::Slash)
+            .single(TokenType::Greater)
+            .single(TokenType::Less)
+            .single(TokenType::Bang)
+            .single(TokenType::OpenParens)
+            .single(TokenType::CloseParens)
+            .single(TokenType::Equal)
+            .single(TokenType::OpenCBracket)
+            .single(TokenType::CloseCBracket)
+            .single(TokenType::OpenSBracket)
+            .single(TokenType::CloseSBracket)
+            .ok("+-*./><!()={}[]");
     }
 
     #[test]
