@@ -60,7 +60,7 @@ impl Token {}
 
 struct Tokenizer<'a> {
     input: &'a str,
-    chars: Vec<(usize, char)>,
+    chars: Vec<char>,
     tokens: Vec<Token>,
     errors: Errors,
     // Positions
@@ -75,7 +75,7 @@ impl<'a> Tokenizer<'a> {
     fn new(input: &str) -> Tokenizer {
         Tokenizer {
             input,
-            chars: input.char_indices().collect(),
+            chars: input.chars().collect(),
             tokens: Vec::new(),
             errors: Errors::new(),
             pos: Pos::new(),
@@ -91,20 +91,15 @@ impl<'a> Tokenizer<'a> {
 
     // Consumes one char, advancing the indices accordingly.
     fn consume(&mut self) {
-        let bytes = self.chars[self.char_index].1.len_utf8();
-        println!(
-            "pos = {:?}, c = {}, bytes = {}",
-            self.pos, self.chars[self.char_index].1, bytes
-        );
+        let bytes = self.chars[self.char_index].len_utf8();
         self.pos = self.pos.advance(bytes);
-        println!("pos = {:?}", self.pos);
         self.char_index += 1;
     }
 
     // Returns the char at the current index.
     // Panics if we have reached the end of the input
     fn peek(&self) -> char {
-        self.chars[self.char_index].1
+        self.chars[self.char_index]
     }
 
     // Returns true if there's a next char and it's equal to the provided one.
@@ -113,7 +108,7 @@ impl<'a> Tokenizer<'a> {
         if i >= self.chars.len() {
             false
         } else {
-            c == self.chars[i].1
+            c == self.chars[i]
         }
     }
 
