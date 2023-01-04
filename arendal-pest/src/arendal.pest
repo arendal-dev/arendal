@@ -1,1 +1,0 @@
-integer = { ASCII_DIGIT+ }
