@@ -1,4 +1,4 @@
-pub mod scanner;
+pub mod tokenizer;
 
 use arendal_error::error;
 use arendal_error::errors::Error;
@@ -42,20 +42,71 @@ impl Indentation {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum NewLine {
+    LF,
+    CRLF,
+}
+
+impl NewLine {
+    fn bytes(self) -> usize {
+        match self {
+            LR => 1,
+            CRLF => 2,
+        }
+    }
+}
+
+// The coordinates of a token or an error in the input
+#[derive(Debug, Clone, Copy)]
+struct Pos {
+    // Line number, starts at 1
+    line: usize,
+    // Byte index from the beginning of the input
+    index: usize,
+    // Byte index from the beginning of the line
+    line_index: usize,
+}
+
+impl Pos {
+    // Creates a new position at the beginning of the input
+    fn new() -> Pos {
+        Pos {
+            line: 1,
+            index: 0,
+            line_index: 0,
+        }
+    }
+
+    // Returns a new position that it's the provided number of bytes forward in the same line
+    fn advance(&self, bytes: usize) -> Pos {
+        Pos {
+            line: self.line,
+            index: self.index + bytes,
+            line_index: self.line_index + bytes,
+        }
+    }
+
+    // Returns a new position at the beginning of the next line.
+    fn newline(&self, newline: NewLine) -> Pos {
+        Pos {
+            line: self.line + 1,
+            index: self.index + newline.bytes(),
+            line_index: 0,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct ParserError {
-    line: usize,
-    index: usize,
+    // Error position
+    pos: Pos,
     error_type: ErrorType,
 }
 
 impl ParserError {
-    fn new(line: usize, index: usize, error_type: ErrorType) -> E {
-        error(ParserError {
-            line,
-            index,
-            error_type,
-        })
+    fn new(pos: Pos, error_type: ErrorType) -> E {
+        error(ParserError { pos, error_type })
     }
 }
 
@@ -67,12 +118,12 @@ enum ErrorType {
 
 impl Error for ParserError {}
 
-fn indentation_error(line: usize, index: usize) -> E {
-    ParserError::new(line, index, ErrorType::IndentationError)
+fn indentation_error(pos: Pos) -> E {
+    ParserError::new(pos, ErrorType::IndentationError)
 }
 
-fn unexpected_char(line: usize, index: usize, c: char) -> E {
-    ParserError::new(line, index, ErrorType::UnexpectedChar(c))
+fn unexpected_char(pos: Pos, c: char) -> E {
+    ParserError::new(pos, ErrorType::UnexpectedChar(c))
 }
 
 #[cfg(test)]
