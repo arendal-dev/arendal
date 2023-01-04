@@ -357,11 +357,18 @@ mod tests {
     #[test]
     fn digits() {
         TestCase::new().digits("1234").ok("1234");
+        TestCase::new()
+            .digits("12")
+            .spaces(1)
+            .digits("34")
+            .ok("12 34");
     }
 
     #[test]
     fn word() {
         TestCase::new().word("abc").ok("abc");
+        TestCase::new().word("abc4e").ok("abc4e");
+        TestCase::new().digits("4").word("bc5e").ok("4bc5e");
     }
 
     #[test]
