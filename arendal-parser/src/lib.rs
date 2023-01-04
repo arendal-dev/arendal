@@ -1,5 +1,9 @@
 pub mod scanner;
 
+use arendal_error::error;
+use arendal_error::errors::Error;
+use arendal_error::Error as E;
+
 #[derive(Debug, PartialEq, Eq)]
 struct Indentation {
     tabs: usize,
@@ -36,6 +40,29 @@ impl Indentation {
     fn len(&self) -> usize {
         self.tabs + self.spaces
     }
+}
+
+#[derive(Debug)]
+struct ParserError {
+    line: usize,
+    index: usize,
+    error_type: ErrorType,
+}
+
+#[derive(Debug)]
+enum ErrorType {
+    IndentationError,
+    UnexpectedChar(char),
+}
+
+impl Error for ParserError {}
+
+fn indentation_error(line: usize, index: usize) -> E {
+    error(ParserError {
+        line,
+        index,
+        error_type: ErrorType::IndentationError,
+    })
 }
 
 #[cfg(test)]

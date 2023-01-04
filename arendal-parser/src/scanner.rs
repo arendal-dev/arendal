@@ -1,7 +1,4 @@
-mod errors;
-
 use arendal_error::{ErrorCollector, Result};
-use errors::*;
 
 use crate::Indentation;
 
@@ -110,10 +107,10 @@ impl<'a> Scanner<'a> {
         while !self.is_done() {
             self.line += 1;
             let (indentation, ok) = super::Indentation::get(&self.input[self.index..]);
-            if !ok {
-                self.errors.add(indentation_error())
-            }
             let len = indentation.len();
+            if !ok {
+                self.errors.add(super::indentation_error(self.line, len))
+            }
             if len > 0 {
                 self.index += len;
                 self.add_indentation(indentation);
