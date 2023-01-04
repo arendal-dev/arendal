@@ -131,7 +131,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn tokenize2(&mut self, c: char) {
-        if !self.consume_eol(c) {
+        if !self.consume_eol(c) && !self.consume_digits(c) {
             self.add_unexpected_char(c)
         }
     }
@@ -185,18 +185,33 @@ impl<'a> Tokenizer<'a> {
         self.add_token(token);
     }
 
+    fn consume_digits(&mut self, mut c: char) -> bool {
+        let mut consumed = false;
+        while c.is_ascii_digit() {
+            self.consume();
+            consumed = true;
+            if self.is_done() {
+                break;
+            } else {
+                c = self.peek();
+            }
+        }
+        if consumed {
+            self.add_token(TokenType::Digits(self.get_token_str()));
+        }
+        consumed
+    }
+
+    fn get_token_str(&self) -> &'a str {
+        &self.input[self.token_start.index..self.pos.index]
+    }
+
     fn add_token(&mut self, token_type: TokenType<'a>) {
         self.tokens.push(Token {
             pos: self.token_start,
             token_type,
         });
     }
-
-    /*
-    fn add_indentation_error(&mut self) {
-        self.errors.add(super::indentation_error(self.pos))
-    }
-    */
 
     fn add_unexpected_char(&mut self, c: char) {
         self.errors.add(super::unexpected_char(self.pos, c))
@@ -255,6 +270,10 @@ mod tests {
             self.token(TokenType::Tabs(n), n)
         }
 
+        fn digits(self, digits: &'a str) -> Self {
+            self.token(TokenType::Digits(digits), digits.len())
+        }
+
         fn ok(&self, input: &str) {
             match super::tokenize(input) {
                 Ok(tokens) => assert_eq!(tokens, self.tokens),
@@ -308,6 +327,11 @@ mod tests {
             .single(TokenType::CloseSBracket)
             .single(TokenType::Underscore)
             .ok("+-*./><!()={}[]_");
+    }
+
+    #[test]
+    fn digits() {
+        TestCase::new().digits("1234").ok("1234");
     }
 
     #[test]
