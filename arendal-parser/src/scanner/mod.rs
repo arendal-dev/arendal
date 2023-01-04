@@ -5,15 +5,15 @@ use errors::*;
 
 use crate::Indentation;
 
-fn scan(input: &str) -> Result<Vec<Token>> {
+pub fn scan(input: &str) -> Result<Vec<Token>> {
     Scanner::new(input).scan()
 }
 
 #[derive(Debug)]
-struct Token {
+pub struct Token {
     line: usize,
     index: usize, // relative to the line, not the input.
-    tokenType: TokenType,
+    token_type: TokenType,
 }
 
 #[derive(Debug)]
@@ -21,26 +21,18 @@ enum TokenType {
     Indentation(super::Indentation),
 }
 
-impl Token {
-    fn indentation(line: usize, indentation: Indentation) -> Token {
-        Token {
-            line,
-            index: 0,
-            tokenType: TokenType::Indentation(indentation),
-        }
-    }
-}
+impl Token {}
 
 struct Scanner<'a> {
     input: &'a str,
-    chars: Vec<(usize, char)>, 
-    tokens : Vec<Token>,
-    errors : ErrorCollector,
-    line : usize, // Current line
-    index: usize, // Current index from the beginning of the input
-    charIndex: usize, // Current char index from the beginning of the input
-    lineIndex: usize, // Current index from the beginning of the line
-    lexeme: usize, // Indext of the start of the current lexeme
+    chars: Vec<(usize, char)>,
+    tokens: Vec<Token>,
+    errors: ErrorCollector,
+    line: usize,        // Current line
+    index: usize,       // Current index from the beginning of the input
+    char_index: usize,  // Current char index from the beginning of the input
+    line_index: usize,  // Current index from the beginning of the line
+    token_start: usize, // Index of the start of the current token
 }
 
 impl<'a> Scanner<'a> {
@@ -52,19 +44,19 @@ impl<'a> Scanner<'a> {
             errors: ErrorCollector::new(),
             line: 0,
             index: 0,
-            charIndex: 0,
-            lineIndex: 0,
-            lexeme: 0,
+            char_index: 0,
+            line_index: 0,
+            token_start: 0,
         }
     }
 
     fn is_done(&self) -> bool {
-        self.charIndex >= self.chars.len()
+        self.char_index >= self.chars.len()
     }
 
     fn consume(&mut self) {
-        self.index += self.chars[self.charIndex].0;
-        self.charIndex += 1;
+        self.index += self.chars[self.char_index].0;
+        self.char_index += 1;
     }
 
     fn scan(mut self) -> Result<Vec<Token>> {
@@ -77,12 +69,18 @@ impl<'a> Scanner<'a> {
             let len = indentation.len();
             if len > 0 {
                 self.index = self.index + len;
-                self.tokens.push(Token::indentation(self.line, indentation))
+                self.add_indentation(indentation);
             }
             break; // TODO: next step skip whitespace and start looking at characters
         }
         self.errors.to_result(self.tokens)
     }
 
+    fn add_indentation(&mut self, indentation: Indentation) {
+        self.tokens.push(Token {
+            line: self.line,
+            index: 0,
+            token_type: TokenType::Indentation(indentation),
+        });
+    }
 }
-

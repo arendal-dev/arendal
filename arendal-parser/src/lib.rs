@@ -1,4 +1,4 @@
-mod scanner;
+pub mod scanner;
 
 #[derive(Debug, PartialEq, Eq)]
 struct Indentation {
@@ -8,14 +8,14 @@ struct Indentation {
 
 impl Indentation {
     #[inline]
-    fn new(tabs : usize, spaces: usize) -> Indentation {
+    fn new(tabs: usize, spaces: usize) -> Indentation {
         Indentation { tabs, spaces }
     }
 
     fn get(input: &str) -> (Indentation, bool) {
-        let mut tabs : usize = 0;
-        let mut spaces : usize = 0;
-        let mut ok : bool = true;
+        let mut tabs: usize = 0;
+        let mut spaces: usize = 0;
+        let mut ok: bool = true;
         for (i, c) in input.char_indices() {
             if c == '\t' {
                 if spaces > 0 {
@@ -29,14 +29,13 @@ impl Indentation {
                 break;
             }
         }
-        ( Self::new(tabs, spaces), ok )
+        (Self::new(tabs, spaces), ok)
     }
 
     #[inline]
     fn len(&self) -> usize {
         self.tabs + self.spaces
     }
-    
 }
 
 #[cfg(test)]
@@ -45,7 +44,10 @@ mod tests {
     use super::Indentation;
 
     fn test_indentation(input: &str, tabs: usize, spaces: usize, ok: bool) {
-        assert_eq!(Indentation::get(input), (Indentation::new(tabs, spaces), ok));
+        assert_eq!(
+            Indentation::get(input),
+            (Indentation::new(tabs, spaces), ok)
+        );
     }
 
     #[test]
