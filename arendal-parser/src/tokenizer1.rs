@@ -17,6 +17,12 @@ pub struct Token<'a> {
     pub token_type: TokenType<'a>,
 }
 
+impl<'a> Token<'a> {
+    pub fn is_whitespace(&self) -> bool {
+        self.token_type.is_whitespace()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType<'a> {
     Spaces(usize),
@@ -39,6 +45,13 @@ pub enum TokenType<'a> {
 }
 
 impl<'a> TokenType<'a> {
+    fn is_whitespace(&self) -> bool {
+        match self {
+            TokenType::Spaces(_) | TokenType::Tabs(_) => true,
+            _ => false,
+        }
+    }
+
     fn single(c: char) -> Option<TokenType<'a>> {
         match c {
             '+' => Some(TokenType::Plus),

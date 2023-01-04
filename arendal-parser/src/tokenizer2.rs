@@ -1,7 +1,7 @@
 use super::tokenizer1::Token as Token1;
 use super::tokenizer1::TokenType as TokenType1;
 use super::tokenizer1::Tokens as Tokens1;
-use super::{NewLine, Pos};
+use super::{Indentation, NewLine, Pos};
 use arendal_error::{Errors, Result};
 
 pub fn tokenize<'a>(input: &'a Tokens1<'a>) -> Result<Tokens<'a>> {
@@ -22,6 +22,7 @@ pub struct Token<'a> {
 
 #[derive(Debug, PartialEq, Eq)]
 enum TokenType<'a> {
+    Indent(Indentation),
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
@@ -98,14 +99,22 @@ impl<'a> Tokenizer<'a> {
         self.input_index += 1;
     }
 
-    // Returns a clone of the token at the current index.
-    // Panics if we have reached the end of the input
-    fn peek(&self) -> Token1<'a> {
-        self.input.tokens[self.input_index].clone()
+    // Returns a clone of the token at the current index, if any
+    fn peek(&self) -> Option<Token1<'a>> {
+        if self.is_done() {
+            None
+        } else {
+            Some(self.input.tokens[self.input_index].clone())
+        }
+    }
+
+    // Consumes one token a returns the next one, if any.
+    fn consume_and_peek(&mut self) -> Option<Token1<'a>> {
+        self.consume();
+        self.peek()
     }
 
     // Returns a clone of the token the requested positions after the current one, if any.
-    // Panics if we have reached the end of the input
     fn peek_other(&self, n: usize) -> Option<Token1<'a>> {
         let i = self.input_index + n;
         if i >= self.input.tokens.len() {
@@ -116,9 +125,14 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn tokenize(mut self) -> Result<Tokens<'a>> {
-        while !self.is_done() {
-            let t = self.peek();
+        let mut last_seen_line = 0;
+        while let Some(t) = self.peek() {
             self.token_start = t.pos;
+            if t.pos.line > last_seen_line {
+                last_seen_line = t.pos.line;
+                self.consume_indentation(t);
+                continue;
+            }
             match t {
                 _ => self.errors.add(super::unexpected_token()),
             }
@@ -136,11 +150,57 @@ impl<'a> Tokenizer<'a> {
         });
     }
 
-    /*
-    fn add_unexpected_char(&mut self, c: char) {
-        self.errors.add(super::unexpected_char(self.pos, c))
+    fn consume_tabs(&mut self, mut t: TokenType1<'a>) -> usize {
+        let mut tabs = 0;
+        while let TokenType1::Tabs(n) = t {
+            tabs += n;
+            if let Some(next) = self.consume_and_peek() {
+                t = next.token_type;
+            } else {
+                break;
+            }
+        }
+        tabs
     }
-    */
+
+    fn consume_spaces(&mut self, mut t: TokenType1<'a>) -> usize {
+        let mut spaces = 0;
+        while let TokenType1::Spaces(n) = t {
+            spaces += n;
+            if let Some(next) = self.consume_and_peek() {
+                t = next.token_type;
+            } else {
+                break;
+            }
+        }
+        spaces
+    }
+
+    fn skip_whitespace(&mut self) {
+        while let Some(t) = self.peek() {
+            if t.is_whitespace() {
+                self.consume();
+            } else {
+                break;
+            }
+        }
+    }
+
+    fn consume_indentation(&mut self, token: Token1<'a>) {
+        let tabs = self.consume_tabs(token.clone().token_type);
+        let spaces = self.consume_spaces(token.token_type);
+        self.add_token(TokenType::Indent(Indentation::new(tabs, spaces)));
+        if let Some(t) = self.peek() {
+            if t.is_whitespace() {
+                self.add_indentation_error(&t);
+                self.skip_whitespace();
+            }
+        }
+    }
+
+    fn add_indentation_error(&mut self, token: &Token1) {
+        self.errors.add(super::indentation_error(token.pos))
+    }
 }
 
 #[cfg(test)]
