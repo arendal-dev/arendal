@@ -23,8 +23,7 @@ pub struct Token<'a> {
 #[derive(Debug, PartialEq, Eq)]
 enum TokenType<'a> {
     Indent(Indentation),
-    Spaces(usize),
-    Tabs(usize),
+    Whitespace,
     EndOfLine(NewLine),
     Plus,
     Minus,
@@ -133,6 +132,9 @@ impl<'a> Tokenizer<'a> {
                 self.consume_indentation(t);
                 continue;
             }
+            if self.consume_whitespace(true) {
+                continue;
+            }
             match t {
                 _ => self.errors.add(super::unexpected_token()),
             }
@@ -176,14 +178,20 @@ impl<'a> Tokenizer<'a> {
         spaces
     }
 
-    fn skip_whitespace(&mut self) {
+    fn consume_whitespace(&mut self, add_token: bool) -> bool {
+        let mut found = false;
         while let Some(t) = self.peek() {
             if t.is_whitespace() {
+                found = true;
                 self.consume();
             } else {
                 break;
             }
         }
+        if found && add_token {
+            self.add_token(TokenType::Whitespace);
+        }
+        found
     }
 
     fn consume_indentation(&mut self, token: Token1<'a>) {
@@ -193,7 +201,7 @@ impl<'a> Tokenizer<'a> {
         if let Some(t) = self.peek() {
             if t.is_whitespace() {
                 self.add_indentation_error(&t);
-                self.skip_whitespace();
+                self.consume_whitespace(false);
             }
         }
     }
