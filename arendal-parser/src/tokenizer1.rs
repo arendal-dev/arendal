@@ -1,8 +1,14 @@
 use super::{NewLine, Pos};
 use arendal_error::{Errors, Result};
 
-pub fn tokenize(input: &str) -> Result<Vec<Token>> {
+pub fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(input).tokenize()
+}
+
+#[derive(Debug)]
+pub struct Tokens<'a> {
+    input: &'a str,
+    tokens: Vec<Token<'a>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -114,7 +120,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn tokenize(mut self) -> Result<Vec<Token<'a>>> {
+    fn tokenize(mut self) -> Result<Tokens<'a>> {
         while !self.is_done() {
             self.token_start = self.pos;
             let c = self.peek();
@@ -128,7 +134,10 @@ impl<'a> Tokenizer<'a> {
                 }
             }
         }
-        self.errors.to_result(self.tokens)
+        self.errors.to_result(Tokens {
+            input: self.input,
+            tokens: self.tokens,
+        })
     }
 
     fn tokenize2(&mut self, c: char) {
@@ -305,7 +314,7 @@ mod tests {
 
         fn ok(&self, input: &str) {
             match super::tokenize(input) {
-                Ok(tokens) => assert_eq!(tokens, self.tokens),
+                Ok(tokens) => assert_eq!(tokens.tokens, self.tokens),
                 Err(_) => assert!(false),
             }
         }
