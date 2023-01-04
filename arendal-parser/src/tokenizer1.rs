@@ -143,17 +143,21 @@ impl<'a> Tokenizer<'a> {
         self.add_token(token_type);
     }
 
+    // Returns whether the provided char is a newline, peeking the next if needed
+    // Consumes a new line if found in the current position
+    fn is_eol(&mut self, c: char) -> Option<NewLine> {
+        if c == '\n' {
+            Some(NewLine::LF)
+        } else if c == '\r' && self.next_matches('\n') {
+            Some(NewLine::CRLF)
+        } else {
+            None
+        }
+    }
+
     // Consumes a new line if found in the current position
     fn consume_eol(&mut self, c: char) -> bool {
-        let newline: Option<NewLine>;
-        if c == '\n' {
-            newline = Some(NewLine::LF);
-        } else if c == '\r' && self.next_matches('\n') {
-            newline = Some(NewLine::CRLF);
-        } else {
-            newline = None;
-        }
-        match newline {
+        match self.is_eol(c) {
             Some(nl) => {
                 self.pos = self.pos.newline(nl);
                 self.char_index += nl.bytes();
