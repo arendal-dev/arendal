@@ -1,7 +1,6 @@
 [workspace]
 
 members = [
-    "arendal-facts",
     "arendal-ast",
     "arendal-pest",
 ]

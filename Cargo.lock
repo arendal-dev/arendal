@@ -10,10 +10,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arendal-facts"
-version = "0.1.0"
-
-[[package]]
 name = "arendal-pest"
 version = "0.1.0"
 dependencies = [
