@@ -1,4 +1,4 @@
-use super::{NewLine, Pos};
+use super::{Enclosure, NewLine, Pos};
 use arendal_error::{Errors, Result};
 
 pub fn tokenize(input: &str) -> Result<Tokens> {
@@ -31,12 +31,8 @@ pub enum TokenType<'a> {
     Less,
     Bang,
     Equal,
-    OpenParens,
-    CloseParens,
-    OpenCBracket,
-    CloseCBracket,
-    OpenSBracket,
-    CloseSBracket,
+    Open(Enclosure),
+    Close(Enclosure),
     Underscore,
     Digits(&'a str),
     Word(&'a str),
@@ -54,12 +50,12 @@ impl<'a> TokenType<'a> {
             '<' => Some(TokenType::Less),
             '!' => Some(TokenType::Bang),
             '=' => Some(TokenType::Equal),
-            '(' => Some(TokenType::OpenParens),
-            ')' => Some(TokenType::CloseParens),
-            '{' => Some(TokenType::OpenCBracket),
-            '}' => Some(TokenType::CloseCBracket),
-            '[' => Some(TokenType::OpenSBracket),
-            ']' => Some(TokenType::CloseSBracket),
+            '(' => Some(TokenType::Open(Enclosure::Parens)),
+            ')' => Some(TokenType::Close(Enclosure::Parens)),
+            '{' => Some(TokenType::Open(Enclosure::Curly)),
+            '}' => Some(TokenType::Close(Enclosure::Curly)),
+            '[' => Some(TokenType::Open(Enclosure::Square)),
+            ']' => Some(TokenType::Close(Enclosure::Square)),
             '_' => Some(TokenType::Underscore),
             _ => None,
         }
@@ -254,8 +250,7 @@ impl<'a> Tokenizer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Token, TokenType};
-    use crate::{NewLine, Pos};
+    use super::{Enclosure, NewLine, Pos, Token, TokenType};
     use NewLine::*;
 
     struct TestCase<'a> {
@@ -356,13 +351,13 @@ mod tests {
             .single(TokenType::Greater)
             .single(TokenType::Less)
             .single(TokenType::Bang)
-            .single(TokenType::OpenParens)
-            .single(TokenType::CloseParens)
+            .single(TokenType::Open(Enclosure::Parens))
+            .single(TokenType::Close(Enclosure::Parens))
             .single(TokenType::Equal)
-            .single(TokenType::OpenCBracket)
-            .single(TokenType::CloseCBracket)
-            .single(TokenType::OpenSBracket)
-            .single(TokenType::CloseSBracket)
+            .single(TokenType::Open(Enclosure::Curly))
+            .single(TokenType::Close(Enclosure::Curly))
+            .single(TokenType::Open(Enclosure::Square))
+            .single(TokenType::Close(Enclosure::Square))
             .single(TokenType::Underscore)
             .ok("+-*./><!()={}[]_");
     }

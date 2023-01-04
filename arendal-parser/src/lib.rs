@@ -56,6 +56,13 @@ impl NewLine {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Enclosure {
+    Parens,
+    Square,
+    Curly,
+}
+
 // The coordinates of a token or an error in the input
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pos {
