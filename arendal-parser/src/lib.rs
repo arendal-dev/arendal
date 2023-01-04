@@ -49,6 +49,16 @@ struct ParserError {
     error_type: ErrorType,
 }
 
+impl ParserError {
+    fn new(line: usize, index: usize, error_type: ErrorType) -> E {
+        error(ParserError {
+            line,
+            index,
+            error_type,
+        })
+    }
+}
+
 #[derive(Debug)]
 enum ErrorType {
     IndentationError,
@@ -58,11 +68,11 @@ enum ErrorType {
 impl Error for ParserError {}
 
 fn indentation_error(line: usize, index: usize) -> E {
-    error(ParserError {
-        line,
-        index,
-        error_type: ErrorType::IndentationError,
-    })
+    ParserError::new(line, index, ErrorType::IndentationError)
+}
+
+fn unexpected_char(line: usize, index: usize, c: char) -> E {
+    ParserError::new(line, index, ErrorType::UnexpectedChar(c))
 }
 
 #[cfg(test)]
