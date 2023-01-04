@@ -300,5 +300,9 @@ mod tests {
             .indentation(0, 0)
             .integer(1234)
             .ok_without_pos("1234");
+        TestCase::new()
+            .indentation(1, 0)
+            .integer(1234)
+            .ok_without_pos("\t1234");
     }
 }
