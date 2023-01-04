@@ -36,6 +36,7 @@ enum TokenType<'a> {
     Less,
     Bang,
     Equal,
+    NotEqual,
     OpenParens,
     CloseParens,
     OpenCBracket,
@@ -48,24 +49,17 @@ enum TokenType<'a> {
 }
 
 impl<'a> TokenType<'a> {
-    fn single(c: char) -> Option<TokenType<'a>> {
-        match c {
-            '+' => Some(TokenType::Plus),
-            '-' => Some(TokenType::Minus),
-            '*' => Some(TokenType::Star),
-            '/' => Some(TokenType::Slash),
-            '.' => Some(TokenType::Dot),
-            '>' => Some(TokenType::Greater),
-            '<' => Some(TokenType::Less),
-            '!' => Some(TokenType::Bang),
-            '=' => Some(TokenType::Equal),
-            '(' => Some(TokenType::OpenParens),
-            ')' => Some(TokenType::CloseParens),
-            '{' => Some(TokenType::OpenCBracket),
-            '}' => Some(TokenType::CloseCBracket),
-            '[' => Some(TokenType::OpenSBracket),
-            ']' => Some(TokenType::CloseSBracket),
-            '_' => Some(TokenType::Underscore),
+    fn single(t: &TokenType1) -> Option<TokenType<'a>> {
+        match t {
+            TokenType1::Plus => Some(TokenType::Plus),
+            TokenType1::Minus => Some(TokenType::Minus),
+            TokenType1::Star => Some(TokenType::Star),
+            TokenType1::Slash => Some(TokenType::Slash),
+            TokenType1::Dot => Some(TokenType::Dot),
+            TokenType1::Greater => Some(TokenType::Greater),
+            TokenType1::Less => Some(TokenType::Less),
+            TokenType1::Equal => Some(TokenType::Equal),
+            TokenType1::Underscore => Some(TokenType::Underscore),
             _ => None,
         }
     }
@@ -137,7 +131,13 @@ impl<'a> Tokenizer<'a> {
             if self.consume_whitespace(true) {
                 continue;
             }
-            match t {
+            if let Some(tt) = TokenType::single(&t.token_type) {
+                self.consume();
+                self.add_token(tt);
+                continue;
+            }
+            match t.token_type {
+                TokenType1::Bang => self.consume_bang(),
                 _ => self.errors.add(super::unexpected_token()),
             }
         }
@@ -206,6 +206,17 @@ impl<'a> Tokenizer<'a> {
                 self.consume_whitespace(false);
             }
         }
+    }
+
+    fn consume_bang(&mut self) {
+        let t = if let Some(TokenType1::Equal) = self.peek_other(1).map(|t| t.token_type) {
+            self.consume();
+            TokenType::NotEqual
+        } else {
+            TokenType::Bang
+        };
+        self.add_token(t);
+        self.consume();
     }
 
     fn add_indentation_error(&mut self, token: &Token1) {
