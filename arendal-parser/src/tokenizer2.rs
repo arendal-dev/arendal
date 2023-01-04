@@ -8,10 +8,12 @@ pub fn tokenize<'a>(input: &'a Tokens1<'a>) -> Result<Tokens<'a>> {
     Tokenizer::new(input).tokenize()
 }
 
+type TokenVec<'a> = Vec<Box<Token<'a>>>;
+
 #[derive(Debug)]
 pub struct Tokens<'a> {
     input: &'a str,
-    tokens: Vec<Token<'a>>,
+    tokens: TokenVec<'a>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -71,7 +73,7 @@ impl<'a> TokenType<'a> {
 
 struct Tokenizer<'a> {
     input: &'a Tokens1<'a>,
-    tokens: Vec<Token<'a>>,
+    tokens: TokenVec<'a>,
     errors: Errors,
     input_index: usize, // Index of the current input token
     token_start: Pos,   // Start of the current output token
@@ -146,10 +148,10 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn add_token(&mut self, token_type: TokenType<'a>) {
-        self.tokens.push(Token {
+        self.tokens.push(Box::new(Token {
             pos: self.token_start,
             token_type,
-        });
+        }));
     }
 
     fn consume_tabs(&mut self, mut t: TokenType1<'a>) -> usize {
