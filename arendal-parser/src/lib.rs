@@ -31,6 +31,11 @@ impl Indentation {
         }
         ( Self::new(tabs, spaces), ok )
     }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.tabs + self.spaces
+    }
     
 }
 
