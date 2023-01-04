@@ -33,6 +33,7 @@ enum TokenType<'a> {
     CloseSBracket,
     Underscore,
     Digits(&'a str),
+    Word(&'a str),
 }
 
 impl<'a> TokenType<'a> {
@@ -131,7 +132,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn tokenize2(&mut self, c: char) {
-        if !self.consume_eol(c) && !self.consume_digits(c) {
+        if !self.consume_eol(c) && !self.consume_digits(c) && !self.consume_word(c) {
             self.add_unexpected_char(c)
         }
     }
@@ -198,6 +199,26 @@ impl<'a> Tokenizer<'a> {
         }
         if consumed {
             self.add_token(TokenType::Digits(self.get_token_str()));
+        }
+        consumed
+    }
+
+    fn consume_word(&mut self, mut c: char) -> bool {
+        if !c.is_ascii_alphabetic() {
+            return false;
+        }
+        let mut consumed = false;
+        while c.is_ascii_alphanumeric() {
+            self.consume();
+            consumed = true;
+            if self.is_done() {
+                break;
+            } else {
+                c = self.peek();
+            }
+        }
+        if consumed {
+            self.add_token(TokenType::Word(self.get_token_str()));
         }
         consumed
     }
@@ -274,6 +295,10 @@ mod tests {
             self.token(TokenType::Digits(digits), digits.len())
         }
 
+        fn word(self, word: &'a str) -> Self {
+            self.token(TokenType::Word(word), word.len())
+        }
+
         fn ok(&self, input: &str) {
             match super::tokenize(input) {
                 Ok(tokens) => assert_eq!(tokens, self.tokens),
@@ -332,6 +357,11 @@ mod tests {
     #[test]
     fn digits() {
         TestCase::new().digits("1234").ok("1234");
+    }
+
+    #[test]
+    fn word() {
+        TestCase::new().word("abc").ok("abc");
     }
 
     #[test]
