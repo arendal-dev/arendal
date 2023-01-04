@@ -7,18 +7,18 @@ pub fn tokenize(input: &str) -> Result<Tokens> {
 
 #[derive(Debug)]
 pub struct Tokens<'a> {
-    input: &'a str,
-    tokens: Vec<Token<'a>>,
+    pub input: &'a str,
+    pub tokens: Vec<Token<'a>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Token<'a> {
-    pos: Pos, // Starting position of the token
-    token_type: TokenType<'a>,
+    pub pos: Pos, // Starting position of the token
+    pub token_type: TokenType<'a>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum TokenType<'a> {
+pub enum TokenType<'a> {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),

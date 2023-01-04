@@ -1,4 +1,5 @@
-pub mod tokenizer1;
+pub mod tokenizer1; // Tokenizer - first pass
+pub mod tokenizer2; // Tokenizer - second pass
 
 use arendal_error::{Error, Errors};
 
@@ -41,7 +42,7 @@ impl Indentation {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum NewLine {
+pub enum NewLine {
     LF,
     CRLF,
 }
@@ -57,7 +58,7 @@ impl NewLine {
 
 // The coordinates of a token or an error in the input
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Pos {
+pub struct Pos {
     // Line number, starts at 1
     line: usize,
     // Byte index from the beginning of the input
