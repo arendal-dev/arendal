@@ -6,13 +6,13 @@ pub fn tokenize(input: &str) -> Result<Vec<Token>> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Token {
+pub struct Token<'a> {
     pos: Pos, // Starting position of the token
-    token_type: TokenType,
+    token_type: TokenType<'a>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum TokenType {
+enum TokenType<'a> {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
@@ -31,10 +31,12 @@ enum TokenType {
     CloseCBracket,
     OpenSBracket,
     CloseSBracket,
+    Underscore,
+    Digits(&'a str),
 }
 
-impl TokenType {
-    fn single(c: char) -> Option<TokenType> {
+impl<'a> TokenType<'a> {
+    fn single(c: char) -> Option<TokenType<'a>> {
         match c {
             '+' => Some(TokenType::Plus),
             '-' => Some(TokenType::Minus),
@@ -51,17 +53,16 @@ impl TokenType {
             '}' => Some(TokenType::CloseCBracket),
             '[' => Some(TokenType::OpenSBracket),
             ']' => Some(TokenType::CloseSBracket),
+            '_' => Some(TokenType::Underscore),
             _ => None,
         }
     }
 }
 
-impl Token {}
-
 struct Tokenizer<'a> {
     input: &'a str,
     chars: Vec<char>,
-    tokens: Vec<Token>,
+    tokens: Vec<Token<'a>>,
     errors: Errors,
     // Positions
     pos: Pos,
@@ -112,7 +113,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn tokenize(mut self) -> Result<Vec<Token>> {
+    fn tokenize(mut self) -> Result<Vec<Token<'a>>> {
         while !self.is_done() {
             self.token_start = self.pos;
             let c = self.peek();
@@ -136,7 +137,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     // Consumes a char, creating the provided token
-    fn consume_single_char_token(&mut self, token_type: TokenType) {
+    fn consume_single_char_token(&mut self, token_type: TokenType<'a>) {
         self.consume();
         self.add_token(token_type);
     }
@@ -184,7 +185,7 @@ impl<'a> Tokenizer<'a> {
         self.add_token(token);
     }
 
-    fn add_token(&mut self, token_type: TokenType) {
+    fn add_token(&mut self, token_type: TokenType<'a>) {
         self.tokens.push(Token {
             pos: self.token_start,
             token_type,
@@ -208,13 +209,13 @@ mod tests {
     use crate::{NewLine, Pos};
     use NewLine::*;
 
-    struct TestCase {
+    struct TestCase<'a> {
         pos: Pos,
-        tokens: Vec<Token>,
+        tokens: Vec<Token<'a>>,
     }
 
-    impl TestCase {
-        fn new() -> TestCase {
+    impl<'a> TestCase<'a> {
+        fn new() -> TestCase<'a> {
             TestCase {
                 pos: Pos::new(),
                 tokens: Vec::new(),
@@ -230,7 +231,7 @@ mod tests {
             self
         }
 
-        fn token(mut self, token_type: TokenType, bytes: usize) -> Self {
+        fn token(mut self, token_type: TokenType<'a>, bytes: usize) -> Self {
             if let TokenType::EndOfLine(_) = token_type {
                 assert!(false);
             }
@@ -242,7 +243,7 @@ mod tests {
             self
         }
 
-        fn single(self, token_type: TokenType) -> Self {
+        fn single(self, token_type: TokenType<'a>) -> Self {
             self.token(token_type, 1)
         }
 
@@ -305,7 +306,8 @@ mod tests {
             .single(TokenType::CloseCBracket)
             .single(TokenType::OpenSBracket)
             .single(TokenType::CloseSBracket)
-            .ok("+-*./><!()={}[]");
+            .single(TokenType::Underscore)
+            .ok("+-*./><!()={}[]_");
     }
 
     #[test]
