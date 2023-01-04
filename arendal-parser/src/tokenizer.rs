@@ -1,23 +1,21 @@
 use super::{NewLine, Pos};
 use arendal_error::{Errors, Result};
-use num::BigInt;
 
 pub fn tokenize(input: &str) -> Result<Vec<Token>> {
     Tokenizer::new(input).tokenize()
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Token {
     pos: Pos, // Starting position of the token
     token_type: TokenType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum TokenType {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
-    Natural(BigInt),
 }
 
 impl Token {}
@@ -76,62 +74,52 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    /*
-    // Consumes one char if we are not at the end of the input
-    // and the current char is the same as the provided.
-    fn consume_if_char(&mut self, c: char) -> bool {
-        if !self.is_done() && c == self.peek() {
-            self.consume();
-            true
-        } else {
-            false
-        }
-    }
-
-    // Consumes two chars if we are at least two chars from the end of the input
-    // and the current and next ones are same as the provided.
-    fn consume_if_two_chars(&mut self, c1: char, c2: char) -> bool {
-        let i = self.char_index + 1;
-        if i >= self.chars.len() {
-            if c1 == self.peek() && c2 == self.chars[i].1 {
-                self.consume();
-                self.consume();
-                return true;
-            }
-        }
-        false
-    }
-
-    // Starts a token in the current char, consuming it.
-    // Only used for variable-length tokens.
-    fn start_token(&mut self) {
-        self.token_index = self.index;
-        self.token_line_index = self.line_index;
-        self.consume();
-    }
-    */
-
     fn tokenize(mut self) -> Result<Vec<Token>> {
         while !self.is_done() {
-            match self.peek() {
+            self.token_start = self.pos;
+            let c = self.peek();
+            match c {
                 ' ' => self.consume_spaces(),
-                _ => self.add_unexpected_char(self.peek()),
+                '\t' => self.consume_tabs(),
+                _ => self.tokenize2(c),
             }
         }
         self.errors.to_result(self.tokens)
     }
 
+    fn tokenize2(&mut self, c: char) {
+        if !self.consume_eol(c) {
+            self.add_unexpected_char(c)
+        }
+    }
+
     // Consumes a new line if found in the current position
-    fn consume_eol(&mut self) {
-        let c = self.peek();
-        if c == '\n' {}
+    fn consume_eol(&mut self, c: char) -> bool {
+        let newline: Option<NewLine>;
+        if c == '\n' {
+            newline = Some(NewLine::LF);
+        } else if c == '\r' && self.next_matches('\n') {
+            newline = Some(NewLine::CRLF);
+        } else {
+            newline = None;
+        }
+        match newline {
+            Some(nl) => {
+                self.pos = self.pos.newline(nl);
+                self.char_index += nl.bytes();
+                self.add_token(TokenType::EndOfLine(nl));
+                true
+            }
+            _ => false,
+        }
     }
 
     // Starts a token a consumes chars while they are equal to the one provided.
     // Returns the number of chars consumed.
     fn consume_multiple(&mut self, c: char) -> usize {
         let mut count = 1;
-        while self.peek() == c {
+        self.consume();
+        while !self.is_done() && self.peek() == c {
             self.consume();
             count += 1
         }
@@ -155,11 +143,100 @@ impl<'a> Tokenizer<'a> {
         });
     }
 
+    /*
     fn add_indentation_error(&mut self) {
         self.errors.add(super::indentation_error(self.pos))
     }
+    */
 
     fn add_unexpected_char(&mut self, c: char) {
         self.errors.add(super::unexpected_char(self.pos, c))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Token, TokenType};
+    use crate::{NewLine, Pos};
+    use NewLine::*;
+
+    struct TestCase {
+        pos: Pos,
+        tokens: Vec<Token>,
+    }
+
+    impl TestCase {
+        fn new() -> TestCase {
+            TestCase {
+                pos: Pos::new(),
+                tokens: Vec::new(),
+            }
+        }
+
+        fn newline(mut self, nl: NewLine) -> Self {
+            self.tokens.push(Token {
+                pos: self.pos,
+                token_type: TokenType::EndOfLine(nl),
+            });
+            self.pos = self.pos.newline(nl);
+            self
+        }
+
+        fn token(mut self, token_type: TokenType, bytes: usize) -> Self {
+            if let TokenType::EndOfLine(_) = token_type {
+                assert!(false);
+            }
+            self.tokens.push(Token {
+                pos: self.pos,
+                token_type,
+            });
+            self.pos = self.pos.advance(bytes);
+            self
+        }
+
+        fn spaces(self, n: usize) -> Self {
+            self.token(TokenType::Spaces(n), n)
+        }
+
+        fn tabs(self, n: usize) -> Self {
+            self.token(TokenType::Tabs(n), n)
+        }
+
+        fn ok(&self, input: &str) {
+            match super::tokenize(input) {
+                Ok(tokens) => assert_eq!(tokens, self.tokens),
+                Err(_) => assert!(false),
+            }
+        }
+    }
+
+    #[test]
+    fn empty() {
+        TestCase::new().ok("");
+    }
+
+    #[test]
+    fn spaces() {
+        TestCase::new().spaces(3).ok("   ");
+    }
+
+    #[test]
+    fn tabs() {
+        TestCase::new().tabs(3).ok("\t\t\t");
+    }
+
+    #[test]
+    fn lf() {
+        TestCase::new().newline(LF).ok("\n");
+    }
+
+    #[test]
+    fn crlf() {
+        TestCase::new().newline(CRLF).ok("\r\n");
+    }
+
+    #[test]
+    fn harness() {
+        TestCase::new().spaces(3).newline(LF).tabs(1).ok("   \n\t");
     }
 }

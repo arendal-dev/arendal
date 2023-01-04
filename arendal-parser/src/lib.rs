@@ -40,7 +40,7 @@ impl Indentation {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum NewLine {
     LF,
     CRLF,
@@ -49,14 +49,14 @@ enum NewLine {
 impl NewLine {
     fn bytes(self) -> usize {
         match self {
-            LF => 1,
-            CRLF => 2,
+            Self::LF => 1,
+            Self::CRLF => 2,
         }
     }
 }
 
 // The coordinates of a token or an error in the input
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Pos {
     // Line number, starts at 1
     line: usize,
