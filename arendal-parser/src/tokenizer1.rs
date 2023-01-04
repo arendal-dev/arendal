@@ -1,5 +1,4 @@
-use super::{Enclosure, NewLine, Pos};
-use arendal_error::{Errors, Result};
+use super::{Enclosure, Errors, NewLine, Pos, Result};
 
 pub fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(input).tokenize()

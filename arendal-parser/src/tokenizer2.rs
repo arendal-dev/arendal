@@ -1,8 +1,7 @@
 use super::tokenizer1::Token as Token1;
 use super::tokenizer1::TokenType as TokenType1;
 use super::tokenizer1::Tokens as Tokens1;
-use super::{Indentation, NewLine, Pos};
-use arendal_error::{Errors, Result};
+use super::{Errors, Indentation, NewLine, Pos, Result};
 
 pub fn tokenize<'a>(input: &'a Tokens1<'a>) -> Result<Tokens<'a>> {
     Tokenizer::new(input).tokenize()

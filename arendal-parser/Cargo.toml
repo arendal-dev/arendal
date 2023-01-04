@@ -7,6 +7,5 @@ edition = "2021"
 
 [dependencies]
 num = "0.4.0"
-arendal-error = { path = "../arendal-error" }
 arendal-ast = { path = "../arendal-ast" }
 # unicode-segmentation = "1.10.0"

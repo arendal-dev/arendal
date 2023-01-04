@@ -1,7 +1,7 @@
 pub mod tokenizer1; // Tokenizer - first pass
 pub mod tokenizer2; // Tokenizer - second pass
 
-use arendal_error::{Error, Errors};
+use arendal_ast::error::{Error, Errors, Result};
 
 #[derive(Debug, PartialEq, Eq)]
 struct Indentation {
