@@ -3,7 +3,7 @@ pub mod tokenizer2; // Tokenizer - second pass
 
 use arendal_ast::error::{Error, Errors, Result};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Indentation {
     tabs: usize,
     spaces: usize,

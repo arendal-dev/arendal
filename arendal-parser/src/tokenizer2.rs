@@ -2,9 +2,14 @@ use super::tokenizer1::Token as Token1;
 use super::tokenizer1::TokenType as TokenType1;
 use super::tokenizer1::Tokens as Tokens1;
 use super::{Errors, Indentation, NewLine, Pos, Result};
-use num::BigInt;
+use num::bigint::{BigInt, ToBigInt};
 
-pub fn tokenize<'a>(input: &'a Tokens1<'a>) -> Result<Tokens<'a>> {
+pub fn tokenize(input: &str) -> Result<Tokens> {
+    let pass1 = super::tokenizer1::tokenize(input)?;
+    tokenize2(pass1)
+}
+
+fn tokenize2(input: Tokens1) -> Result<Tokens> {
     Tokenizer::new(input).tokenize()
 }
 
@@ -22,7 +27,7 @@ pub struct Token<'a> {
     token_type: TokenType<'a>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum TokenType<'a> {
     Indent(Indentation),
     Whitespace,
@@ -66,7 +71,7 @@ impl<'a> TokenType<'a> {
 }
 
 struct Tokenizer<'a> {
-    input: &'a Tokens1<'a>,
+    input: Tokens1<'a>,
     tokens: TokenVec<'a>,
     errors: Errors,
     input_index: usize, // Index of the current input token
@@ -74,7 +79,7 @@ struct Tokenizer<'a> {
 }
 
 impl<'a> Tokenizer<'a> {
-    fn new(input: &'a Tokens1) -> Tokenizer<'a> {
+    fn new(input: Tokens1<'a>) -> Tokenizer<'a> {
         Tokenizer {
             input,
             tokens: Vec::new(),
@@ -137,6 +142,7 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
             match t.token_type {
+                TokenType1::EndOfLine(_) => self.consume(),
                 TokenType1::Bang => self.consume_bang(),
                 TokenType1::Digits(s) => self.consume_digits(s),
                 _ => self.errors.add(super::unexpected_token()),
@@ -232,14 +238,23 @@ impl<'a> Tokenizer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Token, TokenType};
-    use super::{Token1, TokenType1};
-    use crate::{NewLine, Pos};
-    use NewLine::*;
+    use super::{Indentation, Pos, ToBigInt, Token, TokenType, TokenVec};
+
+    fn without_pos<'a>(input: &TokenVec<'a>) -> TokenVec<'a> {
+        let mut output: TokenVec = Vec::new();
+        for token in input {
+            output.push(Box::new(Token {
+                pos: Pos::new(),
+                token_type: token.token_type.clone(),
+            }));
+        }
+
+        output
+    }
 
     struct TestCase<'a> {
         pos: Pos,
-        tokens: Vec<Token<'a>>,
+        tokens: TokenVec<'a>,
     }
 
     impl<'a> TestCase<'a> {
@@ -251,16 +266,39 @@ mod tests {
         }
 
         fn token(mut self, token_type: TokenType<'a>) -> Self {
-            self.tokens.push(Token {
+            self.tokens.push(Box::new(Token {
                 pos: self.pos,
                 token_type,
-            });
+            }));
             self
+        }
+
+        fn indentation(mut self, tabs: usize, spaces: usize) -> Self {
+            self.token(TokenType::Indent(Indentation::new(tabs, spaces)))
+        }
+
+        fn integer(mut self, n: usize) -> Self {
+            self.token(TokenType::Integer(n.to_bigint().unwrap()))
+        }
+
+        fn ok_without_pos(&self, input: &str) {
+            match super::tokenize(input) {
+                Ok(tokens) => assert_eq!(without_pos(&tokens.tokens), self.tokens),
+                Err(_) => assert!(false),
+            }
         }
     }
 
     #[test]
     fn empty() {
-        // TestCase::new().ok("");
+        TestCase::new().ok_without_pos("");
+    }
+
+    #[test]
+    fn digits() {
+        TestCase::new()
+            .indentation(0, 0)
+            .integer(1234)
+            .ok_without_pos("1234");
     }
 }
