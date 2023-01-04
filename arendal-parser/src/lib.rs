@@ -1,8 +1,6 @@
 pub mod tokenizer;
 
-use arendal_error::error;
-use arendal_error::errors::Error;
-use arendal_error::Error as E;
+use arendal_error::{Error, Errors};
 
 #[derive(Debug, PartialEq, Eq)]
 struct Indentation {
@@ -51,7 +49,7 @@ enum NewLine {
 impl NewLine {
     fn bytes(self) -> usize {
         match self {
-            LR => 1,
+            LF => 1,
             CRLF => 2,
         }
     }
@@ -105,8 +103,8 @@ struct ParserError {
 }
 
 impl ParserError {
-    fn new(pos: Pos, error_type: ErrorType) -> E {
-        error(ParserError { pos, error_type })
+    fn new(pos: Pos, error_type: ErrorType) -> Self {
+        ParserError { pos, error_type }
     }
 }
 
@@ -118,11 +116,11 @@ enum ErrorType {
 
 impl Error for ParserError {}
 
-fn indentation_error(pos: Pos) -> E {
+fn indentation_error(pos: Pos) -> ParserError {
     ParserError::new(pos, ErrorType::IndentationError)
 }
 
-fn unexpected_char(pos: Pos, c: char) -> E {
+fn unexpected_char(pos: Pos, c: char) -> ParserError {
     ParserError::new(pos, ErrorType::UnexpectedChar(c))
 }
 
