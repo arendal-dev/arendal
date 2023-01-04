@@ -2,6 +2,7 @@ use super::tokenizer1::Token as Token1;
 use super::tokenizer1::TokenType as TokenType1;
 use super::tokenizer1::Tokens as Tokens1;
 use super::{Errors, Indentation, NewLine, Pos, Result};
+use num::BigInt;
 
 pub fn tokenize<'a>(input: &'a Tokens1<'a>) -> Result<Tokens<'a>> {
     Tokenizer::new(input).tokenize()
@@ -36,6 +37,7 @@ enum TokenType<'a> {
     Bang,
     Equal,
     NotEqual,
+    Integer(BigInt),
     OpenParens,
     CloseParens,
     OpenCBracket,
@@ -43,7 +45,6 @@ enum TokenType<'a> {
     OpenSBracket,
     CloseSBracket,
     Underscore,
-    Digits(&'a str),
     Word(&'a str),
 }
 
@@ -137,6 +138,7 @@ impl<'a> Tokenizer<'a> {
             }
             match t.token_type {
                 TokenType1::Bang => self.consume_bang(),
+                TokenType1::Digits(s) => self.consume_digits(s),
                 _ => self.errors.add(super::unexpected_token()),
             }
         }
@@ -216,6 +218,11 @@ impl<'a> Tokenizer<'a> {
         };
         self.add_token(t);
         self.consume();
+    }
+
+    fn consume_digits(&mut self, digits: &'a str) {
+        self.consume();
+        self.add_token(TokenType::Integer(digits.parse().unwrap()));
     }
 
     fn add_indentation_error(&mut self, token: &Token1) {
