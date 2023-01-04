@@ -1,5 +1,5 @@
-extern crate num;
 extern crate arendal_error;
+extern crate num;
 
 use num::BigInt;
 #[derive(Debug, PartialEq, Eq)]
