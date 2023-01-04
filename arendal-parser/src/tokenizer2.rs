@@ -98,27 +98,30 @@ impl<'a> Tokenizer<'a> {
         self.input_index += 1;
     }
 
-    // Returns the token at the current index.
+    // Returns a clone of the token at the current index.
     // Panics if we have reached the end of the input
-    fn peek(&self) -> &Token1 {
-        &self.input.tokens[self.input_index]
+    fn peek(&self) -> Token1<'a> {
+        self.input.tokens[self.input_index].clone()
     }
 
-    // Returns the token the requested positions after the current one, if any.
+    // Returns a clone of the token the requested positions after the current one, if any.
     // Panics if we have reached the end of the input
-    fn peek_other(&self, n: usize) -> Option<&Token1> {
+    fn peek_other(&self, n: usize) -> Option<Token1<'a>> {
         let i = self.input_index + n;
         if i >= self.input.tokens.len() {
             None
         } else {
-            Some(&self.input.tokens[i])
+            Some(self.input.tokens[i].clone())
         }
     }
 
     fn tokenize(mut self) -> Result<Tokens<'a>> {
         while !self.is_done() {
             let t = self.peek();
-            self.token_start = t.pos; // TODO
+            self.token_start = t.pos;
+            match t {
+                _ => self.errors.add(super::unexpected_token()),
+            }
         }
         self.errors.to_result(Tokens {
             input: self.input.input,

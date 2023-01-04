@@ -11,13 +11,13 @@ pub struct Tokens<'a> {
     pub tokens: Vec<Token<'a>>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'a> {
     pub pos: Pos, // Starting position of the token
     pub token_type: TokenType<'a>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType<'a> {
     Spaces(usize),
     Tabs(usize),

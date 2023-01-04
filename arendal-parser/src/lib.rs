@@ -120,6 +120,7 @@ impl ParserError {
 enum ErrorType {
     IndentationError,
     UnexpectedChar(char),
+    UnexpectedToken,
 }
 
 impl Error for ParserError {}
@@ -130,6 +131,10 @@ fn indentation_error(pos: Pos) -> ParserError {
 
 fn unexpected_char(pos: Pos, c: char) -> ParserError {
     ParserError::new(pos, ErrorType::UnexpectedChar(c))
+}
+
+fn unexpected_token() -> ParserError {
+    ParserError::new(Pos::new(), ErrorType::UnexpectedToken)
 }
 
 #[cfg(test)]
