@@ -16,7 +16,7 @@ impl Indentation {
         let mut tabs: usize = 0;
         let mut spaces: usize = 0;
         let mut ok: bool = true;
-        for (i, c) in input.char_indices() {
+        for (_, c) in input.char_indices() {
             if c == '\t' {
                 if spaces > 0 {
                     ok = false;

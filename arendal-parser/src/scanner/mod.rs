@@ -59,21 +59,74 @@ impl<'a> Scanner<'a> {
         self.char_index += 1;
     }
 
+    fn peek(&self) -> Option<char> {
+        if self.is_done() {
+            None
+        } else {
+            Some(self.chars[self.char_index].1)
+        }
+    }
+
+    fn peek_next(&self) -> Option<char> {
+        let i = self.char_index + 1;
+        if i >= self.chars.len() {
+            None
+        } else {
+            Some(self.chars[i].1)
+        }
+    }
+
+    fn matches(&mut self, c: char) -> bool {
+        if !self.is_done() && c == self.chars[self.char_index].1 {
+            self.consume();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn skip_whitespace(&mut self) {
+        while self.matches(' ') || self.matches('\t') {}
+    }
+
+    fn eol(&mut self) -> bool {
+        match self.peek() {
+            Some('\n') => {
+                self.consume();
+                true
+            }
+            Some('\r') => match self.peek_next() {
+                Some('\n') => {
+                    self.consume();
+                    true
+                }
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
     fn scan(mut self) -> Result<Vec<Token>> {
         while !self.is_done() {
-            self.line = self.line + 1;
+            self.line += 1;
             let (indentation, ok) = super::Indentation::get(&self.input[self.index..]);
             if !ok {
                 self.errors.add(indentation_error())
             }
             let len = indentation.len();
             if len > 0 {
-                self.index = self.index + len;
+                self.index += len;
                 self.add_indentation(indentation);
             }
-            break; // TODO: next step skip whitespace and start looking at characters
+            self.scan_line();
         }
         self.errors.to_result(self.tokens)
+    }
+
+    fn scan_line(&mut self) {
+        while !self.is_done() && !self.eol() {
+            self.skip_whitespace();
+        }
     }
 
     fn add_indentation(&mut self, indentation: Indentation) {
