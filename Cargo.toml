@@ -1,6 +1,8 @@
 [workspace]
 
 members = [
+    "arendal-error",
     "arendal-ast",
+    "arendal-parser",
     "arendal-pest",
 ]
