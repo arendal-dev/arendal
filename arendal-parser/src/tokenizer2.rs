@@ -131,7 +131,10 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
             match t.token_type {
-                TokenType1::EndOfLine(_) => self.consume(),
+                TokenType1::EndOfLine(_) => {
+                    self.consume();
+                    self.consume_indentation();
+                },
                 TokenType1::Bang => self.consume_bang(),
                 TokenType1::Digits(s) => self.consume_digits(s),
                 _ => self.errors.add(super::unexpected_token(t.clone())),
@@ -204,12 +207,6 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn consume_eol(&mut self, token: Token1<'a>) {
-        self.consume();
-        self.consume_indentation();
-    }
-
-
     fn consume_bang(&mut self) {
         let t = if let Some(TokenType1::Equal) = self.peek_other(1).map(|t| t.token_type) {
             self.consume();
@@ -273,6 +270,10 @@ mod tests {
             self
         }
 
+        fn whitespace(mut self) -> Self {
+            self.token(TokenType::Whitespace)
+        }
+
         fn indentation(mut self, tabs: usize, spaces: usize) -> Self {
             self.token(TokenType::Indent(Indentation::new(tabs, spaces)))
         }
@@ -283,7 +284,7 @@ mod tests {
 
         fn ok_without_pos(&self) {
             match super::tokenize(self.input) {
-                Ok(tokens) => assert!(eq_types(&tokens, &self.tokens)),
+                Ok(tokens) => assert!(eq_types(&tokens, &self.tokens), "{:?}\n{:?}", &tokens, &self.tokens),
                 Err(_) => assert!(false),
             }
         }
@@ -305,4 +306,31 @@ mod tests {
             .integer(1234)
             .ok_without_pos();
     }
+
+    #[test]
+    fn sums() {
+        TestCase::new("1234+456")
+            .indentation(0, 0)
+            .integer(1234)
+            .token(TokenType::Plus)
+            .integer(456)
+            .ok_without_pos();
+        TestCase::new("  1234 +  456")
+            .indentation(0, 2)
+            .integer(1234)
+            .whitespace()
+            .token(TokenType::Plus)
+            .whitespace()
+            .integer(456)
+            .ok_without_pos();
+            TestCase::new("  1234 +\n\t456")
+            .indentation(0, 2)
+            .integer(1234)
+            .whitespace()
+            .token(TokenType::Plus)
+            .indentation(1, 0)
+            .integer(456)
+            .ok_without_pos();
+    }
+
 }
