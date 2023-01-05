@@ -1,8 +1,9 @@
-mod pos;
+pub mod pos;
 pub mod tokenizer1; // Tokenizer - first pass
 pub mod tokenizer2; // Tokenizer - second pass
 
 use arendal_ast::error::{Error, Errors, Result};
+pub use pos::Pos;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Indentation {
@@ -55,6 +56,11 @@ impl NewLine {
             Self::CRLF => 2,
         }
     }
+
+    fn chars(self) -> usize {
+        self.bytes() // we have another method in case it's different in the future
+    }
+
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,67 +70,27 @@ pub enum Enclosure {
     Curly,
 }
 
-// The coordinates of a token or an error in the input
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Pos {
-    // Line number, starts at 1
-    line: usize,
-    // Byte index from the beginning of the input
-    index: usize,
-    // Byte index from the beginning of the line
-    line_index: usize,
-}
-
-impl Pos {
-    // Creates a new position at the beginning of the input
-    fn new() -> Pos {
-        Pos {
-            line: 1,
-            index: 0,
-            line_index: 0,
-        }
-    }
-
-    // Returns a new position that it's the provided number of bytes forward in the same line
-    fn advance(&self, bytes: usize) -> Pos {
-        Pos {
-            line: self.line,
-            index: self.index + bytes,
-            line_index: self.line_index + bytes,
-        }
-    }
-
-    // Returns a new position at the beginning of the next line.
-    fn newline(&self, newline: NewLine) -> Pos {
-        Pos {
-            line: self.line + 1,
-            index: self.index + newline.bytes(),
-            line_index: 0,
-        }
-    }
-}
-
 #[derive(Debug)]
-struct ParserError {
+struct ParserError<'a> {
     // Error position
-    pos: Pos,
-    error_type: ErrorType,
+    pos: Pos<'a>,
+    error_type: ErrorType<'a>,
 }
 
-impl ParserError {
-    fn new(pos: Pos, error_type: ErrorType) -> Self {
+impl<'a> ParserError<'a> {
+    fn new(pos: Pos<'a>, error_type: ErrorType<'a>) -> Self {
         ParserError { pos, error_type }
     }
 }
 
 #[derive(Debug)]
-enum ErrorType {
+enum ErrorType<'a> {
     IndentationError,
     UnexpectedChar(char),
-    UnexpectedToken,
+    UnexpectedToken(tokenizer1::Token<'a>),
 }
 
-impl Error for ParserError {}
+impl<'a> Error for ParserError<'a> {}
 
 fn indentation_error(pos: Pos) -> ParserError {
     ParserError::new(pos, ErrorType::IndentationError)
@@ -134,8 +100,8 @@ fn unexpected_char(pos: Pos, c: char) -> ParserError {
     ParserError::new(pos, ErrorType::UnexpectedChar(c))
 }
 
-fn unexpected_token() -> ParserError {
-    ParserError::new(Pos::new(), ErrorType::UnexpectedToken)
+fn unexpected_token(token: tokenizer1::Token) -> ParserError {
+    ParserError::new(token.pos, ErrorType::UnexpectedToken(token))
 }
 
 #[cfg(test)]

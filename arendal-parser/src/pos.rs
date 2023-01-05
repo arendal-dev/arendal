@@ -29,8 +29,16 @@ impl<'a> Pos<'a> {
     pub fn reset(&mut self) {
         self.index = 0;
     }
-}
 
+    // Returns a slice from the current position to provided one
+    // Panics if the positions are for different input or if the end index is smaller
+    // than the current one or larger than the length of the input.
+    pub fn str_to(&self, to: &Pos) -> &'a str {
+        assert_eq!(self.input, to.input);
+        assert!(self.index <= to.index);
+        &self.input[self.index..to.index]
+    }
+}
 
 #[cfg(test)]
 mod tests {

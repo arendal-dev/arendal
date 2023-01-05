@@ -1,21 +1,21 @@
 pub trait Error: std::fmt::Debug {}
 
-type ErrorItem = Box<dyn Error>;
-type ErrorVec = Vec<ErrorItem>;
+type ErrorItem<'a> = Box<dyn Error + 'a>;
+type ErrorVec<'a> = Vec<ErrorItem<'a>>;
 
 #[derive(Debug)]
-pub struct Errors {
-    errors: ErrorVec,
+pub struct Errors<'a> {
+    errors: ErrorVec<'a>,
 }
 
-pub type Result<T> = std::result::Result<T, Errors>;
+pub type Result<'a, T> = std::result::Result<T, Errors<'a>>;
 
-impl Errors {
-    pub fn new() -> Errors {
+impl<'a> Errors<'a> {
+    pub fn new() -> Errors<'a> {
         Errors { errors: Vec::new() }
     }
 
-    pub fn add<T: Error + 'static>(&mut self, error: T) {
+    pub fn add<T: Error + 'a>(&mut self, error: T) {
         self.errors.push(Box::new(error));
     }
 
@@ -26,7 +26,7 @@ impl Errors {
         }
     }
 
-    pub fn to_result<T>(self, value: T) -> Result<T> {
+    pub fn to_result<T>(self, value: T) -> Result<'a, T> {
         if self.errors.is_empty() {
             Ok(value)
         } else {

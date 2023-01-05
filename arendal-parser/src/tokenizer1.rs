@@ -4,15 +4,11 @@ pub fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(input).tokenize()
 }
 
-#[derive(Debug)]
-pub struct Tokens<'a> {
-    pub input: &'a str,
-    pub tokens: Vec<Token<'a>>,
-}
+pub type Tokens<'a> = Vec<Token<'a>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'a> {
-    pub pos: Pos, // Starting position of the token
+    pub pos: Pos<'a>, // Starting position of the token
     pub token_type: TokenType<'a>,
 }
 
@@ -75,28 +71,26 @@ impl<'a> TokenType<'a> {
 }
 
 struct Tokenizer<'a> {
-    input: &'a str,
     chars: Vec<char>,
-    tokens: Vec<Token<'a>>,
-    errors: Errors,
+    tokens: Tokens<'a>,
+    errors: Errors<'a>,
     // Positions
-    pos: Pos,
+    pos: Pos<'a>,
     // Current char index from the beginning of the input
     char_index: usize,
     // Start of the current token
-    token_start: Pos,
+    token_start: Pos<'a>,
 }
 
 impl<'a> Tokenizer<'a> {
     fn new(input: &str) -> Tokenizer {
         Tokenizer {
-            input,
             chars: input.chars().collect(),
             tokens: Vec::new(),
             errors: Errors::new(),
-            pos: Pos::new(),
+            pos: Pos::new(input),
             char_index: 0,
-            token_start: Pos::new(),
+            token_start: Pos::new(input),
         }
     }
 
@@ -108,7 +102,7 @@ impl<'a> Tokenizer<'a> {
     // Consumes one char, advancing the indices accordingly.
     fn consume(&mut self) {
         let bytes = self.chars[self.char_index].len_utf8();
-        self.pos = self.pos.advance(bytes);
+        self.pos.advance(bytes);
         self.char_index += 1;
     }
 
@@ -128,7 +122,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn tokenize(mut self) -> Result<Tokens<'a>> {
+    fn tokenize(mut self) -> Result<'a, Tokens<'a>> {
         while !self.is_done() {
             self.token_start = self.pos;
             let c = self.peek();
@@ -142,10 +136,7 @@ impl<'a> Tokenizer<'a> {
                 }
             }
         }
-        self.errors.to_result(Tokens {
-            input: self.input,
-            tokens: self.tokens,
-        })
+        self.errors.to_result(self.tokens)
     }
 
     fn tokenize2(&mut self, c: char) {
@@ -176,8 +167,8 @@ impl<'a> Tokenizer<'a> {
     fn consume_eol(&mut self, c: char) -> bool {
         match self.is_eol(c) {
             Some(nl) => {
-                self.pos = self.pos.newline(nl);
-                self.char_index += nl.bytes();
+                self.pos.advance(nl.bytes());
+                self.char_index += nl.chars();
                 self.add_token(TokenType::EndOfLine(nl));
                 true
             }
@@ -245,7 +236,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn get_token_str(&self) -> &'a str {
-        &self.input[self.token_start.index..self.pos.index]
+        self.token_start.str_to(&self.pos)
     }
 
     fn add_token(&mut self, token_type: TokenType<'a>) {
@@ -262,18 +253,20 @@ impl<'a> Tokenizer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Enclosure, NewLine, Pos, Token, TokenType};
+    use super::{Enclosure, NewLine, Pos, Token, Tokens, TokenType};
     use NewLine::*;
 
     struct TestCase<'a> {
-        pos: Pos,
-        tokens: Vec<Token<'a>>,
+        input: &'a str,
+        pos: Pos<'a>,
+        tokens: Tokens<'a>,
     }
 
     impl<'a> TestCase<'a> {
-        fn new() -> TestCase<'a> {
+        fn new(input: &'a str) -> TestCase<'a> {
             TestCase {
-                pos: Pos::new(),
+                input,
+                pos: Pos::new(input),
                 tokens: Vec::new(),
             }
         }
@@ -283,7 +276,7 @@ mod tests {
                 pos: self.pos,
                 token_type: TokenType::EndOfLine(nl),
             });
-            self.pos = self.pos.newline(nl);
+            self.pos.advance(nl.bytes());
             self
         }
 
@@ -295,7 +288,7 @@ mod tests {
                 pos: self.pos,
                 token_type,
             });
-            self.pos = self.pos.advance(bytes);
+            self.pos.advance(bytes);
             self
         }
 
@@ -319,9 +312,9 @@ mod tests {
             self.token(TokenType::Word(word), word.len())
         }
 
-        fn ok(&self, input: &str) {
-            match super::tokenize(input) {
-                Ok(tokens) => assert_eq!(tokens.tokens, self.tokens),
+        fn ok(&self) {
+            match super::tokenize(self.input) {
+                Ok(tokens) => assert_eq!(tokens, self.tokens),
                 Err(_) => assert!(false),
             }
         }
@@ -329,32 +322,32 @@ mod tests {
 
     #[test]
     fn empty() {
-        TestCase::new().ok("");
+        TestCase::new("").ok();
     }
 
     #[test]
     fn spaces() {
-        TestCase::new().spaces(3).ok("   ");
+        TestCase::new("   ").spaces(3).ok();
     }
 
     #[test]
     fn tabs() {
-        TestCase::new().tabs(3).ok("\t\t\t");
+        TestCase::new("\t\t\t").tabs(3).ok();
     }
 
     #[test]
     fn lf() {
-        TestCase::new().newline(LF).ok("\n");
+        TestCase::new("\n").newline(LF).ok();
     }
 
     #[test]
     fn crlf() {
-        TestCase::new().newline(CRLF).ok("\r\n");
+        TestCase::new("\r\n").newline(CRLF).ok();
     }
 
     #[test]
     fn singles() {
-        TestCase::new()
+        TestCase::new("+-*./><!()={}[]_")
             .single(TokenType::Plus)
             .single(TokenType::Minus)
             .single(TokenType::Star)
@@ -371,28 +364,28 @@ mod tests {
             .single(TokenType::Open(Enclosure::Square))
             .single(TokenType::Close(Enclosure::Square))
             .single(TokenType::Underscore)
-            .ok("+-*./><!()={}[]_");
+            .ok();
     }
 
     #[test]
     fn digits() {
-        TestCase::new().digits("1234").ok("1234");
-        TestCase::new()
+        TestCase::new("1234").digits("1234").ok();
+        TestCase::new("12 34")
             .digits("12")
             .spaces(1)
             .digits("34")
-            .ok("12 34");
+            .ok();
     }
 
     #[test]
     fn word() {
-        TestCase::new().word("abc").ok("abc");
-        TestCase::new().word("abc4e").ok("abc4e");
-        TestCase::new().digits("4").word("bc5e").ok("4bc5e");
+        TestCase::new("abc").word("abc").ok();
+        TestCase::new("abc4e").word("abc4e").ok();
+        TestCase::new("4bc5e").digits("4").word("bc5e").ok();
     }
 
     #[test]
     fn harness() {
-        TestCase::new().spaces(3).newline(LF).tabs(1).ok("   \n\t");
+        TestCase::new("   \n\t").spaces(3).newline(LF).tabs(1).ok();
     }
 }
