@@ -1,24 +1,20 @@
-// This struct represents an input string and a byte index in it. 
+// This struct represents an input string and a byte index in it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pos<'a> {
     input: &'a str, // Input string
-    index: usize, // Byte index from the beginning of the input
+    index: usize,   // Byte index from the beginning of the input
 }
 
 impl<'a> Pos<'a> {
     // Creates a new position at the beginning of the input
     pub fn new(input: &str) -> Pos {
-        Pos {
-            input,
-            index: 0,
-        }
+        Pos { input, index: 0 }
     }
 
     // Returns true if we have reached the end of the input
     pub fn is_done(&self) -> bool {
         self.index >= self.input.len()
     }
-    
 
     // Advances the current position the provided number of bytes
     pub fn advance(&mut self, bytes: usize) {
@@ -59,6 +55,4 @@ mod tests {
         assert_eq!(0, pos.index);
         assert!(!pos.is_done());
     }
-
-
 }

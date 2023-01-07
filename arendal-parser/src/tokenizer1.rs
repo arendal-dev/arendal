@@ -253,7 +253,7 @@ impl<'a> Tokenizer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Enclosure, NewLine, Pos, Token, Tokens, TokenType};
+    use super::{Enclosure, NewLine, Pos, Token, TokenType, Tokens};
     use NewLine::*;
 
     struct TestCase<'a> {

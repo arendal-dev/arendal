@@ -1,19 +1,33 @@
 pub mod error;
 
-use num::BigInt;
+use num::bigint::BigInt;
+
 #[derive(Debug, PartialEq, Eq)]
-pub enum Expr {
+pub enum UnaryOp {
+    Minus,
+    Not,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Eq,
+    NEq,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Expression {
     IntLiteral(BigInt),
+    Unary(UnaryOp, Box<Expression>),
+    Binary(BinaryOp, Box<Expression>, Box<Expression>),
 }
 
 #[cfg(test)]
 mod tests {
-    use num::bigint::ToBigInt;
-
-    use super::*;
 
     #[test]
-    fn it_works() {
-        let _ = Expr::IntLiteral(0.to_bigint().unwrap());
-    }
+    fn it_works() {}
 }

@@ -15,14 +15,14 @@ fn tokenize2(input: Tokens1) -> Result<Tokens> {
 
 pub type Tokens<'a> = Vec<Box<Token<'a>>>;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token<'a> {
-    pos: Pos<'a>, // Starting position of the token
-    token_type: TokenType<'a>,
+    pub pos: Pos<'a>, // Starting position of the token
+    pub token_type: TokenType<'a>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum TokenType<'a> {
+pub enum TokenType<'a> {
     Indent(Indentation),
     Whitespace,
     EndOfLine(NewLine),
@@ -68,8 +68,8 @@ struct Tokenizer<'a> {
     input: Tokens1<'a>,
     tokens: Tokens<'a>,
     errors: Errors<'a>,
-    input_index: usize, // Index of the current input token
-    token_start: Pos<'a>,   // Start of the current output token
+    index: usize,         // Index of the current input token
+    token_start: Pos<'a>, // Start of the current output token
 }
 
 impl<'a> Tokenizer<'a> {
@@ -78,19 +78,19 @@ impl<'a> Tokenizer<'a> {
             input,
             tokens: Vec::new(),
             errors: Errors::new(),
-            input_index: 0,
+            index: 0,
             token_start: Pos::new(""),
         }
     }
 
     // Returns true if we have reached the end of the input
     fn is_done(&self) -> bool {
-        self.input_index >= self.input.len()
+        self.index >= self.input.len()
     }
 
     // Consumes one token, advancing the index accordingly.
     fn consume(&mut self) {
-        self.input_index += 1;
+        self.index += 1;
     }
 
     // Returns a clone of the token at the current index, if any
@@ -98,7 +98,7 @@ impl<'a> Tokenizer<'a> {
         if self.is_done() {
             None
         } else {
-            Some(self.input[self.input_index].clone())
+            Some(self.input[self.index].clone())
         }
     }
 
@@ -110,7 +110,7 @@ impl<'a> Tokenizer<'a> {
 
     // Returns a clone of the token the requested positions after the current one, if any.
     fn peek_other(&self, n: usize) -> Option<Token1<'a>> {
-        let i = self.input_index + n;
+        let i = self.index + n;
         if i >= self.input.len() {
             None
         } else {
@@ -134,7 +134,7 @@ impl<'a> Tokenizer<'a> {
                 TokenType1::EndOfLine(_) => {
                     self.consume();
                     self.consume_indentation();
-                },
+                }
                 TokenType1::Bang => self.consume_bang(),
                 TokenType1::Digits(s) => self.consume_digits(s),
                 _ => self.errors.add(super::unexpected_token(t.clone())),
@@ -237,15 +237,16 @@ mod tests {
         if n == right.len() {
             for (leftToken, rightToken) in left.iter().zip(right.iter()) {
                 match &leftToken.token_type {
-                    other => if *other != rightToken.token_type {
-                        return false;
-                    },
+                    other => {
+                        if *other != rightToken.token_type {
+                            return false;
+                        }
+                    }
                 }
             }
             true
         } else {
             false
-
         }
     }
 
@@ -284,7 +285,12 @@ mod tests {
 
         fn ok_without_pos(&self) {
             match super::tokenize(self.input) {
-                Ok(tokens) => assert!(eq_types(&tokens, &self.tokens), "{:?}\n{:?}", &tokens, &self.tokens),
+                Ok(tokens) => assert!(
+                    eq_types(&tokens, &self.tokens),
+                    "{:?}\n{:?}",
+                    &tokens,
+                    &self.tokens
+                ),
                 Err(_) => assert!(false),
             }
         }
@@ -323,7 +329,7 @@ mod tests {
             .whitespace()
             .integer(456)
             .ok_without_pos();
-            TestCase::new("  1234 +\n\t456")
+        TestCase::new("  1234 +\n\t456")
             .indentation(0, 2)
             .integer(1234)
             .whitespace()
@@ -332,5 +338,4 @@ mod tests {
             .integer(456)
             .ok_without_pos();
     }
-
 }
