@@ -4,7 +4,8 @@ use crate::{Errors, Expression, Pos, Result};
 // Tries to parses an expression
 fn parse_expression(input: &str) -> Result<Option<Expression>> {
     let pass2 = super::tokenize(input)?;
-    Ok(Parser::new(pass2).expression())
+    let expr = Parser::new(pass2).expression();
+    Ok(expr)
 }
 
 struct Parser<'a> {
@@ -53,7 +54,7 @@ impl<'a> Parser<'a> {
     }
 
     // Tries to parses an expression, if any, consuming as many tokens as needed
-    fn expression(&mut self) -> Option<Expression> {
+    fn expression(&mut self) -> Option<Expression<'a>> {
         None
     }
 }

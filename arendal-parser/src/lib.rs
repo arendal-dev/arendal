@@ -3,8 +3,6 @@ pub mod pass1;
 use arendal_ast::error;
 use std::fmt;
 
-use arendal_ast::Expression;
-
 // This struct represents an input string and a byte index in it.
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Pos<'a> {
@@ -53,6 +51,7 @@ impl<'a> error::ErrorLoc for Pos<'a> {}
 
 type Errors<'a> = error::Errors<'a, Pos<'a>>;
 type Result<'a, T> = error::Result<'a, T, Pos<'a>>;
+type Expression<'a> = arendal_ast::Expression<'a, Pos<'a>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Indentation {
