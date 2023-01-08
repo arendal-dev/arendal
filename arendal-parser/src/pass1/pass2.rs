@@ -1,28 +1,28 @@
-use super::tokenizer1::Token as Token1;
-use super::tokenizer1::TokenType as TokenType1;
-use super::tokenizer1::Tokens as Tokens1;
-use super::{Errors, Indentation, NewLine, Pos, Result};
+mod parser;
+
+use super::{CharToken, CharTokenType, CharTokens, Errors, NewLine, Pos, Result};
+use crate::Indentation;
 use num::bigint::{BigInt, ToBigInt};
 
-pub fn tokenize(input: &str) -> Result<Tokens> {
-    let pass1 = super::tokenizer1::tokenize(input)?;
+fn tokenize(input: &str) -> Result<Tokens> {
+    let pass1 = super::tokenize(input)?;
     tokenize2(pass1)
 }
 
-fn tokenize2(input: Tokens1) -> Result<Tokens> {
+fn tokenize2(input: CharTokens) -> Result<Tokens> {
     Tokenizer::new(input).tokenize()
 }
 
-pub type Tokens<'a> = Vec<Box<Token<'a>>>;
+type Tokens<'a> = Vec<Box<Token<'a>>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Token<'a> {
-    pub pos: Pos<'a>, // Starting position of the token
-    pub token_type: TokenType<'a>,
+struct Token<'a> {
+    pos: Pos<'a>, // Starting position of the token
+    token_type: TokenType<'a>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenType<'a> {
+enum TokenType<'a> {
     Indent(Indentation),
     Whitespace,
     EndOfLine(NewLine),
@@ -48,24 +48,24 @@ pub enum TokenType<'a> {
 }
 
 impl<'a> TokenType<'a> {
-    fn single(t: &TokenType1) -> Option<TokenType<'a>> {
+    fn single(t: &CharTokenType) -> Option<TokenType<'a>> {
         match t {
-            TokenType1::Plus => Some(TokenType::Plus),
-            TokenType1::Minus => Some(TokenType::Minus),
-            TokenType1::Star => Some(TokenType::Star),
-            TokenType1::Slash => Some(TokenType::Slash),
-            TokenType1::Dot => Some(TokenType::Dot),
-            TokenType1::Greater => Some(TokenType::Greater),
-            TokenType1::Less => Some(TokenType::Less),
-            TokenType1::Equal => Some(TokenType::Equal),
-            TokenType1::Underscore => Some(TokenType::Underscore),
+            CharTokenType::Plus => Some(TokenType::Plus),
+            CharTokenType::Minus => Some(TokenType::Minus),
+            CharTokenType::Star => Some(TokenType::Star),
+            CharTokenType::Slash => Some(TokenType::Slash),
+            CharTokenType::Dot => Some(TokenType::Dot),
+            CharTokenType::Greater => Some(TokenType::Greater),
+            CharTokenType::Less => Some(TokenType::Less),
+            CharTokenType::Equal => Some(TokenType::Equal),
+            CharTokenType::Underscore => Some(TokenType::Underscore),
             _ => None,
         }
     }
 }
 
 struct Tokenizer<'a> {
-    input: Tokens1<'a>,
+    input: CharTokens<'a>,
     tokens: Tokens<'a>,
     errors: Errors<'a>,
     index: usize,         // Index of the current input token
@@ -73,7 +73,7 @@ struct Tokenizer<'a> {
 }
 
 impl<'a> Tokenizer<'a> {
-    fn new(input: Tokens1<'a>) -> Tokenizer<'a> {
+    fn new(input: CharTokens<'a>) -> Tokenizer<'a> {
         Tokenizer {
             input,
             tokens: Vec::new(),
@@ -94,7 +94,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     // Returns a clone of the token at the current index, if any
-    fn peek(&self) -> Option<Token1<'a>> {
+    fn peek(&self) -> Option<CharToken<'a>> {
         if self.is_done() {
             None
         } else {
@@ -103,13 +103,13 @@ impl<'a> Tokenizer<'a> {
     }
 
     // Consumes one token a returns the next one, if any.
-    fn consume_and_peek(&mut self) -> Option<Token1<'a>> {
+    fn consume_and_peek(&mut self) -> Option<CharToken<'a>> {
         self.consume();
         self.peek()
     }
 
     // Returns a clone of the token the requested positions after the current one, if any.
-    fn peek_other(&self, n: usize) -> Option<Token1<'a>> {
+    fn peek_other(&self, n: usize) -> Option<CharToken<'a>> {
         let i = self.index + n;
         if i >= self.input.len() {
             None
@@ -131,13 +131,13 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
             match t.token_type {
-                TokenType1::EndOfLine(_) => {
+                CharTokenType::EndOfLine(_) => {
                     self.consume();
                     self.consume_indentation();
                 }
-                TokenType1::Bang => self.consume_bang(),
-                TokenType1::Digits(s) => self.consume_digits(s),
-                _ => self.errors.add(super::unexpected_token(t.clone())),
+                CharTokenType::Bang => self.consume_bang(),
+                CharTokenType::Digits(s) => self.consume_digits(s),
+                _ => self.errors.add(crate::parsing_error(t.pos)),
             }
         }
         self.errors.to_result(self.tokens)
@@ -150,9 +150,9 @@ impl<'a> Tokenizer<'a> {
         }));
     }
 
-    fn consume_tabs(&mut self, mut t: TokenType1<'a>) -> usize {
+    fn consume_tabs(&mut self, mut t: CharTokenType<'a>) -> usize {
         let mut tabs = 0;
-        while let TokenType1::Tabs(n) = t {
+        while let CharTokenType::Tabs(n) = t {
             tabs += n;
             if let Some(next) = self.consume_and_peek() {
                 t = next.token_type;
@@ -163,9 +163,9 @@ impl<'a> Tokenizer<'a> {
         tabs
     }
 
-    fn consume_spaces(&mut self, mut t: TokenType1<'a>) -> usize {
+    fn consume_spaces(&mut self, mut t: CharTokenType<'a>) -> usize {
         let mut spaces = 0;
-        while let TokenType1::Spaces(n) = t {
+        while let CharTokenType::Spaces(n) = t {
             spaces += n;
             if let Some(next) = self.consume_and_peek() {
                 t = next.token_type;
@@ -208,7 +208,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn consume_bang(&mut self) {
-        let t = if let Some(TokenType1::Equal) = self.peek_other(1).map(|t| t.token_type) {
+        let t = if let Some(CharTokenType::Equal) = self.peek_other(1).map(|t| t.token_type) {
             self.consume();
             TokenType::NotEqual
         } else {
@@ -223,8 +223,8 @@ impl<'a> Tokenizer<'a> {
         self.add_token(TokenType::Integer(digits.parse().unwrap()));
     }
 
-    fn add_indentation_error(&mut self, token: &Token1<'a>) {
-        self.errors.add(super::indentation_error(token.pos))
+    fn add_indentation_error(&mut self, token: &CharToken<'a>) {
+        self.errors.add(crate::indentation_error(token.pos))
     }
 }
 

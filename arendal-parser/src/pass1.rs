@@ -1,25 +1,53 @@
-use super::{Enclosure, Errors, NewLine, Pos, Result};
+mod pass2;
 
-pub fn tokenize(input: &str) -> Result<Tokens> {
+use super::{Errors, Pos, Result};
+
+fn tokenize(input: &str) -> Result<CharTokens> {
     Tokenizer::new(input).tokenize()
 }
 
-pub type Tokens<'a> = Vec<Token<'a>>;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Token<'a> {
-    pub pos: Pos<'a>, // Starting position of the token
-    pub token_type: TokenType<'a>,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NewLine {
+    LF,
+    CRLF,
 }
 
-impl<'a> Token<'a> {
-    pub fn is_whitespace(&self) -> bool {
+impl NewLine {
+    fn bytes(self) -> usize {
+        match self {
+            Self::LF => 1,
+            Self::CRLF => 2,
+        }
+    }
+
+    fn chars(self) -> usize {
+        self.bytes() // we have another method in case it's different in the future
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Enclosure {
+    Parens,
+    Square,
+    Curly,
+}
+
+type CharTokens<'a> = Vec<CharToken<'a>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CharToken<'a> {
+    pos: Pos<'a>, // Starting position of the token
+    token_type: CharTokenType<'a>,
+}
+
+impl<'a> CharToken<'a> {
+    fn is_whitespace(&self) -> bool {
         self.token_type.is_whitespace()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenType<'a> {
+enum CharTokenType<'a> {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
@@ -39,32 +67,32 @@ pub enum TokenType<'a> {
     Word(&'a str),
 }
 
-impl<'a> TokenType<'a> {
+impl<'a> CharTokenType<'a> {
     fn is_whitespace(&self) -> bool {
         match self {
-            TokenType::Spaces(_) | TokenType::Tabs(_) => true,
+            CharTokenType::Spaces(_) | CharTokenType::Tabs(_) => true,
             _ => false,
         }
     }
 
-    fn single(c: char) -> Option<TokenType<'a>> {
+    fn single(c: char) -> Option<CharTokenType<'a>> {
         match c {
-            '+' => Some(TokenType::Plus),
-            '-' => Some(TokenType::Minus),
-            '*' => Some(TokenType::Star),
-            '/' => Some(TokenType::Slash),
-            '.' => Some(TokenType::Dot),
-            '>' => Some(TokenType::Greater),
-            '<' => Some(TokenType::Less),
-            '!' => Some(TokenType::Bang),
-            '=' => Some(TokenType::Equal),
-            '(' => Some(TokenType::Open(Enclosure::Parens)),
-            ')' => Some(TokenType::Close(Enclosure::Parens)),
-            '{' => Some(TokenType::Open(Enclosure::Curly)),
-            '}' => Some(TokenType::Close(Enclosure::Curly)),
-            '[' => Some(TokenType::Open(Enclosure::Square)),
-            ']' => Some(TokenType::Close(Enclosure::Square)),
-            '_' => Some(TokenType::Underscore),
+            '+' => Some(CharTokenType::Plus),
+            '-' => Some(CharTokenType::Minus),
+            '*' => Some(CharTokenType::Star),
+            '/' => Some(CharTokenType::Slash),
+            '.' => Some(CharTokenType::Dot),
+            '>' => Some(CharTokenType::Greater),
+            '<' => Some(CharTokenType::Less),
+            '!' => Some(CharTokenType::Bang),
+            '=' => Some(CharTokenType::Equal),
+            '(' => Some(CharTokenType::Open(Enclosure::Parens)),
+            ')' => Some(CharTokenType::Close(Enclosure::Parens)),
+            '{' => Some(CharTokenType::Open(Enclosure::Curly)),
+            '}' => Some(CharTokenType::Close(Enclosure::Curly)),
+            '[' => Some(CharTokenType::Open(Enclosure::Square)),
+            ']' => Some(CharTokenType::Close(Enclosure::Square)),
+            '_' => Some(CharTokenType::Underscore),
             _ => None,
         }
     }
@@ -72,7 +100,7 @@ impl<'a> TokenType<'a> {
 
 struct Tokenizer<'a> {
     chars: Vec<char>,
-    tokens: Tokens<'a>,
+    tokens: CharTokens<'a>,
     errors: Errors<'a>,
     // Positions
     pos: Pos<'a>,
@@ -122,11 +150,11 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn tokenize(mut self) -> Result<'a, Tokens<'a>> {
+    fn tokenize(mut self) -> Result<'a, CharTokens<'a>> {
         while !self.is_done() {
             self.token_start = self.pos;
             let c = self.peek();
-            if let Some(t) = TokenType::single(c) {
+            if let Some(t) = CharTokenType::single(c) {
                 self.consume_single_char_token(t);
             } else {
                 match c {
@@ -146,7 +174,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     // Consumes a char, creating the provided token
-    fn consume_single_char_token(&mut self, token_type: TokenType<'a>) {
+    fn consume_single_char_token(&mut self, token_type: CharTokenType<'a>) {
         self.consume();
         self.add_token(token_type);
     }
@@ -169,7 +197,7 @@ impl<'a> Tokenizer<'a> {
             Some(nl) => {
                 self.pos.advance(nl.bytes());
                 self.char_index += nl.chars();
-                self.add_token(TokenType::EndOfLine(nl));
+                self.add_token(CharTokenType::EndOfLine(nl));
                 true
             }
             _ => false,
@@ -189,12 +217,12 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn consume_spaces(&mut self) {
-        let token = TokenType::Spaces(self.consume_multiple(' '));
+        let token = CharTokenType::Spaces(self.consume_multiple(' '));
         self.add_token(token);
     }
 
     fn consume_tabs(&mut self) {
-        let token = TokenType::Tabs(self.consume_multiple('\t'));
+        let token = CharTokenType::Tabs(self.consume_multiple('\t'));
         self.add_token(token);
     }
 
@@ -210,7 +238,7 @@ impl<'a> Tokenizer<'a> {
             }
         }
         if consumed {
-            self.add_token(TokenType::Digits(self.get_token_str()));
+            self.add_token(CharTokenType::Digits(self.get_token_str()));
         }
         consumed
     }
@@ -230,7 +258,7 @@ impl<'a> Tokenizer<'a> {
             }
         }
         if consumed {
-            self.add_token(TokenType::Word(self.get_token_str()));
+            self.add_token(CharTokenType::Word(self.get_token_str()));
         }
         consumed
     }
@@ -239,8 +267,8 @@ impl<'a> Tokenizer<'a> {
         self.token_start.str_to(&self.pos)
     }
 
-    fn add_token(&mut self, token_type: TokenType<'a>) {
-        self.tokens.push(Token {
+    fn add_token(&mut self, token_type: CharTokenType<'a>) {
+        self.tokens.push(CharToken {
             pos: self.token_start,
             token_type,
         });
@@ -253,13 +281,13 @@ impl<'a> Tokenizer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Enclosure, NewLine, Pos, Token, TokenType, Tokens};
+    use super::{CharToken, CharTokenType, CharTokens, Enclosure, NewLine, Pos};
     use NewLine::*;
 
     struct TestCase<'a> {
         input: &'a str,
         pos: Pos<'a>,
-        tokens: Tokens<'a>,
+        tokens: CharTokens<'a>,
     }
 
     impl<'a> TestCase<'a> {
@@ -272,19 +300,19 @@ mod tests {
         }
 
         fn newline(mut self, nl: NewLine) -> Self {
-            self.tokens.push(Token {
+            self.tokens.push(CharToken {
                 pos: self.pos,
-                token_type: TokenType::EndOfLine(nl),
+                token_type: CharTokenType::EndOfLine(nl),
             });
             self.pos.advance(nl.bytes());
             self
         }
 
-        fn token(mut self, token_type: TokenType<'a>, bytes: usize) -> Self {
-            if let TokenType::EndOfLine(_) = token_type {
+        fn token(mut self, token_type: CharTokenType<'a>, bytes: usize) -> Self {
+            if let CharTokenType::EndOfLine(_) = token_type {
                 assert!(false);
             }
-            self.tokens.push(Token {
+            self.tokens.push(CharToken {
                 pos: self.pos,
                 token_type,
             });
@@ -292,24 +320,24 @@ mod tests {
             self
         }
 
-        fn single(self, token_type: TokenType<'a>) -> Self {
+        fn single(self, token_type: CharTokenType<'a>) -> Self {
             self.token(token_type, 1)
         }
 
         fn spaces(self, n: usize) -> Self {
-            self.token(TokenType::Spaces(n), n)
+            self.token(CharTokenType::Spaces(n), n)
         }
 
         fn tabs(self, n: usize) -> Self {
-            self.token(TokenType::Tabs(n), n)
+            self.token(CharTokenType::Tabs(n), n)
         }
 
         fn digits(self, digits: &'a str) -> Self {
-            self.token(TokenType::Digits(digits), digits.len())
+            self.token(CharTokenType::Digits(digits), digits.len())
         }
 
         fn word(self, word: &'a str) -> Self {
-            self.token(TokenType::Word(word), word.len())
+            self.token(CharTokenType::Word(word), word.len())
         }
 
         fn ok(&self) {
@@ -348,22 +376,22 @@ mod tests {
     #[test]
     fn singles() {
         TestCase::new("+-*./><!()={}[]_")
-            .single(TokenType::Plus)
-            .single(TokenType::Minus)
-            .single(TokenType::Star)
-            .single(TokenType::Dot)
-            .single(TokenType::Slash)
-            .single(TokenType::Greater)
-            .single(TokenType::Less)
-            .single(TokenType::Bang)
-            .single(TokenType::Open(Enclosure::Parens))
-            .single(TokenType::Close(Enclosure::Parens))
-            .single(TokenType::Equal)
-            .single(TokenType::Open(Enclosure::Curly))
-            .single(TokenType::Close(Enclosure::Curly))
-            .single(TokenType::Open(Enclosure::Square))
-            .single(TokenType::Close(Enclosure::Square))
-            .single(TokenType::Underscore)
+            .single(CharTokenType::Plus)
+            .single(CharTokenType::Minus)
+            .single(CharTokenType::Star)
+            .single(CharTokenType::Dot)
+            .single(CharTokenType::Slash)
+            .single(CharTokenType::Greater)
+            .single(CharTokenType::Less)
+            .single(CharTokenType::Bang)
+            .single(CharTokenType::Open(Enclosure::Parens))
+            .single(CharTokenType::Close(Enclosure::Parens))
+            .single(CharTokenType::Equal)
+            .single(CharTokenType::Open(Enclosure::Curly))
+            .single(CharTokenType::Close(Enclosure::Curly))
+            .single(CharTokenType::Open(Enclosure::Square))
+            .single(CharTokenType::Close(Enclosure::Square))
+            .single(CharTokenType::Underscore)
             .ok();
     }
 
