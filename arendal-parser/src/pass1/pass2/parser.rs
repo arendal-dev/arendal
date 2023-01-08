@@ -1,5 +1,5 @@
 use super::{Token, Tokens};
-use crate::{Error, Errors, Expression, Pos, Result};
+use crate::{Errors, Expression, Pos, Result};
 
 // Tries to parses an expression
 fn parse_expression(input: &str) -> Result<Option<Expression>> {
@@ -43,7 +43,7 @@ impl<'a> Parser<'a> {
     }
 
     // Returns a clone of the token the requested positions after the current one, if any.
-    fn peek_other(&self, n: usize) -> Option<Box<Token<'a>>> {
+    fn peek_ahead(&self, n: usize) -> Option<Box<Token<'a>>> {
         let i = self.index + n;
         if i >= self.input.len() {
             None
