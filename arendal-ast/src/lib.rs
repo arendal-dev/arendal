@@ -37,7 +37,7 @@ impl<'a, L: error::ErrorLoc> Expression<'a, L> {
         }
     }
 
-    fn int_literal(loc: L, value: BigInt) -> Self {
+    pub fn int_literal(loc: L, value: BigInt) -> Self {
         Self::new(loc, Expr::IntLiteral(value))
     }
 }

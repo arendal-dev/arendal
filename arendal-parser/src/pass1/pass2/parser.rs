@@ -1,21 +1,25 @@
-use super::{Token, Tokens};
-use crate::{Errors, Expression, Pos, Result};
+use super::{Token, TokenType, Tokens};
+use crate::{Errors, Expression, Result};
 
 // Tries to parses an expression
 fn parse_expression(input: &str) -> Result<Option<Expression>> {
     let pass2 = super::tokenize(input)?;
-    let expr = Parser::new(pass2).expression();
-    Ok(expr)
+    Parser::new(pass2).expression()
 }
 
 struct Parser<'a> {
     input: Tokens<'a>,
     index: usize, // Index of the current input token
+    errors: Errors<'a>,
 }
 
 impl<'a> Parser<'a> {
     fn new(input: Tokens<'a>) -> Parser<'a> {
-        Parser { input, index: 0 }
+        Parser {
+            input,
+            index: 0,
+            errors: Errors::new(),
+        }
     }
 
     // Returns true if we have reached the end of the input
@@ -54,8 +58,26 @@ impl<'a> Parser<'a> {
     }
 
     // Tries to parses an expression, if any, consuming as many tokens as needed
-    fn expression(&mut self) -> Option<Expression<'a>> {
-        None
+    fn expression(mut self) -> Result<'a, Option<Expression<'a>>> {
+        Ok(None)
+    }
+
+    fn rule_expression(&mut self) -> Option<Expression<'a>> {
+        self.rule_primary()
+    }
+
+    fn rule_primary(&mut self) -> Option<Expression<'a>> {
+        let token = self.peek()?;
+        match token.token_type {
+            TokenType::Integer(n) => {
+                self.consume();
+                Some(Expression::int_literal(token.pos, n))
+            }
+            _ => {
+                self.errors.add(crate::parsing_error(token.pos));
+                None
+            }
+        }
     }
 }
 
