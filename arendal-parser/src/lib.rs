@@ -2,9 +2,10 @@ pub mod pass1;
 
 use arendal_ast::error::{Error, Errors, Result};
 use arendal_ast::Expression;
+use std::fmt;
 
 // This struct represents an input string and a byte index in it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 struct Pos<'a> {
     input: &'a str, // Input string
     index: usize,   // Byte index from the beginning of the input
@@ -38,6 +39,12 @@ impl<'a> Pos<'a> {
         assert_eq!(self.input, to.input);
         assert!(self.index <= to.index);
         &self.input[self.index..to.index]
+    }
+}
+
+impl<'a> fmt::Debug for Pos<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Pos({})", self.index)
     }
 }
 

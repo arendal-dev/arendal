@@ -1,6 +1,7 @@
 mod pass2;
 
 use super::{Errors, Pos, Result};
+use std::fmt;
 
 fn tokenize(input: &str) -> Result<CharTokens> {
     Tokenizer::new(input).tokenize()
@@ -34,7 +35,7 @@ pub enum Enclosure {
 
 type CharTokens<'a> = Vec<CharToken<'a>>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 struct CharToken<'a> {
     pos: Pos<'a>, // Starting position of the token
     token_type: CharTokenType<'a>,
@@ -43,6 +44,12 @@ struct CharToken<'a> {
 impl<'a> CharToken<'a> {
     fn is_whitespace(&self) -> bool {
         self.token_type.is_whitespace()
+    }
+}
+
+impl<'a> fmt::Debug for CharToken<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}@{:?}", self.token_type, self.pos)
     }
 }
 

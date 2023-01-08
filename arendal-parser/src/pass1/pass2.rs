@@ -3,6 +3,7 @@ mod parser;
 use super::{CharToken, CharTokenType, CharTokens, Errors, NewLine, Pos, Result};
 use crate::Indentation;
 use num::bigint::{BigInt, ToBigInt};
+use std::fmt;
 
 fn tokenize(input: &str) -> Result<Tokens> {
     let pass1 = super::tokenize(input)?;
@@ -15,10 +16,16 @@ fn tokenize2(input: CharTokens) -> Result<Tokens> {
 
 type Tokens<'a> = Vec<Box<Token<'a>>>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 struct Token<'a> {
     pos: Pos<'a>, // Starting position of the token
     token_type: TokenType<'a>,
+}
+
+impl<'a> fmt::Debug for Token<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}@{:?}", self.token_type, self.pos)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -102,14 +109,8 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    // Consumes one token a returns the next one, if any.
-    fn consume_and_peek(&mut self) -> Option<CharToken<'a>> {
-        self.consume();
-        self.peek()
-    }
-
     // Returns a clone of the token the requested positions after the current one, if any.
-    fn peek_other(&self, n: usize) -> Option<CharToken<'a>> {
+    fn peek_ahead(&self, n: usize) -> Option<CharToken<'a>> {
         let i = self.index + n;
         if i >= self.input.len() {
             None
@@ -150,28 +151,28 @@ impl<'a> Tokenizer<'a> {
         }));
     }
 
-    fn consume_tabs(&mut self, mut t: CharTokenType<'a>) -> usize {
+    fn consume_tabs(&mut self) -> usize {
         let mut tabs = 0;
-        while let CharTokenType::Tabs(n) = t {
+        while let Some(CharToken {
+            token_type: CharTokenType::Tabs(n),
+            ..
+        }) = self.peek()
+        {
             tabs += n;
-            if let Some(next) = self.consume_and_peek() {
-                t = next.token_type;
-            } else {
-                break;
-            }
+            self.consume();
         }
         tabs
     }
 
-    fn consume_spaces(&mut self, mut t: CharTokenType<'a>) -> usize {
+    fn consume_spaces(&mut self) -> usize {
         let mut spaces = 0;
-        while let CharTokenType::Spaces(n) = t {
+        while let Some(CharToken {
+            token_type: CharTokenType::Spaces(n),
+            ..
+        }) = self.peek()
+        {
             spaces += n;
-            if let Some(next) = self.consume_and_peek() {
-                t = next.token_type;
-            } else {
-                break;
-            }
+            self.consume();
         }
         spaces
     }
@@ -192,11 +193,34 @@ impl<'a> Tokenizer<'a> {
         found
     }
 
+    fn skip_empty_lines(&mut self) {
+        // Skip empty lines
+        let mut look_ahead: usize = 0;
+        let mut remove: usize = 0;
+        let mut line_index: usize = 0;
+        while let Some(token) = self.peek_ahead(look_ahead) {
+            if token.is_whitespace() {
+                look_ahead += 1;
+                line_index += 1;
+                continue;
+            }
+            if let CharTokenType::EndOfLine(_) = token.token_type {
+                look_ahead += 1;
+                remove += line_index + 1; // the EOL itself
+                line_index = 0;
+                continue;
+            }
+            break; // any other token
+        }
+        self.index += remove;
+    }
+
     fn consume_indentation(&mut self) {
+        self.skip_empty_lines();
         if let Some(token) = self.peek() {
             self.token_start = token.pos;
-            let tabs = self.consume_tabs(token.clone().token_type);
-            let spaces = self.consume_spaces(token.token_type);
+            let tabs = self.consume_tabs();
+            let spaces = self.consume_spaces();
             self.add_token(TokenType::Indent(Indentation::new(tabs, spaces)));
             if let Some(t) = self.peek() {
                 if t.is_whitespace() {
@@ -208,7 +232,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn consume_bang(&mut self) {
-        let t = if let Some(CharTokenType::Equal) = self.peek_other(1).map(|t| t.token_type) {
+        let t = if let Some(CharTokenType::Equal) = self.peek_ahead(1).map(|t| t.token_type) {
             self.consume();
             TokenType::NotEqual
         } else {
@@ -302,11 +326,15 @@ mod tests {
     }
 
     #[test]
-    fn digits() {
+    fn digits1() {
         TestCase::new("1234")
             .indentation(0, 0)
             .integer(1234)
             .ok_without_pos();
+    }
+
+    #[test]
+    fn digits2() {
         TestCase::new("\t1234")
             .indentation(1, 0)
             .integer(1234)
@@ -314,13 +342,25 @@ mod tests {
     }
 
     #[test]
-    fn sums() {
+    fn digits3() {
+        TestCase::new("\t 1234")
+            .indentation(1, 1)
+            .integer(1234)
+            .ok_without_pos();
+    }
+
+    #[test]
+    fn sum1() {
         TestCase::new("1234+456")
             .indentation(0, 0)
             .integer(1234)
             .token(TokenType::Plus)
             .integer(456)
             .ok_without_pos();
+    }
+
+    #[test]
+    fn sum2() {
         TestCase::new("  1234 +  456")
             .indentation(0, 2)
             .integer(1234)
@@ -329,6 +369,10 @@ mod tests {
             .whitespace()
             .integer(456)
             .ok_without_pos();
+    }
+
+    #[test]
+    fn sum3() {
         TestCase::new("  1234 +\n\t456")
             .indentation(0, 2)
             .integer(1234)
@@ -336,6 +380,40 @@ mod tests {
             .token(TokenType::Plus)
             .indentation(1, 0)
             .integer(456)
+            .ok_without_pos();
+    }
+
+    #[test]
+    fn remove_empty_lines1() {
+        TestCase::new("\n\n \n1234")
+            .indentation(0, 0)
+            .integer(1234)
+            .ok_without_pos();
+    }
+
+    #[test]
+    fn remove_empty_lines2() {
+        TestCase::new("\n\n \n\t \n \t \n1234")
+            .indentation(0, 0)
+            .integer(1234)
+            .ok_without_pos();
+    }
+
+    #[test]
+    fn remove_empty_lines3() {
+        TestCase::new("\n\n \n\t \n \t \n\t 1234")
+            .indentation(1, 1)
+            .integer(1234)
+            .ok_without_pos();
+    }
+
+    #[test]
+    fn remove_empty_lines4() {
+        TestCase::new("\n\n \n\t \n \t \n\t 1234\n\n \n 567\n\n")
+            .indentation(1, 1)
+            .integer(1234)
+            .indentation(0, 1)
+            .integer(567)
             .ok_without_pos();
     }
 }
