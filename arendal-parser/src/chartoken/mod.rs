@@ -1,48 +1,20 @@
-mod pass2;
-
-use super::{Errors, Pos, Result};
+use super::{Enclosure, Errors, NewLine, Pos, Result};
 use std::fmt;
 
-fn tokenize(input: &str) -> Result<CharTokens> {
+pub fn tokenize(input: &str) -> Result<CharTokens> {
     Tokenizer::new(input).tokenize()
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum NewLine {
-    LF,
-    CRLF,
-}
-
-impl NewLine {
-    fn bytes(self) -> usize {
-        match self {
-            Self::LF => 1,
-            Self::CRLF => 2,
-        }
-    }
-
-    fn chars(self) -> usize {
-        self.bytes() // we have another method in case it's different in the future
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Enclosure {
-    Parens,
-    Square,
-    Curly,
-}
-
-type CharTokens<'a> = Vec<CharToken<'a>>;
+pub type CharTokens<'a> = Vec<CharToken<'a>>;
 
 #[derive(Clone, PartialEq, Eq)]
-struct CharToken<'a> {
-    pos: Pos<'a>, // Starting position of the token
-    token_type: CharTokenType<'a>,
+pub struct CharToken<'a> {
+    pub pos: Pos<'a>, // Starting position of the token
+    pub token_type: CharTokenType<'a>,
 }
 
 impl<'a> CharToken<'a> {
-    fn is_whitespace(&self) -> bool {
+    pub fn is_whitespace(&self) -> bool {
         self.token_type.is_whitespace()
     }
 }
@@ -54,7 +26,7 @@ impl<'a> fmt::Debug for CharToken<'a> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum CharTokenType<'a> {
+pub enum CharTokenType<'a> {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
@@ -188,7 +160,7 @@ impl<'a> Tokenizer<'a> {
 
     // Returns whether the provided char is a newline, peeking the next if needed
     // Consumes a new line if found in the current position
-    fn is_eol(&mut self, c: char) -> Option<NewLine> {
+    fn is_eol(&self, c: char) -> Option<NewLine> {
         if c == '\n' {
             Some(NewLine::LF)
         } else if c == '\r' && self.next_matches('\n') {
@@ -287,140 +259,4 @@ impl<'a> Tokenizer<'a> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{CharToken, CharTokenType, CharTokens, Enclosure, NewLine, Pos};
-    use NewLine::*;
-
-    struct TestCase<'a> {
-        input: &'a str,
-        pos: Pos<'a>,
-        tokens: CharTokens<'a>,
-    }
-
-    impl<'a> TestCase<'a> {
-        fn new(input: &'a str) -> TestCase<'a> {
-            TestCase {
-                input,
-                pos: Pos::new(input),
-                tokens: Vec::new(),
-            }
-        }
-
-        fn newline(mut self, nl: NewLine) -> Self {
-            self.tokens.push(CharToken {
-                pos: self.pos,
-                token_type: CharTokenType::EndOfLine(nl),
-            });
-            self.pos.advance(nl.bytes());
-            self
-        }
-
-        fn token(mut self, token_type: CharTokenType<'a>, bytes: usize) -> Self {
-            if let CharTokenType::EndOfLine(_) = token_type {
-                assert!(false);
-            }
-            self.tokens.push(CharToken {
-                pos: self.pos,
-                token_type,
-            });
-            self.pos.advance(bytes);
-            self
-        }
-
-        fn single(self, token_type: CharTokenType<'a>) -> Self {
-            self.token(token_type, 1)
-        }
-
-        fn spaces(self, n: usize) -> Self {
-            self.token(CharTokenType::Spaces(n), n)
-        }
-
-        fn tabs(self, n: usize) -> Self {
-            self.token(CharTokenType::Tabs(n), n)
-        }
-
-        fn digits(self, digits: &'a str) -> Self {
-            self.token(CharTokenType::Digits(digits), digits.len())
-        }
-
-        fn word(self, word: &'a str) -> Self {
-            self.token(CharTokenType::Word(word), word.len())
-        }
-
-        fn ok(&self) {
-            match super::tokenize(self.input) {
-                Ok(tokens) => assert_eq!(tokens, self.tokens),
-                Err(_) => assert!(false),
-            }
-        }
-    }
-
-    #[test]
-    fn empty() {
-        TestCase::new("").ok();
-    }
-
-    #[test]
-    fn spaces() {
-        TestCase::new("   ").spaces(3).ok();
-    }
-
-    #[test]
-    fn tabs() {
-        TestCase::new("\t\t\t").tabs(3).ok();
-    }
-
-    #[test]
-    fn lf() {
-        TestCase::new("\n").newline(LF).ok();
-    }
-
-    #[test]
-    fn crlf() {
-        TestCase::new("\r\n").newline(CRLF).ok();
-    }
-
-    #[test]
-    fn singles() {
-        TestCase::new("+-*./><!()={}[]_")
-            .single(CharTokenType::Plus)
-            .single(CharTokenType::Minus)
-            .single(CharTokenType::Star)
-            .single(CharTokenType::Dot)
-            .single(CharTokenType::Slash)
-            .single(CharTokenType::Greater)
-            .single(CharTokenType::Less)
-            .single(CharTokenType::Bang)
-            .single(CharTokenType::Open(Enclosure::Parens))
-            .single(CharTokenType::Close(Enclosure::Parens))
-            .single(CharTokenType::Equal)
-            .single(CharTokenType::Open(Enclosure::Curly))
-            .single(CharTokenType::Close(Enclosure::Curly))
-            .single(CharTokenType::Open(Enclosure::Square))
-            .single(CharTokenType::Close(Enclosure::Square))
-            .single(CharTokenType::Underscore)
-            .ok();
-    }
-
-    #[test]
-    fn digits() {
-        TestCase::new("1234").digits("1234").ok();
-        TestCase::new("12 34")
-            .digits("12")
-            .spaces(1)
-            .digits("34")
-            .ok();
-    }
-
-    #[test]
-    fn word() {
-        TestCase::new("abc").word("abc").ok();
-        TestCase::new("abc4e").word("abc4e").ok();
-        TestCase::new("4bc5e").digits("4").word("bc5e").ok();
-    }
-
-    #[test]
-    fn harness() {
-        TestCase::new("   \n\t").spaces(3).newline(LF).tabs(1).ok();
-    }
-}
+mod tests;

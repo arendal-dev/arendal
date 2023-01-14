@@ -1,9 +1,9 @@
-use super::{Token, TokenType, Tokens};
+use super::{token, Token, TokenType, Tokens};
 use crate::{Errors, Expression, Result};
 
 // Tries to parses an expression
 fn parse_expression(input: &str) -> Result<Option<Expression>> {
-    let pass2 = super::tokenize(input)?;
+    let pass2 = token::tokenize(input)?;
     Parser::new(pass2).expression()
 }
 
@@ -82,8 +82,4 @@ impl<'a> Parser<'a> {
 }
 
 #[cfg(test)]
-mod tests {
-
-    #[test]
-    fn it_works() {}
-}
+mod tests;

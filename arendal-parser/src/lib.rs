@@ -1,11 +1,42 @@
-pub mod pass1;
+pub mod chartoken;
+pub mod parser;
+pub mod token;
 
-use arendal_ast::{error, BigInt, ToBigInt};
+pub use chartoken::{CharToken, CharTokenType, CharTokens};
+pub use token::{Token, TokenType, Tokens};
+
+use arendal_ast::{error, BigInt};
 use std::fmt;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Enclosure {
+    Parens,
+    Square,
+    Curly,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NewLine {
+    LF,
+    CRLF,
+}
+
+impl NewLine {
+    fn bytes(self) -> usize {
+        match self {
+            Self::LF => 1,
+            Self::CRLF => 2,
+        }
+    }
+
+    fn chars(self) -> usize {
+        self.bytes() // we have another method in case it's different in the future
+    }
+}
 
 // This struct represents an input string and a byte index in it.
 #[derive(Clone, Copy, PartialEq, Eq)]
-struct Pos<'a> {
+pub struct Pos<'a> {
     input: &'a str, // Input string
     index: usize,   // Byte index from the beginning of the input
 }
