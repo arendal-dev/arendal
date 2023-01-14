@@ -1,7 +1,8 @@
 pub mod error;
 
-use num::bigint::BigInt;
-use std::marker;
+pub use num::bigint::{BigInt, ToBigInt};
+
+pub trait Loc {}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -22,19 +23,14 @@ pub enum BinaryOp {
 // We have a lifetime parameter as we expect locations to be a reference to some input
 // which will require a lifetime.
 #[derive(Debug, PartialEq, Eq)]
-pub struct Expression<'a, L: error::ErrorLoc> {
+pub struct Expression<L: Loc> {
     loc: L,
-    expr: Expr<'a, L>,
-    _marker: marker::PhantomData<&'a L>,
+    expr: Expr<L>,
 }
 
-impl<'a, L: error::ErrorLoc> Expression<'a, L> {
-    fn new(loc: L, expr: Expr<'a, L>) -> Self {
-        Expression {
-            loc,
-            expr,
-            _marker: marker::PhantomData,
-        }
+impl<'a, L: Loc> Expression<L> {
+    fn new(loc: L, expr: Expr<L>) -> Self {
+        Expression { loc, expr }
     }
 
     pub fn int_literal(loc: L, value: BigInt) -> Self {
@@ -43,10 +39,10 @@ impl<'a, L: error::ErrorLoc> Expression<'a, L> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Expr<'a, L: error::ErrorLoc> {
+pub enum Expr<L: Loc> {
     IntLiteral(BigInt),
-    Unary(UnaryOp, Box<Expression<'a, L>>),
-    Binary(BinaryOp, Box<Expression<'a, L>>, Box<Expression<'a, L>>),
+    Unary(UnaryOp, Box<Expression<L>>),
+    Binary(BinaryOp, Box<Expression<L>>, Box<Expression<L>>),
 }
 
 #[cfg(test)]

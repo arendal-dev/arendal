@@ -1,6 +1,6 @@
 pub mod pass1;
 
-use arendal_ast::error;
+use arendal_ast::{error, BigInt, ToBigInt};
 use std::fmt;
 
 // This struct represents an input string and a byte index in it.
@@ -47,11 +47,11 @@ impl<'a> fmt::Debug for Pos<'a> {
     }
 }
 
-impl<'a> error::ErrorLoc for Pos<'a> {}
+impl<'a> arendal_ast::Loc for Pos<'a> {}
 
-type Errors<'a> = error::Errors<'a, Pos<'a>>;
-type Result<'a, T> = error::Result<'a, T, Pos<'a>>;
-type Expression<'a> = arendal_ast::Expression<'a, Pos<'a>>;
+type Errors<'a> = error::Errors<'a>;
+type Result<'a, T> = error::Result<'a, T>;
+type Expression<'a> = arendal_ast::Expression<Pos<'a>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Indentation {
@@ -86,11 +86,7 @@ enum ErrorType {
     ParsingError, // placeholder, temporary error
 }
 
-impl<'a> error::Error<'a, Pos<'a>> for ParserError<'a> {
-    fn location(&self) -> Pos<'a> {
-        self.pos
-    }
-}
+impl<'a> error::Error<'a> for ParserError<'a> {}
 
 fn indentation_error(pos: Pos) -> ParserError {
     ParserError::new(pos, ErrorType::IndentationError)

@@ -122,7 +122,7 @@ impl<'a> Tokenizer<'a> {
         Tokenizer {
             chars: input.chars().collect(),
             tokens: Vec::new(),
-            errors: Errors::new(),
+            errors: Default::default(),
             pos: Pos::new(input),
             char_index: 0,
             token_start: Pos::new(input),

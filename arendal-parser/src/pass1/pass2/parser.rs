@@ -18,7 +18,7 @@ impl<'a> Parser<'a> {
         Parser {
             input,
             index: 0,
-            errors: Errors::new(),
+            errors: Default::default(),
         }
     }
 

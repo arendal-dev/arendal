@@ -14,7 +14,6 @@ name = "arendal-parser"
 version = "0.1.0"
 dependencies = [
  "arendal-ast",
- "num",
 ]
 
 [[package]]

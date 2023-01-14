@@ -1,8 +1,7 @@
 mod parser;
 
 use super::{CharToken, CharTokenType, CharTokens, Errors, NewLine, Pos, Result};
-use crate::Indentation;
-use num::bigint::{BigInt, ToBigInt};
+use crate::{Indentation, BigInt, ToBigInt};
 use std::fmt;
 
 fn tokenize(input: &str) -> Result<Tokens> {
@@ -84,7 +83,7 @@ impl<'a> Tokenizer<'a> {
         Tokenizer {
             input,
             tokens: Vec::new(),
-            errors: Errors::new(),
+            errors: Default::default(),
             index: 0,
             token_start: Pos::new(""),
         }
