@@ -92,7 +92,7 @@ impl<'a> Lexer<'a> {
 
     // Returns true if we have reached the end of the input
     fn is_done(&self) -> bool {
-        self.index >= self.input.len()
+        !self.input.contains(self.index)
     }
 
     // Consumes one lexer, advancing the index accordingly.
@@ -102,21 +102,12 @@ impl<'a> Lexer<'a> {
 
     // Returns a clone of the lexer at the current index, if any
     fn peek(&self) -> Option<Token<'a>> {
-        if self.is_done() {
-            None
-        } else {
-            Some(self.input[self.index].clone())
-        }
+        self.input.get(self.index)
     }
 
     // Returns a clone of the lexer the requested positions after the current one, if any.
     fn peek_ahead(&self, n: usize) -> Option<Token<'a>> {
-        let i = self.index + n;
-        if i >= self.input.len() {
-            None
-        } else {
-            Some(self.input[i].clone())
-        }
+        self.input.get(self.index + n)
     }
 
     fn lex(mut self) -> Result<'a, Lexemes<'a>> {

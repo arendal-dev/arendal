@@ -12,29 +12,21 @@ impl<'a> TestCase<'a> {
         TestCase {
             input,
             pos: Pos::new(input),
-            tokens: Vec::new(),
+            tokens: Default::default(),
         }
-    }
-
-    fn newline(mut self, nl: NewLine) -> Self {
-        self.tokens.push(Token {
-            pos: self.pos,
-            kind: TokenKind::EndOfLine(nl),
-        });
-        self.pos.advance(nl.bytes());
-        self
     }
 
     fn token(mut self, token_type: TokenKind<'a>, bytes: usize) -> Self {
-        if let TokenKind::EndOfLine(_) = token_type {
-            panic!();
-        }
-        self.tokens.push(Token {
+        self.tokens.tokens.push(Token {
             pos: self.pos,
             kind: token_type,
         });
         self.pos.advance(bytes);
         self
+    }
+
+    fn newline(mut self, nl: NewLine) -> Self {
+        self.token(TokenKind::EndOfLine(nl), nl.bytes())
     }
 
     fn single(self, token_type: TokenKind<'a>) -> Self {

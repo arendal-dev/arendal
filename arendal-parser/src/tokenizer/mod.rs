@@ -5,7 +5,29 @@ pub fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(input).tokenize()
 }
 
-pub type Tokens<'a> = Vec<Token<'a>>;
+#[derive(Default, PartialEq, Eq)]
+pub struct Tokens<'a> {
+    tokens: Vec<Token<'a>>,
+}
+
+impl<'a> Tokens<'a> {
+    #[inline]
+    pub fn contains(&self, index: usize) -> bool {
+        index < self.tokens.len()
+    }
+
+    #[inline]
+    pub fn get(&self, index: usize) -> Option<Token<'a>> {
+        self.tokens.get(index).map(|t| t.clone())
+    }
+}
+
+impl<'a> fmt::Debug for Tokens<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.tokens)
+    }
+}
+
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Token<'a> {
@@ -90,7 +112,7 @@ impl<'a> Tokenizer<'a> {
     fn new(input: &str) -> Tokenizer {
         Tokenizer {
             chars: input.chars().collect(),
-            tokens: Vec::new(),
+            tokens: Default::default(),
             errors: Default::default(),
             pos: Pos::new(input),
             char_index: 0,
@@ -244,7 +266,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn add_token(&mut self, token_type: TokenKind<'a>) {
-        self.tokens.push(Token {
+        self.tokens.tokens.push(Token {
             pos: self.token_start,
             kind: token_type,
         });
