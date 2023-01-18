@@ -1,11 +1,11 @@
-use super::{Indentation, Pos, Token, TokenType, Tokens};
+use super::{Indentation, Lexeme, LexemeKind, Lexemes, Pos};
 use arendal_ast::ToBigInt;
 
-fn eq_types(left: &Tokens, right: &Tokens) -> bool {
+fn eq_kinds(left: &Lexemes, right: &Lexemes) -> bool {
     let n = left.len();
     if n == right.len() {
         for (left_token, right_token) in left.iter().zip(right.iter()) {
-            if left_token.token_type != right_token.token_type {
+            if left_token.kind != right_token.kind {
                 return false;
             }
         }
@@ -17,44 +17,44 @@ fn eq_types(left: &Tokens, right: &Tokens) -> bool {
 
 struct TestCase<'a> {
     input: &'a str,
-    tokens: Tokens<'a>,
+    lexemes: Lexemes<'a>,
 }
 
 impl<'a> TestCase<'a> {
     fn new(input: &'a str) -> TestCase<'a> {
         TestCase {
             input,
-            tokens: Vec::new(),
+            lexemes: Vec::new(),
         }
     }
 
-    fn token(mut self, token_type: TokenType<'a>) -> Self {
-        self.tokens.push(Box::new(Token {
+    fn token(mut self, kind: LexemeKind<'a>) -> Self {
+        self.lexemes.push(Box::new(Lexeme {
             pos: Pos::new(self.input),
-            token_type,
+            kind,
         }));
         self
     }
 
     fn whitespace(self) -> Self {
-        self.token(TokenType::Whitespace)
+        self.token(LexemeKind::Whitespace)
     }
 
     fn indentation(self, tabs: usize, spaces: usize) -> Self {
-        self.token(TokenType::Indent(Indentation::new(tabs, spaces)))
+        self.token(LexemeKind::Indent(Indentation::new(tabs, spaces)))
     }
 
     fn integer(self, n: usize) -> Self {
-        self.token(TokenType::Integer(n.to_bigint().unwrap()))
+        self.token(LexemeKind::Integer(n.to_bigint().unwrap()))
     }
 
     fn ok_without_pos(&self) {
-        match super::tokenize(self.input) {
+        match super::lex(self.input) {
             Ok(tokens) => assert!(
-                eq_types(&tokens, &self.tokens),
+                eq_kinds(&tokens, &self.lexemes),
                 "{:?}\n{:?}",
                 &tokens,
-                &self.tokens
+                &self.lexemes
             ),
             Err(_) => panic!(),
         }
@@ -95,7 +95,7 @@ fn sum1() {
     TestCase::new("1234+456")
         .indentation(0, 0)
         .integer(1234)
-        .token(TokenType::Plus)
+        .token(LexemeKind::Plus)
         .integer(456)
         .ok_without_pos();
 }
@@ -106,7 +106,7 @@ fn sum2() {
         .indentation(0, 2)
         .integer(1234)
         .whitespace()
-        .token(TokenType::Plus)
+        .token(LexemeKind::Plus)
         .whitespace()
         .integer(456)
         .ok_without_pos();
@@ -118,7 +118,7 @@ fn sum3() {
         .indentation(0, 2)
         .integer(1234)
         .whitespace()
-        .token(TokenType::Plus)
+        .token(LexemeKind::Plus)
         .indentation(1, 0)
         .integer(456)
         .ok_without_pos();

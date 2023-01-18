@@ -1,10 +1,10 @@
-use super::{CharToken, CharTokenType, CharTokens, Enclosure, NewLine, Pos};
+use super::{Token, TokenKind, Tokens, Enclosure, NewLine, Pos};
 use NewLine::*;
 
 struct TestCase<'a> {
     input: &'a str,
     pos: Pos<'a>,
-    tokens: CharTokens<'a>,
+    tokens: Tokens<'a>,
 }
 
 impl<'a> TestCase<'a> {
@@ -17,50 +17,50 @@ impl<'a> TestCase<'a> {
     }
 
     fn newline(mut self, nl: NewLine) -> Self {
-        self.tokens.push(CharToken {
+        self.tokens.push(Token {
             pos: self.pos,
-            token_type: CharTokenType::EndOfLine(nl),
+            kind: TokenKind::EndOfLine(nl),
         });
         self.pos.advance(nl.bytes());
         self
     }
 
-    fn token(mut self, token_type: CharTokenType<'a>, bytes: usize) -> Self {
-        if let CharTokenType::EndOfLine(_) = token_type {
-            assert!(false);
+    fn token(mut self, token_type: TokenKind<'a>, bytes: usize) -> Self {
+        if let TokenKind::EndOfLine(_) = token_type {
+            panic!();
         }
-        self.tokens.push(CharToken {
+        self.tokens.push(Token {
             pos: self.pos,
-            token_type,
+            kind: token_type,
         });
         self.pos.advance(bytes);
         self
     }
 
-    fn single(self, token_type: CharTokenType<'a>) -> Self {
+    fn single(self, token_type: TokenKind<'a>) -> Self {
         self.token(token_type, 1)
     }
 
     fn spaces(self, n: usize) -> Self {
-        self.token(CharTokenType::Spaces(n), n)
+        self.token(TokenKind::Spaces(n), n)
     }
 
     fn tabs(self, n: usize) -> Self {
-        self.token(CharTokenType::Tabs(n), n)
+        self.token(TokenKind::Tabs(n), n)
     }
 
     fn digits(self, digits: &'a str) -> Self {
-        self.token(CharTokenType::Digits(digits), digits.len())
+        self.token(TokenKind::Digits(digits), digits.len())
     }
 
     fn word(self, word: &'a str) -> Self {
-        self.token(CharTokenType::Word(word), word.len())
+        self.token(TokenKind::Word(word), word.len())
     }
 
     fn ok(&self) {
         match super::tokenize(self.input) {
             Ok(tokens) => assert_eq!(tokens, self.tokens),
-            Err(_) => assert!(false),
+            Err(_) => panic!(),
         }
     }
 }
@@ -93,22 +93,22 @@ fn crlf() {
 #[test]
 fn singles() {
     TestCase::new("+-*./><!()={}[]_")
-        .single(CharTokenType::Plus)
-        .single(CharTokenType::Minus)
-        .single(CharTokenType::Star)
-        .single(CharTokenType::Dot)
-        .single(CharTokenType::Slash)
-        .single(CharTokenType::Greater)
-        .single(CharTokenType::Less)
-        .single(CharTokenType::Bang)
-        .single(CharTokenType::Open(Enclosure::Parens))
-        .single(CharTokenType::Close(Enclosure::Parens))
-        .single(CharTokenType::Equal)
-        .single(CharTokenType::Open(Enclosure::Curly))
-        .single(CharTokenType::Close(Enclosure::Curly))
-        .single(CharTokenType::Open(Enclosure::Square))
-        .single(CharTokenType::Close(Enclosure::Square))
-        .single(CharTokenType::Underscore)
+        .single(TokenKind::Plus)
+        .single(TokenKind::Minus)
+        .single(TokenKind::Star)
+        .single(TokenKind::Dot)
+        .single(TokenKind::Slash)
+        .single(TokenKind::Greater)
+        .single(TokenKind::Less)
+        .single(TokenKind::Bang)
+        .single(TokenKind::Open(Enclosure::Parens))
+        .single(TokenKind::Close(Enclosure::Parens))
+        .single(TokenKind::Equal)
+        .single(TokenKind::Open(Enclosure::Curly))
+        .single(TokenKind::Close(Enclosure::Curly))
+        .single(TokenKind::Open(Enclosure::Square))
+        .single(TokenKind::Close(Enclosure::Square))
+        .single(TokenKind::Underscore)
         .ok();
 }
 

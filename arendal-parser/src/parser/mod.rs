@@ -1,20 +1,20 @@
-use super::{token, Token, TokenType, Tokens};
+use super::{lexer, Lexeme, LexemeKind, Lexemes};
 use crate::{Errors, Expression, Result};
 
 // Tries to parses an expression
 fn parse_expression(input: &str) -> Result<Option<Expression>> {
-    let pass2 = token::tokenize(input)?;
+    let pass2 = lexer::lex(input)?;
     Parser::new(pass2).expression()
 }
 
 struct Parser<'a> {
-    input: Tokens<'a>,
-    index: usize, // Index of the current input token
+    input: Lexemes<'a>,
+    index: usize, // Index of the current input lexer
     errors: Errors<'a>,
 }
 
 impl<'a> Parser<'a> {
-    fn new(input: Tokens<'a>) -> Parser<'a> {
+    fn new(input: Lexemes<'a>) -> Parser<'a> {
         Parser {
             input,
             index: 0,
@@ -27,13 +27,13 @@ impl<'a> Parser<'a> {
         self.index >= self.input.len()
     }
 
-    // Consumes one token, advancing the index accordingly.
+    // Consumes one lexer, advancing the index accordingly.
     fn consume(&mut self) {
         self.index += 1;
     }
 
-    // Returns a clone of the token at the current index, if any
-    fn peek(&self) -> Option<Box<Token<'a>>> {
+    // Returns a clone of the lexer at the current index, if any
+    fn peek(&self) -> Option<Box<Lexeme<'a>>> {
         if self.is_done() {
             None
         } else {
@@ -41,14 +41,14 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // Consumes one token a returns the next one, if any.
-    fn consume_and_peek(&mut self) -> Option<Box<Token<'a>>> {
+    // Consumes one lexer a returns the next one, if any.
+    fn consume_and_peek(&mut self) -> Option<Box<Lexeme<'a>>> {
         self.consume();
         self.peek()
     }
 
-    // Returns a clone of the token the requested positions after the current one, if any.
-    fn peek_ahead(&self, n: usize) -> Option<Box<Token<'a>>> {
+    // Returns a clone of the lexer the requested positions after the current one, if any.
+    fn peek_ahead(&self, n: usize) -> Option<Box<Lexeme<'a>>> {
         let i = self.index + n;
         if i >= self.input.len() {
             None
@@ -68,8 +68,8 @@ impl<'a> Parser<'a> {
 
     fn rule_primary(&mut self) -> Option<Expression<'a>> {
         let token = self.peek()?;
-        match token.token_type {
-            TokenType::Integer(n) => {
+        match token.kind {
+            LexemeKind::Integer(n) => {
                 self.consume();
                 Some(Expression::int_literal(token.pos, n))
             }

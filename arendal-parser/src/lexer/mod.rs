@@ -1,35 +1,35 @@
 use std::fmt;
 
 use super::{
-    chartoken, BigInt, CharToken, CharTokenType, CharTokens, Errors, Indentation, NewLine, Pos,
+    tokenizer, BigInt, Token, TokenKind, Tokens, Errors, Indentation, NewLine, Pos,
     Result,
 };
 
-pub fn tokenize(input: &str) -> Result<Tokens> {
-    let pass1 = chartoken::tokenize(input)?;
-    tokenize2(pass1)
+pub fn lex(input: &str) -> Result<Lexemes> {
+    let pass1 = tokenizer::tokenize(input)?;
+    lex2(pass1)
 }
 
-fn tokenize2(input: CharTokens) -> Result<Tokens> {
-    Tokenizer::new(input).tokenize()
+fn lex2(input: Tokens) -> Result<Lexemes> {
+    Lexer::new(input).lex()
 }
 
-pub type Tokens<'a> = Vec<Box<Token<'a>>>;
+pub type Lexemes<'a> = Vec<Box<Lexeme<'a>>>;
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Token<'a> {
-    pub pos: Pos<'a>, // Starting position of the token
-    pub token_type: TokenType<'a>,
+pub struct Lexeme<'a> {
+    pub pos: Pos<'a>, // Starting position of the lexeme
+    pub kind: LexemeKind<'a>,
 }
 
-impl<'a> fmt::Debug for Token<'a> {
+impl<'a> fmt::Debug for Lexeme<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}@{:?}", self.token_type, self.pos)
+        write!(f, "{:?}@{:?}", self.kind, self.pos)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenType<'a> {
+pub enum LexemeKind<'a> {
     Indent(Indentation),
     Whitespace,
     EndOfLine(NewLine),
@@ -54,39 +54,39 @@ pub enum TokenType<'a> {
     Word(&'a str),
 }
 
-impl<'a> TokenType<'a> {
-    fn single(t: &CharTokenType) -> Option<TokenType<'a>> {
+impl<'a> LexemeKind<'a> {
+    fn single(t: &TokenKind) -> Option<LexemeKind<'a>> {
         match t {
-            CharTokenType::Plus => Some(TokenType::Plus),
-            CharTokenType::Minus => Some(TokenType::Minus),
-            CharTokenType::Star => Some(TokenType::Star),
-            CharTokenType::Slash => Some(TokenType::Slash),
-            CharTokenType::Dot => Some(TokenType::Dot),
-            CharTokenType::Greater => Some(TokenType::Greater),
-            CharTokenType::Less => Some(TokenType::Less),
-            CharTokenType::Equal => Some(TokenType::Equal),
-            CharTokenType::Underscore => Some(TokenType::Underscore),
+            TokenKind::Plus => Some(LexemeKind::Plus),
+            TokenKind::Minus => Some(LexemeKind::Minus),
+            TokenKind::Star => Some(LexemeKind::Star),
+            TokenKind::Slash => Some(LexemeKind::Slash),
+            TokenKind::Dot => Some(LexemeKind::Dot),
+            TokenKind::Greater => Some(LexemeKind::Greater),
+            TokenKind::Less => Some(LexemeKind::Less),
+            TokenKind::Equal => Some(LexemeKind::Equal),
+            TokenKind::Underscore => Some(LexemeKind::Underscore),
             _ => None,
         }
     }
 }
 
-struct Tokenizer<'a> {
-    input: CharTokens<'a>,
-    tokens: Tokens<'a>,
+struct Lexer<'a> {
+    input: Tokens<'a>,
+    lexemes: Lexemes<'a>,
     errors: Errors<'a>,
-    index: usize,         // Index of the current input token
-    token_start: Pos<'a>, // Start of the current output token
+    index: usize,          // Index of the current input lexer
+    lexeme_start: Pos<'a>, // Start of the current output lexer
 }
 
-impl<'a> Tokenizer<'a> {
-    fn new(input: CharTokens<'a>) -> Tokenizer<'a> {
-        Tokenizer {
+impl<'a> Lexer<'a> {
+    fn new(input: Tokens<'a>) -> Lexer<'a> {
+        Lexer {
             input,
-            tokens: Vec::new(),
+            lexemes: Vec::new(),
             errors: Default::default(),
             index: 0,
-            token_start: Pos::new(""),
+            lexeme_start: Pos::new(""),
         }
     }
 
@@ -95,13 +95,13 @@ impl<'a> Tokenizer<'a> {
         self.index >= self.input.len()
     }
 
-    // Consumes one token, advancing the index accordingly.
+    // Consumes one lexer, advancing the index accordingly.
     fn consume(&mut self) {
         self.index += 1;
     }
 
-    // Returns a clone of the token at the current index, if any
-    fn peek(&self) -> Option<CharToken<'a>> {
+    // Returns a clone of the lexer at the current index, if any
+    fn peek(&self) -> Option<Token<'a>> {
         if self.is_done() {
             None
         } else {
@@ -109,8 +109,8 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    // Returns a clone of the token the requested positions after the current one, if any.
-    fn peek_ahead(&self, n: usize) -> Option<CharToken<'a>> {
+    // Returns a clone of the lexer the requested positions after the current one, if any.
+    fn peek_ahead(&self, n: usize) -> Option<Token<'a>> {
         let i = self.index + n;
         if i >= self.input.len() {
             None
@@ -119,42 +119,42 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn tokenize(mut self) -> Result<'a, Tokens<'a>> {
+    fn lex(mut self) -> Result<'a, Lexemes<'a>> {
         self.consume_indentation();
         while let Some(t) = self.peek() {
-            self.token_start = t.pos;
+            self.lexeme_start = t.pos;
             if self.consume_whitespace(true) {
                 continue;
             }
-            if let Some(tt) = TokenType::single(&t.token_type) {
+            if let Some(tt) = LexemeKind::single(&t.kind) {
                 self.consume();
                 self.add_token(tt);
                 continue;
             }
-            match t.token_type {
-                CharTokenType::EndOfLine(_) => {
+            match t.kind {
+                TokenKind::EndOfLine(_) => {
                     self.consume();
                     self.consume_indentation();
                 }
-                CharTokenType::Bang => self.consume_bang(),
-                CharTokenType::Digits(s) => self.consume_digits(s),
+                TokenKind::Bang => self.consume_bang(),
+                TokenKind::Digits(s) => self.consume_digits(s),
                 _ => self.errors.add(crate::parsing_error(t.pos)),
             }
         }
-        self.errors.to_result(self.tokens)
+        self.errors.to_result(self.lexemes)
     }
 
-    fn add_token(&mut self, token_type: TokenType<'a>) {
-        self.tokens.push(Box::new(Token {
-            pos: self.token_start,
-            token_type,
+    fn add_token(&mut self, token_type: LexemeKind<'a>) {
+        self.lexemes.push(Box::new(Lexeme {
+            pos: self.lexeme_start,
+            kind: token_type,
         }));
     }
 
     fn consume_tabs(&mut self) -> usize {
         let mut tabs = 0;
-        while let Some(CharToken {
-            token_type: CharTokenType::Tabs(n),
+        while let Some(Token {
+            kind: TokenKind::Tabs(n),
             ..
         }) = self.peek()
         {
@@ -166,8 +166,8 @@ impl<'a> Tokenizer<'a> {
 
     fn consume_spaces(&mut self) -> usize {
         let mut spaces = 0;
-        while let Some(CharToken {
-            token_type: CharTokenType::Spaces(n),
+        while let Some(Token {
+            kind: TokenKind::Spaces(n),
             ..
         }) = self.peek()
         {
@@ -188,7 +188,7 @@ impl<'a> Tokenizer<'a> {
             }
         }
         if found && add_token {
-            self.add_token(TokenType::Whitespace);
+            self.add_token(LexemeKind::Whitespace);
         }
         found
     }
@@ -204,13 +204,13 @@ impl<'a> Tokenizer<'a> {
                 line_index += 1;
                 continue;
             }
-            if let CharTokenType::EndOfLine(_) = token.token_type {
+            if let TokenKind::EndOfLine(_) = token.kind {
                 look_ahead += 1;
                 remove += line_index + 1; // the EOL itself
                 line_index = 0;
                 continue;
             }
-            break; // any other token
+            break; // any other lexer
         }
         self.index += remove;
     }
@@ -218,10 +218,10 @@ impl<'a> Tokenizer<'a> {
     fn consume_indentation(&mut self) {
         self.skip_empty_lines();
         if let Some(token) = self.peek() {
-            self.token_start = token.pos;
+            self.lexeme_start = token.pos;
             let tabs = self.consume_tabs();
             let spaces = self.consume_spaces();
-            self.add_token(TokenType::Indent(Indentation::new(tabs, spaces)));
+            self.add_token(LexemeKind::Indent(Indentation::new(tabs, spaces)));
             if let Some(t) = self.peek() {
                 if t.is_whitespace() {
                     self.add_indentation_error(&t);
@@ -232,11 +232,11 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn consume_bang(&mut self) {
-        let t = if let Some(CharTokenType::Equal) = self.peek_ahead(1).map(|t| t.token_type) {
+        let t = if let Some(TokenKind::Equal) = self.peek_ahead(1).map(|t| t.kind) {
             self.consume();
-            TokenType::NotEqual
+            LexemeKind::NotEqual
         } else {
-            TokenType::Bang
+            LexemeKind::Bang
         };
         self.add_token(t);
         self.consume();
@@ -244,10 +244,10 @@ impl<'a> Tokenizer<'a> {
 
     fn consume_digits(&mut self, digits: &'a str) {
         self.consume();
-        self.add_token(TokenType::Integer(digits.parse().unwrap()));
+        self.add_token(LexemeKind::Integer(digits.parse().unwrap()));
     }
 
-    fn add_indentation_error(&mut self, token: &CharToken<'a>) {
+    fn add_indentation_error(&mut self, token: &Token<'a>) {
         self.errors.add(crate::indentation_error(token.pos))
     }
 }

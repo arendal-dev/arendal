@@ -1,9 +1,9 @@
-pub mod chartoken;
+pub mod tokenizer;
+pub mod lexer;
 pub mod parser;
-pub mod token;
 
-pub use chartoken::{CharToken, CharTokenType, CharTokens};
-pub use token::{Token, TokenType, Tokens};
+pub use tokenizer::{Token, TokenKind, Tokens};
+pub use lexer::{Lexeme, LexemeKind, Lexemes};
 
 use arendal_ast::{error, BigInt};
 use std::fmt;

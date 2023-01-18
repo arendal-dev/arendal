@@ -1,32 +1,32 @@
 use super::{Enclosure, Errors, NewLine, Pos, Result};
 use std::fmt;
 
-pub fn tokenize(input: &str) -> Result<CharTokens> {
+pub fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(input).tokenize()
 }
 
-pub type CharTokens<'a> = Vec<CharToken<'a>>;
+pub type Tokens<'a> = Vec<Token<'a>>;
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct CharToken<'a> {
-    pub pos: Pos<'a>, // Starting position of the token
-    pub token_type: CharTokenType<'a>,
+pub struct Token<'a> {
+    pub pos: Pos<'a>, // Starting position of the lexer
+    pub kind: TokenKind<'a>,
 }
 
-impl<'a> CharToken<'a> {
+impl<'a> Token<'a> {
     pub fn is_whitespace(&self) -> bool {
-        self.token_type.is_whitespace()
+        self.kind.is_whitespace()
     }
 }
 
-impl<'a> fmt::Debug for CharToken<'a> {
+impl<'a> fmt::Debug for Token<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}@{:?}", self.token_type, self.pos)
+        write!(f, "{:?}@{:?}", self.kind, self.pos)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CharTokenType<'a> {
+pub enum TokenKind<'a> {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
@@ -46,32 +46,29 @@ pub enum CharTokenType<'a> {
     Word(&'a str),
 }
 
-impl<'a> CharTokenType<'a> {
+impl<'a> TokenKind<'a> {
     fn is_whitespace(&self) -> bool {
-        match self {
-            CharTokenType::Spaces(_) | CharTokenType::Tabs(_) => true,
-            _ => false,
-        }
+        matches!(self, TokenKind::Spaces(_) | TokenKind::Tabs(_))
     }
 
-    fn single(c: char) -> Option<CharTokenType<'a>> {
+    fn single(c: char) -> Option<TokenKind<'a>> {
         match c {
-            '+' => Some(CharTokenType::Plus),
-            '-' => Some(CharTokenType::Minus),
-            '*' => Some(CharTokenType::Star),
-            '/' => Some(CharTokenType::Slash),
-            '.' => Some(CharTokenType::Dot),
-            '>' => Some(CharTokenType::Greater),
-            '<' => Some(CharTokenType::Less),
-            '!' => Some(CharTokenType::Bang),
-            '=' => Some(CharTokenType::Equal),
-            '(' => Some(CharTokenType::Open(Enclosure::Parens)),
-            ')' => Some(CharTokenType::Close(Enclosure::Parens)),
-            '{' => Some(CharTokenType::Open(Enclosure::Curly)),
-            '}' => Some(CharTokenType::Close(Enclosure::Curly)),
-            '[' => Some(CharTokenType::Open(Enclosure::Square)),
-            ']' => Some(CharTokenType::Close(Enclosure::Square)),
-            '_' => Some(CharTokenType::Underscore),
+            '+' => Some(TokenKind::Plus),
+            '-' => Some(TokenKind::Minus),
+            '*' => Some(TokenKind::Star),
+            '/' => Some(TokenKind::Slash),
+            '.' => Some(TokenKind::Dot),
+            '>' => Some(TokenKind::Greater),
+            '<' => Some(TokenKind::Less),
+            '!' => Some(TokenKind::Bang),
+            '=' => Some(TokenKind::Equal),
+            '(' => Some(TokenKind::Open(Enclosure::Parens)),
+            ')' => Some(TokenKind::Close(Enclosure::Parens)),
+            '{' => Some(TokenKind::Open(Enclosure::Curly)),
+            '}' => Some(TokenKind::Close(Enclosure::Curly)),
+            '[' => Some(TokenKind::Open(Enclosure::Square)),
+            ']' => Some(TokenKind::Close(Enclosure::Square)),
+            '_' => Some(TokenKind::Underscore),
             _ => None,
         }
     }
@@ -79,7 +76,7 @@ impl<'a> CharTokenType<'a> {
 
 struct Tokenizer<'a> {
     chars: Vec<char>,
-    tokens: CharTokens<'a>,
+    tokens: Tokens<'a>,
     errors: Errors<'a>,
     // Positions
     pos: Pos<'a>,
@@ -129,11 +126,11 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn tokenize(mut self) -> Result<'a, CharTokens<'a>> {
+    fn tokenize(mut self) -> Result<'a, Tokens<'a>> {
         while !self.is_done() {
             self.token_start = self.pos;
             let c = self.peek();
-            if let Some(t) = CharTokenType::single(c) {
+            if let Some(t) = TokenKind::single(c) {
                 self.consume_single_char_token(t);
             } else {
                 match c {
@@ -152,8 +149,8 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    // Consumes a char, creating the provided token
-    fn consume_single_char_token(&mut self, token_type: CharTokenType<'a>) {
+    // Consumes a char, creating the provided lexer
+    fn consume_single_char_token(&mut self, token_type: TokenKind<'a>) {
         self.consume();
         self.add_token(token_type);
     }
@@ -176,14 +173,14 @@ impl<'a> Tokenizer<'a> {
             Some(nl) => {
                 self.pos.advance(nl.bytes());
                 self.char_index += nl.chars();
-                self.add_token(CharTokenType::EndOfLine(nl));
+                self.add_token(TokenKind::EndOfLine(nl));
                 true
             }
             _ => false,
         }
     }
 
-    // Starts a token a consumes chars while they are equal to the one provided.
+    // Starts a lexer a consumes chars while they are equal to the one provided.
     // Returns the number of chars consumed.
     fn consume_multiple(&mut self, c: char) -> usize {
         let mut count = 1;
@@ -196,12 +193,12 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn consume_spaces(&mut self) {
-        let token = CharTokenType::Spaces(self.consume_multiple(' '));
+        let token = TokenKind::Spaces(self.consume_multiple(' '));
         self.add_token(token);
     }
 
     fn consume_tabs(&mut self) {
-        let token = CharTokenType::Tabs(self.consume_multiple('\t'));
+        let token = TokenKind::Tabs(self.consume_multiple('\t'));
         self.add_token(token);
     }
 
@@ -217,7 +214,7 @@ impl<'a> Tokenizer<'a> {
             }
         }
         if consumed {
-            self.add_token(CharTokenType::Digits(self.get_token_str()));
+            self.add_token(TokenKind::Digits(self.get_token_str()));
         }
         consumed
     }
@@ -237,7 +234,7 @@ impl<'a> Tokenizer<'a> {
             }
         }
         if consumed {
-            self.add_token(CharTokenType::Word(self.get_token_str()));
+            self.add_token(TokenKind::Word(self.get_token_str()));
         }
         consumed
     }
@@ -246,10 +243,10 @@ impl<'a> Tokenizer<'a> {
         self.token_start.str_to(&self.pos)
     }
 
-    fn add_token(&mut self, token_type: CharTokenType<'a>) {
-        self.tokens.push(CharToken {
+    fn add_token(&mut self, token_type: TokenKind<'a>) {
+        self.tokens.push(Token {
             pos: self.token_start,
-            token_type,
+            kind: token_type,
         });
     }
 
