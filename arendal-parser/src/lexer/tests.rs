@@ -1,10 +1,11 @@
+use std::rc::Rc;
 use super::{Indentation, Lexeme, LexemeKind, Lexemes, Pos};
 use arendal_ast::ToBigInt;
 
 fn eq_kinds(left: &Lexemes, right: &Lexemes) -> bool {
-    let n = left.len();
-    if n == right.len() {
-        for (left_token, right_token) in left.iter().zip(right.iter()) {
+    let n = left.lexemes.len();
+    if n == right.lexemes.len() {
+        for (left_token, right_token) in left.lexemes.iter().zip(right.lexemes.iter()) {
             if left_token.kind != right_token.kind {
                 return false;
             }
@@ -24,12 +25,12 @@ impl<'a> TestCase<'a> {
     fn new(input: &'a str) -> TestCase<'a> {
         TestCase {
             input,
-            lexemes: Vec::new(),
+            lexemes: Default::default(),
         }
     }
 
     fn token(mut self, kind: LexemeKind<'a>) -> Self {
-        self.lexemes.push(Box::new(Lexeme {
+        self.lexemes.lexemes.push(Rc::new(Lexeme {
             pos: Pos::new(self.input),
             kind,
         }));

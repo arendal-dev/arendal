@@ -284,7 +284,10 @@ struct Error<'a> {
 
 impl<'a> Error<'a> {
     fn new(pos: Pos<'a>, error_type: ErrorKind) -> Self {
-        Error { pos, kind: error_type }
+        Error {
+            pos,
+            kind: error_type,
+        }
     }
 }
 

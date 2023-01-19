@@ -2,7 +2,7 @@ pub mod lexer;
 pub mod parser;
 pub mod tokenizer;
 
-pub use lexer::{Lexeme, LexemeKind, Lexemes};
+pub use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes};
 pub use tokenizer::{Token, TokenKind, Tokens};
 
 use arendal_ast::{error, BigInt};
@@ -95,30 +95,6 @@ impl Indentation {
     fn new(tabs: usize, spaces: usize) -> Indentation {
         Indentation { tabs, spaces }
     }
-}
-
-#[derive(Debug)]
-struct ParserError<'a> {
-    // Error position
-    pos: Pos<'a>,
-    error_type: ErrorType,
-}
-
-impl<'a> ParserError<'a> {
-    fn new(pos: Pos<'a>, error_type: ErrorType) -> Self {
-        ParserError { pos, error_type }
-    }
-}
-
-#[derive(Debug)]
-enum ErrorType {
-    ParsingError, // placeholder, temporary error
-}
-
-impl<'a> error::Error<'a> for ParserError<'a> {}
-
-fn parsing_error(pos: Pos) -> ParserError {
-    ParserError::new(pos, ErrorType::ParsingError)
 }
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
 use std::fmt;
+use std::rc::Rc;
 
 use super::{
     error, tokenizer, BigInt, Errors, Indentation, NewLine, Pos, Result, Token, TokenKind, Tokens,
@@ -13,7 +14,30 @@ fn lex2(input: Tokens) -> Result<Lexemes> {
     Lexer::new(input).lex()
 }
 
-pub type Lexemes<'a> = Vec<Box<Lexeme<'a>>>;
+pub type LexemeRef<'a> = Rc<Lexeme<'a>>;
+
+#[derive(Default)]
+pub struct Lexemes<'a> {
+    lexemes: Vec<LexemeRef<'a>>,
+}
+
+impl<'a> Lexemes<'a> {
+    #[inline]
+    pub fn contains(&self, index: usize) -> bool {
+        index < self.lexemes.len()
+    }
+
+    #[inline]
+    pub fn get(&self, index: usize) -> Option<LexemeRef<'a>> {
+        self.lexemes.get(index).map(|l| Rc::clone(l))
+    }
+}
+
+impl<'a> fmt::Debug for Lexemes<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.lexemes)
+    }
+}
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Lexeme<'a> {
@@ -82,7 +106,7 @@ impl<'a> Lexer<'a> {
     fn new(input: Tokens<'a>) -> Lexer<'a> {
         Lexer {
             input,
-            lexemes: Vec::new(),
+            lexemes: Default::default(),
             errors: Default::default(),
             index: 0,
             lexeme_start: Pos::new(""),
@@ -128,14 +152,14 @@ impl<'a> Lexer<'a> {
                 }
                 TokenKind::Bang => self.consume_bang(),
                 TokenKind::Digits(s) => self.consume_digits(s),
-                _ => self.errors.add(crate::parsing_error(t.pos)),
+                _ => self.add_error(&t, ErrorKind::UnexpectedToken),
             }
         }
         self.errors.to_result(self.lexemes)
     }
 
     fn add_token(&mut self, token_type: LexemeKind<'a>) {
-        self.lexemes.push(Box::new(Lexeme {
+        self.lexemes.lexemes.push(Rc::new(Lexeme {
             pos: self.lexeme_start,
             kind: token_type,
         }));
@@ -250,13 +274,17 @@ struct Error<'a> {
 
 impl<'a> Error<'a> {
     fn new(token: Token<'a>, error_type: ErrorKind) -> Self {
-        Error { token, kind: error_type }
+        Error {
+            token,
+            kind: error_type,
+        }
     }
 }
 
 #[derive(Debug)]
 enum ErrorKind {
     IndentationError,
+    UnexpectedToken,
 }
 
 impl<'a> error::Error<'a> for Error<'a> {}

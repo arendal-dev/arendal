@@ -1,5 +1,5 @@
-use super::{lexer, Lexeme, LexemeKind, Lexemes};
-use crate::{Errors, Expression, Result};
+use super::{error, lexer, Errors, Expression, LexemeKind, LexemeRef, Lexemes, Result};
+use std::rc::Rc;
 
 // Tries to parses an expression
 fn parse_expression(input: &str) -> Result<Option<Expression>> {
@@ -24,7 +24,7 @@ impl<'a> Parser<'a> {
 
     // Returns true if we have reached the end of the input
     fn is_done(&self) -> bool {
-        self.index >= self.input.len()
+        self.input.contains(self.index)
     }
 
     // Consumes one lexer, advancing the index accordingly.
@@ -33,28 +33,19 @@ impl<'a> Parser<'a> {
     }
 
     // Returns a clone of the lexer at the current index, if any
-    fn peek(&self) -> Option<Box<Lexeme<'a>>> {
-        if self.is_done() {
-            None
-        } else {
-            Some(self.input[self.index].clone())
-        }
+    fn peek(&self) -> Option<LexemeRef<'a>> {
+        self.input.get(self.index)
     }
 
     // Consumes one lexer a returns the next one, if any.
-    fn consume_and_peek(&mut self) -> Option<Box<Lexeme<'a>>> {
+    fn consume_and_peek(&mut self) -> Option<LexemeRef<'a>> {
         self.consume();
         self.peek()
     }
 
     // Returns a clone of the lexer the requested positions after the current one, if any.
-    fn peek_ahead(&self, n: usize) -> Option<Box<Lexeme<'a>>> {
-        let i = self.index + n;
-        if i >= self.input.len() {
-            None
-        } else {
-            Some(self.input[i].clone())
-        }
+    fn peek_ahead(&self, n: usize) -> Option<LexemeRef<'a>> {
+        self.input.get(self.index + n)
     }
 
     // Tries to parses an expression, if any, consuming as many tokens as needed
@@ -67,19 +58,42 @@ impl<'a> Parser<'a> {
     }
 
     fn rule_primary(&mut self) -> Option<Expression<'a>> {
-        let token = self.peek()?;
-        match token.kind {
+        let lexeme = self.peek()?;
+        match &lexeme.kind {
             LexemeKind::Integer(n) => {
                 self.consume();
-                Some(Expression::int_literal(token.pos, n))
+                Some(Expression::int_literal(lexeme.pos, n.clone()))
             }
             _ => {
-                self.errors.add(crate::parsing_error(token.pos));
+                self.add_error(&lexeme, ErrorKind::ParsingError);
                 None
             }
         }
     }
+
+    fn add_error(&mut self, lexeme: &LexemeRef<'a>, kind: ErrorKind) {
+        self.errors.add(Error::new(Rc::clone(lexeme), kind))
+    }
 }
+
+#[derive(Debug)]
+struct Error<'a> {
+    lexeme: LexemeRef<'a>,
+    kind: ErrorKind,
+}
+
+impl<'a> Error<'a> {
+    fn new(lexeme: LexemeRef<'a>, kind: ErrorKind) -> Self {
+        Error { lexeme, kind }
+    }
+}
+
+#[derive(Debug)]
+enum ErrorKind {
+    ParsingError, // placeholder, temporary error
+}
+
+impl<'a> error::Error<'a> for Error<'a> {}
 
 #[cfg(test)]
 mod tests;
