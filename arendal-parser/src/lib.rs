@@ -1,9 +1,9 @@
-pub mod tokenizer;
 pub mod lexer;
 pub mod parser;
+pub mod tokenizer;
 
-pub use tokenizer::{Token, TokenKind, Tokens};
 pub use lexer::{Lexeme, LexemeKind, Lexemes};
+pub use tokenizer::{Token, TokenKind, Tokens};
 
 use arendal_ast::{error, BigInt};
 use std::fmt;
@@ -112,20 +112,10 @@ impl<'a> ParserError<'a> {
 
 #[derive(Debug)]
 enum ErrorType {
-    IndentationError,
-    UnexpectedChar(char),
     ParsingError, // placeholder, temporary error
 }
 
 impl<'a> error::Error<'a> for ParserError<'a> {}
-
-fn indentation_error(pos: Pos) -> ParserError {
-    ParserError::new(pos, ErrorType::IndentationError)
-}
-
-fn unexpected_char(pos: Pos, c: char) -> ParserError {
-    ParserError::new(pos, ErrorType::UnexpectedChar(c))
-}
 
 fn parsing_error(pos: Pos) -> ParserError {
     ParserError::new(pos, ErrorType::ParsingError)

@@ -1,4 +1,4 @@
-use super::{Enclosure, Errors, NewLine, Pos, Result};
+use super::{error, Enclosure, Errors, NewLine, Pos, Result};
 use std::fmt;
 
 pub fn tokenize(input: &str) -> Result<Tokens> {
@@ -27,7 +27,6 @@ impl<'a> fmt::Debug for Tokens<'a> {
         write!(f, "{:?}", self.tokens)
     }
 }
-
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Token<'a> {
@@ -167,7 +166,7 @@ impl<'a> Tokenizer<'a> {
 
     fn tokenize2(&mut self, c: char) {
         if !self.consume_eol(c) && !self.consume_digits(c) && !self.consume_word(c) {
-            self.add_unexpected_char(c)
+            self.add_error(ErrorKind::UnexpectedChar(c));
         }
     }
 
@@ -272,10 +271,29 @@ impl<'a> Tokenizer<'a> {
         });
     }
 
-    fn add_unexpected_char(&mut self, c: char) {
-        self.errors.add(super::unexpected_char(self.pos, c))
+    fn add_error(&mut self, error: ErrorKind) {
+        self.errors.add(Error::new(self.pos, error));
     }
 }
+
+#[derive(Debug)]
+struct Error<'a> {
+    pos: Pos<'a>,
+    kind: ErrorKind,
+}
+
+impl<'a> Error<'a> {
+    fn new(pos: Pos<'a>, error_type: ErrorKind) -> Self {
+        Error { pos, kind: error_type }
+    }
+}
+
+#[derive(Debug)]
+enum ErrorKind {
+    UnexpectedChar(char),
+}
+
+impl<'a> error::Error<'a> for Error<'a> {}
 
 #[cfg(test)]
 mod tests;

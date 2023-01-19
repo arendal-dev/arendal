@@ -1,8 +1,7 @@
 use std::fmt;
 
 use super::{
-    tokenizer, BigInt, Token, TokenKind, Tokens, Errors, Indentation, NewLine, Pos,
-    Result,
+    error, tokenizer, BigInt, Errors, Indentation, NewLine, Pos, Result, Token, TokenKind, Tokens,
 };
 
 pub fn lex(input: &str) -> Result<Lexemes> {
@@ -215,7 +214,7 @@ impl<'a> Lexer<'a> {
             self.add_token(LexemeKind::Indent(Indentation::new(tabs, spaces)));
             if let Some(t) = self.peek() {
                 if t.is_whitespace() {
-                    self.add_indentation_error(&t);
+                    self.add_error(&t, ErrorKind::IndentationError);
                     self.consume_whitespace(false);
                 }
             }
@@ -238,10 +237,29 @@ impl<'a> Lexer<'a> {
         self.add_token(LexemeKind::Integer(digits.parse().unwrap()));
     }
 
-    fn add_indentation_error(&mut self, token: &Token<'a>) {
-        self.errors.add(crate::indentation_error(token.pos))
+    fn add_error(&mut self, token: &Token<'a>, kind: ErrorKind) {
+        self.errors.add(Error::new(token.clone(), kind))
     }
 }
+
+#[derive(Debug)]
+struct Error<'a> {
+    token: Token<'a>,
+    kind: ErrorKind,
+}
+
+impl<'a> Error<'a> {
+    fn new(token: Token<'a>, error_type: ErrorKind) -> Self {
+        Error { token, kind: error_type }
+    }
+}
+
+#[derive(Debug)]
+enum ErrorKind {
+    IndentationError,
+}
+
+impl<'a> error::Error<'a> for Error<'a> {}
 
 #[cfg(test)]
 mod tests;

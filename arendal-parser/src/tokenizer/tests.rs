@@ -1,4 +1,4 @@
-use super::{Token, TokenKind, Tokens, Enclosure, NewLine, Pos};
+use super::{Enclosure, NewLine, Pos, Token, TokenKind, Tokens};
 use NewLine::*;
 
 struct TestCase<'a> {
