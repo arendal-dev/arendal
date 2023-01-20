@@ -20,7 +20,7 @@ pub struct LexemeRef {
     lex_ref: Rc<Lexeme>,
 }
 
-impl<'a> LexemeRef {
+impl LexemeRef {
     fn new(lexeme: Lexeme) -> Self {
         LexemeRef {
             lex_ref: Rc::new(lexeme),
@@ -72,7 +72,7 @@ impl Lexeme {
     }
 }
 
-impl<'a> fmt::Debug for Lexeme {
+impl fmt::Debug for Lexeme {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}[{:?}]", self.kind, self.token)
     }
@@ -104,7 +104,7 @@ pub enum LexemeKind {
     Word(Substr),
 }
 
-impl<'a> LexemeKind {
+impl LexemeKind {
     fn single(t: &TokenKind) -> Option<LexemeKind> {
         match t {
             TokenKind::Plus => Some(LexemeKind::Plus),
@@ -314,7 +314,7 @@ enum ErrorKind {
     UnexpectedToken,
 }
 
-impl<'a> super::Error for Error {}
+impl super::Error for Error {}
 
 #[cfg(test)]
 mod tests;
