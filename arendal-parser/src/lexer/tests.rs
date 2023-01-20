@@ -1,12 +1,11 @@
-use std::rc::Rc;
-use super::{Indentation, Lexeme, LexemeKind, Lexemes, Pos};
+use super::{ArcStr, Indentation, Lexeme, LexemeKind, LexemeRef, Lexemes, Pos, Token, TokenKind};
 use arendal_ast::ToBigInt;
 
 fn eq_kinds(left: &Lexemes, right: &Lexemes) -> bool {
     let n = left.lexemes.len();
     if n == right.lexemes.len() {
         for (left_token, right_token) in left.lexemes.iter().zip(right.lexemes.iter()) {
-            if left_token.kind != right_token.kind {
+            if left_token.kind() != right_token.kind() {
                 return false;
             }
         }
@@ -16,22 +15,25 @@ fn eq_kinds(left: &Lexemes, right: &Lexemes) -> bool {
     }
 }
 
-struct TestCase<'a> {
-    input: &'a str,
-    lexemes: Lexemes<'a>,
+struct TestCase {
+    input: ArcStr,
+    lexemes: Lexemes,
 }
 
-impl<'a> TestCase<'a> {
-    fn new(input: &'a str) -> TestCase<'a> {
+impl TestCase {
+    fn new(input: &str) -> TestCase {
         TestCase {
-            input,
+            input: ArcStr::from(input),
             lexemes: Default::default(),
         }
     }
 
-    fn token(mut self, kind: LexemeKind<'a>) -> Self {
-        self.lexemes.lexemes.push(Rc::new(Lexeme {
-            pos: Pos::new(self.input),
+    fn token(mut self, kind: LexemeKind) -> Self {
+        self.lexemes.lexemes.push(LexemeRef::new(Lexeme {
+            token: Token {
+                pos: Pos::new(self.input.clone()),
+                kind: TokenKind::Equal,
+            },
             kind,
         }));
         self
@@ -50,7 +52,7 @@ impl<'a> TestCase<'a> {
     }
 
     fn ok_without_pos(&self) {
-        match super::lex(self.input) {
+        match super::lex(self.input.as_str()) {
             Ok(tokens) => assert!(
                 eq_kinds(&tokens, &self.lexemes),
                 "{:?}\n{:?}",

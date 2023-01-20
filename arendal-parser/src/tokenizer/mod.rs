@@ -1,53 +1,53 @@
-use super::{error, Enclosure, Errors, NewLine, Pos, Result};
+use super::{ArcStr, Enclosure, Errors, NewLine, Pos, Result, Substr};
 use std::fmt;
 
 pub fn tokenize(input: &str) -> Result<Tokens> {
-    Tokenizer::new(input).tokenize()
+    Tokenizer::new(ArcStr::from(input)).tokenize()
 }
 
 #[derive(Default, PartialEq, Eq)]
-pub struct Tokens<'a> {
-    tokens: Vec<Token<'a>>,
+pub struct Tokens {
+    tokens: Vec<Token>,
 }
 
-impl<'a> Tokens<'a> {
+impl Tokens {
     #[inline]
     pub fn contains(&self, index: usize) -> bool {
         index < self.tokens.len()
     }
 
     #[inline]
-    pub fn get(&self, index: usize) -> Option<Token<'a>> {
+    pub fn get(&self, index: usize) -> Option<Token> {
         self.tokens.get(index).map(|t| t.clone())
     }
 }
 
-impl<'a> fmt::Debug for Tokens<'a> {
+impl fmt::Debug for Tokens {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.tokens)
     }
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Token<'a> {
-    pub pos: Pos<'a>, // Starting position of the lexer
-    pub kind: TokenKind<'a>,
+pub struct Token {
+    pub pos: Pos, // Starting position of the token
+    pub kind: TokenKind,
 }
 
-impl<'a> Token<'a> {
+impl Token {
     pub fn is_whitespace(&self) -> bool {
         self.kind.is_whitespace()
     }
 }
 
-impl<'a> fmt::Debug for Token<'a> {
+impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}@{:?}", self.kind, self.pos)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenKind<'a> {
+pub enum TokenKind {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
@@ -63,16 +63,16 @@ pub enum TokenKind<'a> {
     Open(Enclosure),
     Close(Enclosure),
     Underscore,
-    Digits(&'a str),
-    Word(&'a str),
+    Digits(Substr),
+    Word(Substr),
 }
 
-impl<'a> TokenKind<'a> {
+impl TokenKind {
     fn is_whitespace(&self) -> bool {
         matches!(self, TokenKind::Spaces(_) | TokenKind::Tabs(_))
     }
 
-    fn single(c: char) -> Option<TokenKind<'a>> {
+    fn single(c: char) -> Option<TokenKind> {
         match c {
             '+' => Some(TokenKind::Plus),
             '-' => Some(TokenKind::Minus),
@@ -95,27 +95,28 @@ impl<'a> TokenKind<'a> {
     }
 }
 
-struct Tokenizer<'a> {
+struct Tokenizer {
     chars: Vec<char>,
-    tokens: Tokens<'a>,
-    errors: Errors<'a>,
+    tokens: Tokens,
+    errors: Errors,
     // Positions
-    pos: Pos<'a>,
+    pos: Pos,
     // Current char index from the beginning of the input
     char_index: usize,
     // Start of the current token
-    token_start: Pos<'a>,
+    token_start: Pos,
 }
 
-impl<'a> Tokenizer<'a> {
-    fn new(input: &str) -> Tokenizer {
+impl Tokenizer {
+    fn new(input: ArcStr) -> Tokenizer {
+        let pos = Pos::new(input.clone());
         Tokenizer {
             chars: input.chars().collect(),
             tokens: Default::default(),
             errors: Default::default(),
-            pos: Pos::new(input),
+            pos: pos.clone(),
             char_index: 0,
-            token_start: Pos::new(input),
+            token_start: pos,
         }
     }
 
@@ -147,9 +148,9 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn tokenize(mut self) -> Result<'a, Tokens<'a>> {
+    fn tokenize(mut self) -> Result<Tokens> {
         while !self.is_done() {
-            self.token_start = self.pos;
+            self.token_start = self.pos.clone();
             let c = self.peek();
             if let Some(t) = TokenKind::single(c) {
                 self.consume_single_char_token(t);
@@ -171,7 +172,7 @@ impl<'a> Tokenizer<'a> {
     }
 
     // Consumes a char, creating the provided lexer
-    fn consume_single_char_token(&mut self, token_type: TokenKind<'a>) {
+    fn consume_single_char_token(&mut self, token_type: TokenKind) {
         self.consume();
         self.add_token(token_type);
     }
@@ -260,33 +261,33 @@ impl<'a> Tokenizer<'a> {
         consumed
     }
 
-    fn get_token_str(&self) -> &'a str {
+    fn get_token_str(&self) -> Substr {
         self.token_start.str_to(&self.pos)
     }
 
-    fn add_token(&mut self, token_type: TokenKind<'a>) {
+    fn add_token(&mut self, token_type: TokenKind) {
         self.tokens.tokens.push(Token {
-            pos: self.token_start,
+            pos: self.token_start.clone(),
             kind: token_type,
         });
     }
 
     fn add_error(&mut self, error: ErrorKind) {
-        self.errors.add(Error::new(self.pos, error));
+        self.errors.add(Error::new(&self.pos, error));
     }
 }
 
 #[derive(Debug)]
-struct Error<'a> {
-    pos: Pos<'a>,
+struct Error {
+    pos: Pos,
     kind: ErrorKind,
 }
 
-impl<'a> Error<'a> {
-    fn new(pos: Pos<'a>, error_type: ErrorKind) -> Self {
+impl Error {
+    fn new(pos: &Pos, kind: ErrorKind) -> Self {
         Error {
-            pos,
-            kind: error_type,
+            pos: pos.clone(),
+            kind,
         }
     }
 }
@@ -296,7 +297,7 @@ enum ErrorKind {
     UnexpectedChar(char),
 }
 
-impl<'a> error::Error<'a> for Error<'a> {}
+impl super::Error for Error {}
 
 #[cfg(test)]
 mod tests;

@@ -1,24 +1,25 @@
-use super::{Enclosure, NewLine, Pos, Token, TokenKind, Tokens};
+use super::{ArcStr, Enclosure, NewLine, Pos, Token, TokenKind, Tokens};
 use NewLine::*;
 
-struct TestCase<'a> {
-    input: &'a str,
-    pos: Pos<'a>,
-    tokens: Tokens<'a>,
+struct TestCase {
+    input: ArcStr,
+    pos: Pos,
+    tokens: Tokens,
 }
 
-impl<'a> TestCase<'a> {
-    fn new(input: &'a str) -> TestCase<'a> {
+impl TestCase {
+    fn new(input: &str) -> TestCase {
+        let arcstr = ArcStr::from(input);
         TestCase {
-            input,
-            pos: Pos::new(input),
+            input: arcstr.clone(),
+            pos: Pos::new(arcstr),
             tokens: Default::default(),
         }
     }
 
-    fn token(mut self, token_type: TokenKind<'a>, bytes: usize) -> Self {
+    fn token(mut self, token_type: TokenKind, bytes: usize) -> Self {
         self.tokens.tokens.push(Token {
-            pos: self.pos,
+            pos: self.pos.clone(),
             kind: token_type,
         });
         self.pos.advance(bytes);
@@ -29,7 +30,7 @@ impl<'a> TestCase<'a> {
         self.token(TokenKind::EndOfLine(nl), nl.bytes())
     }
 
-    fn single(self, token_type: TokenKind<'a>) -> Self {
+    fn single(self, token_type: TokenKind) -> Self {
         self.token(token_type, 1)
     }
 
@@ -41,16 +42,19 @@ impl<'a> TestCase<'a> {
         self.token(TokenKind::Tabs(n), n)
     }
 
-    fn digits(self, digits: &'a str) -> Self {
-        self.token(TokenKind::Digits(digits), digits.len())
+    fn digits(self, digits: &str) -> Self {
+        self.token(
+            TokenKind::Digits(ArcStr::from(digits).substr(0..)),
+            digits.len(),
+        )
     }
 
-    fn word(self, word: &'a str) -> Self {
-        self.token(TokenKind::Word(word), word.len())
+    fn word(self, word: &str) -> Self {
+        self.token(TokenKind::Word(ArcStr::from(word).substr(0..)), word.len())
     }
 
     fn ok(&self) {
-        match super::tokenize(self.input) {
+        match super::tokenize(self.input.as_str()) {
             Ok(tokens) => assert_eq!(tokens, self.tokens),
             Err(_) => panic!(),
         }

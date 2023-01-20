@@ -2,7 +2,8 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::{
-    error, tokenizer, BigInt, Errors, Indentation, NewLine, Pos, Result, Token, TokenKind, Tokens,
+    tokenizer, ArcStr, BigInt, Errors, Indentation, Loc, NewLine, Pos, Result, Substr, Token,
+    TokenKind, Tokens,
 };
 
 pub fn lex(input: &str) -> Result<Lexemes> {
@@ -14,45 +15,71 @@ fn lex2(input: Tokens) -> Result<Lexemes> {
     Lexer::new(input).lex()
 }
 
-pub type LexemeRef<'a> = Rc<Lexeme<'a>>;
-
-#[derive(Default)]
-pub struct Lexemes<'a> {
-    lexemes: Vec<LexemeRef<'a>>,
+#[derive(Debug, Clone)]
+pub struct LexemeRef {
+    lex_ref: Rc<Lexeme>,
 }
 
-impl<'a> Lexemes<'a> {
+impl<'a> LexemeRef {
+    fn new(lexeme: Lexeme) -> Self {
+        LexemeRef {
+            lex_ref: Rc::new(lexeme),
+        }
+    }
+
+    pub fn kind(&self) -> &LexemeKind {
+        &self.lex_ref.kind
+    }
+}
+
+impl Loc for LexemeRef {}
+
+#[derive(Default)]
+pub struct Lexemes {
+    lexemes: Vec<LexemeRef>,
+}
+
+impl Lexemes {
     #[inline]
     pub fn contains(&self, index: usize) -> bool {
         index < self.lexemes.len()
     }
 
     #[inline]
-    pub fn get(&self, index: usize) -> Option<LexemeRef<'a>> {
-        self.lexemes.get(index).map(|l| Rc::clone(l))
+    pub fn get(&self, index: usize) -> Option<LexemeRef> {
+        self.lexemes.get(index).map(|l| l.clone())
     }
 }
 
-impl<'a> fmt::Debug for Lexemes<'a> {
+impl fmt::Debug for Lexemes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.lexemes)
     }
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Lexeme<'a> {
-    pub pos: Pos<'a>, // Starting position of the lexeme
-    pub kind: LexemeKind<'a>,
+pub struct Lexeme {
+    pub token: Token, // Starting token of the lexeme
+    pub kind: LexemeKind,
 }
 
-impl<'a> fmt::Debug for Lexeme<'a> {
+impl Lexeme {
+    fn new(token: &Token, kind: LexemeKind) -> Self {
+        Lexeme {
+            token: token.clone(),
+            kind,
+        }
+    }
+}
+
+impl<'a> fmt::Debug for Lexeme {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}@{:?}", self.kind, self.pos)
+        write!(f, "{:?}[{:?}]", self.kind, self.token)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LexemeKind<'a> {
+pub enum LexemeKind {
     Indent(Indentation),
     Whitespace,
     EndOfLine(NewLine),
@@ -74,11 +101,11 @@ pub enum LexemeKind<'a> {
     OpenSBracket,
     CloseSBracket,
     Underscore,
-    Word(&'a str),
+    Word(Substr),
 }
 
-impl<'a> LexemeKind<'a> {
-    fn single(t: &TokenKind) -> Option<LexemeKind<'a>> {
+impl<'a> LexemeKind {
+    fn single(t: &TokenKind) -> Option<LexemeKind> {
         match t {
             TokenKind::Plus => Some(LexemeKind::Plus),
             TokenKind::Minus => Some(LexemeKind::Minus),
@@ -94,22 +121,22 @@ impl<'a> LexemeKind<'a> {
     }
 }
 
-struct Lexer<'a> {
-    input: Tokens<'a>,
-    lexemes: Lexemes<'a>,
-    errors: Errors<'a>,
-    index: usize,          // Index of the current input lexer
-    lexeme_start: Pos<'a>, // Start of the current output lexer
+struct Lexer {
+    input: Tokens,
+    lexemes: Lexemes,
+    errors: Errors,
+    index: usize,        // Index of the current input token
+    lexeme_start: usize, // Index of the start token of the current lexeme
 }
 
-impl<'a> Lexer<'a> {
-    fn new(input: Tokens<'a>) -> Lexer<'a> {
+impl Lexer {
+    fn new(input: Tokens) -> Lexer {
         Lexer {
             input,
             lexemes: Default::default(),
             errors: Default::default(),
             index: 0,
-            lexeme_start: Pos::new(""),
+            lexeme_start: 0,
         }
     }
 
@@ -124,19 +151,19 @@ impl<'a> Lexer<'a> {
     }
 
     // Returns a clone of the lexer at the current index, if any
-    fn peek(&self) -> Option<Token<'a>> {
+    fn peek(&self) -> Option<Token> {
         self.input.get(self.index)
     }
 
     // Returns a clone of the lexer the requested positions after the current one, if any.
-    fn peek_ahead(&self, n: usize) -> Option<Token<'a>> {
+    fn peek_ahead(&self, n: usize) -> Option<Token> {
         self.input.get(self.index + n)
     }
 
-    fn lex(mut self) -> Result<'a, Lexemes<'a>> {
+    fn lex(mut self) -> Result<Lexemes> {
         self.consume_indentation();
         while let Some(t) = self.peek() {
-            self.lexeme_start = t.pos;
+            self.lexeme_start = self.index;
             if self.consume_whitespace(true) {
                 continue;
             }
@@ -151,18 +178,18 @@ impl<'a> Lexer<'a> {
                     self.consume_indentation();
                 }
                 TokenKind::Bang => self.consume_bang(),
-                TokenKind::Digits(s) => self.consume_digits(s),
+                TokenKind::Digits(s) => self.consume_digits(&s),
                 _ => self.add_error(&t, ErrorKind::UnexpectedToken),
             }
         }
         self.errors.to_result(self.lexemes)
     }
 
-    fn add_token(&mut self, token_type: LexemeKind<'a>) {
-        self.lexemes.lexemes.push(Rc::new(Lexeme {
-            pos: self.lexeme_start,
-            kind: token_type,
-        }));
+    fn add_token(&mut self, token_type: LexemeKind) {
+        self.lexemes.lexemes.push(LexemeRef::new(Lexeme::new(
+            &self.input.get(self.lexeme_start).unwrap(),
+            token_type,
+        )));
     }
 
     fn consume_tabs(&mut self) -> usize {
@@ -231,8 +258,8 @@ impl<'a> Lexer<'a> {
 
     fn consume_indentation(&mut self) {
         self.skip_empty_lines();
-        if let Some(token) = self.peek() {
-            self.lexeme_start = token.pos;
+        if let Some(_) = self.peek() {
+            self.lexeme_start = self.index;
             let tabs = self.consume_tabs();
             let spaces = self.consume_spaces();
             self.add_token(LexemeKind::Indent(Indentation::new(tabs, spaces)));
@@ -256,24 +283,24 @@ impl<'a> Lexer<'a> {
         self.consume();
     }
 
-    fn consume_digits(&mut self, digits: &'a str) {
+    fn consume_digits(&mut self, digits: &Substr) {
         self.consume();
         self.add_token(LexemeKind::Integer(digits.parse().unwrap()));
     }
 
-    fn add_error(&mut self, token: &Token<'a>, kind: ErrorKind) {
+    fn add_error(&mut self, token: &Token, kind: ErrorKind) {
         self.errors.add(Error::new(token.clone(), kind))
     }
 }
 
 #[derive(Debug)]
-struct Error<'a> {
-    token: Token<'a>,
+struct Error {
+    token: Token,
     kind: ErrorKind,
 }
 
-impl<'a> Error<'a> {
-    fn new(token: Token<'a>, error_type: ErrorKind) -> Self {
+impl Error {
+    fn new(token: Token, error_type: ErrorKind) -> Self {
         Error {
             token,
             kind: error_type,
@@ -287,7 +314,7 @@ enum ErrorKind {
     UnexpectedToken,
 }
 
-impl<'a> error::Error<'a> for Error<'a> {}
+impl<'a> super::Error for Error {}
 
 #[cfg(test)]
 mod tests;

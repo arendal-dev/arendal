@@ -28,7 +28,7 @@ pub struct Expression<L: Loc> {
     expr: Expr<L>,
 }
 
-impl<'a, L: Loc> Expression<L> {
+impl<L: Loc> Expression<L> {
     fn new(loc: L, expr: Expr<L>) -> Self {
         Expression { loc, expr }
     }
