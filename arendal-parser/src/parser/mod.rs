@@ -23,7 +23,7 @@ impl Parser {
 
     // Returns true if we have reached the end of the input
     fn is_done(&self) -> bool {
-        self.input.contains(self.index)
+        !self.input.contains(self.index)
     }
 
     // Consumes one lexer, advancing the index accordingly.
@@ -51,10 +51,13 @@ impl Parser {
     // Assumes that the expression starts on a line.
     fn parse_expression(mut self) -> Result<Expression> {
         if self.is_done() {
+            println!("Empty input: {:?}", self.input);
             self.empty_input()
         } else if let Some(e) = self.expression(Indentation::new(0, 0)) {
+            println!("Expression returned");
             self.errors.to_result(e)
         } else {
+            println!("None returned");
             Err(self.errors)
         }
     }

@@ -42,6 +42,7 @@ pub struct Lexemes {
 impl Lexemes {
     #[inline]
     pub fn contains(&self, index: usize) -> bool {
+        println!("Index: {} - Len: {}", index, self.lexemes.len());
         index < self.lexemes.len()
     }
 
