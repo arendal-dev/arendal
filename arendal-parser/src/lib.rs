@@ -95,6 +95,10 @@ impl Indentation {
     fn new(tabs: usize, spaces: usize) -> Indentation {
         Indentation { tabs, spaces }
     }
+
+    fn next(&self) -> Indentation {
+        Self::new(self.tabs, self.spaces + 1)
+    }
 }
 
 impl Ord for Indentation {

@@ -1,5 +1,4 @@
 use super::{lexer, Errors, Expression, Indentation, LexemeKind, LexemeRef, Lexemes, Result};
-use arendal_ast::{BigInt, ToBigInt};
 
 // Parses a single expression
 fn parse_expression(input: &str) -> Result<Expression> {
@@ -48,10 +47,12 @@ impl Parser {
         self.input.get(self.index + n)
     }
 
-    // Parses a single expression, if any, consuming as many tokens as needed.
+    // Parses the input as single expression, if any, consuming as many tokens as needed.
     // Assumes that the expression starts on a line.
     fn parse_expression(mut self) -> Result<Expression> {
-        if let Some(e) = self.expression() {
+        if self.is_done() {
+            self.empty_input()
+        } else if let Some(e) = self.expression(Indentation::new(0, 0)) {
             self.errors.to_result(e)
         } else {
             Err(self.errors)
@@ -60,33 +61,32 @@ impl Parser {
 
     // Parses a single expression, if any, consuming as many tokens as needed.
     // Assumes that the expression starts on a line.
-    fn expression(&mut self) -> Option<Expression> {
+    fn expression(&mut self, min_indent: Indentation) -> Option<Expression> {
         let peek = self.peek();
         if let Some(lexeme) = peek {
             match lexeme.kind() {
                 LexemeKind::Indent(indentation) => {
-                    self.consume();
-                    let ctx = ExprCtx::new(*indentation, &lexeme);
-                    let rule_result = self.rule_expression(ctx);
-                    match rule_result {
-                        Ok(expr) => Some(expr),
-                        Err(error) => {
-                            self.errors.add(error);
-                            // TODO advance until next "resonable" line
-                            None
+                    if *indentation >= min_indent {
+                        self.consume();
+                        let ctx = ExprCtx::new(*indentation, &lexeme);
+                        let rule_result = self.rule_expression(ctx);
+                        match rule_result {
+                            Ok(expr) => return Some(expr),
+                            Err(error) => {
+                                self.errors.add(error);
+                                // TODO advance until next "resonable" line
+                            }
                         }
+                    } else {
+                        self.add_error(&lexeme, ErrorKind::ParsingError);
                     }
                 }
                 _ => {
-                    self.errors
-                        .add(Error::new(&lexeme, ErrorKind::ParsingError));
-                    None
+                    self.add_error(&lexeme, ErrorKind::ParsingError);
                 }
             }
-        } else {
-            self.errors.add(EmptyInputError {});
-            None
         }
+        None
     }
 
     fn rule_expression(&mut self, ctx: ExprCtx) -> ExprResult {
@@ -106,6 +106,10 @@ impl Parser {
         } else {
             Err(Error::new(&ctx.last_seen, ErrorKind::ParsingError))
         }
+    }
+
+    fn add_error(&mut self, lexeme: &LexemeRef, kind: ErrorKind) {
+        self.errors.add(Error::new(lexeme, kind));
     }
 
     fn empty_input<T>(mut self) -> Result<T> {

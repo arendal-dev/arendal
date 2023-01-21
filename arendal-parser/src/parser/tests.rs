@@ -1,2 +1,8 @@
+use super::parse_expression;
+
 #[test]
-fn it_works() {}
+fn int_literal() {
+    if parse_expression("1234").is_err() {
+        panic!();
+    }
+}
