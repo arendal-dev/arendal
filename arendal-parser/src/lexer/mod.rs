@@ -48,7 +48,7 @@ impl Lexemes {
 
     #[inline]
     pub fn get(&self, index: usize) -> Option<LexemeRef> {
-        self.lexemes.get(index).map(|l| l.clone())
+        self.lexemes.get(index).cloned()
     }
 }
 
@@ -259,7 +259,7 @@ impl Lexer {
 
     fn consume_indentation(&mut self) {
         self.skip_empty_lines();
-        if let Some(_) = self.peek() {
+        if self.peek().is_some() {
             self.lexeme_start = self.index;
             let tabs = self.consume_tabs();
             let spaces = self.consume_spaces();

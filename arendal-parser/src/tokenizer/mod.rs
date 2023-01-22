@@ -18,7 +18,7 @@ impl Tokens {
 
     #[inline]
     pub fn get(&self, index: usize) -> Option<Token> {
-        self.tokens.get(index).map(|t| t.clone())
+        self.tokens.get(index).cloned()
     }
 }
 

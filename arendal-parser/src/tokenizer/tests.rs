@@ -26,7 +26,7 @@ impl TestCase {
         self
     }
 
-    fn newline(mut self, nl: NewLine) -> Self {
+    fn newline(self, nl: NewLine) -> Self {
         self.token(TokenKind::EndOfLine(nl), nl.bytes())
     }
 
