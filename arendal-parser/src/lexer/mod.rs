@@ -15,7 +15,7 @@ fn lex2(input: Tokens) -> Result<Lexemes> {
     Lexer::new(input).lex()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct LexemeRef {
     lex_ref: Rc<Lexeme>,
 }

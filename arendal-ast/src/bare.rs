@@ -1,5 +1,6 @@
 use super::{BigInt, BinaryOp, UnaryOp};
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct BareLoc {}
 
 impl super::Loc for BareLoc {}

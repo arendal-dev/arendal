@@ -3,7 +3,10 @@ pub mod error;
 
 pub use num::bigint::{BigInt, ToBigInt};
 
-pub trait Loc {}
+use std::cmp::{Eq, PartialEq};
+use std::fmt::Debug;
+
+pub trait Loc: Debug + PartialEq + Eq {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -34,7 +37,7 @@ impl<L: Loc> Expression<L> {
         Expression { loc, expr }
     }
 
-    fn to_bare(&self) -> bare::Expression {
+    pub fn to_bare(&self) -> bare::Expression {
         match &self.expr {
             Expr::IntLiteral(value) => bare::int_literal(value.clone()),
             Expr::Unary(op, e) => bare::unary(*op, e.to_bare()),
