@@ -1,6 +1,7 @@
 pub mod bare;
 pub mod error;
 
+pub use arcstr::{literal, ArcStr, Substr};
 pub use num::bigint::{BigInt, ToBigInt};
 
 use std::cmp::{Eq, PartialEq};

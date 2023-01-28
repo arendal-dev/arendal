@@ -7,8 +7,8 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 pub use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes};
 pub use tokenizer::{Token, TokenKind, Tokens};
 
-use arcstr::{ArcStr, Substr};
 use arendal_ast::error::{Error, Errors, Result};
+use arendal_ast::{ArcStr, Substr};
 use arendal_ast::{BigInt, Loc};
 use std::fmt;
 
@@ -121,10 +121,11 @@ impl PartialOrd for Indentation {
 #[cfg(test)]
 mod tests {
     use super::Pos;
+    use arendal_ast::literal;
 
     #[test]
     fn pos_harness() {
-        let mut pos = Pos::new(arcstr::literal!("1234"));
+        let mut pos = Pos::new(literal!("1234"));
         assert_eq!(0, pos.index);
         assert!(!pos.is_done());
         pos.advance(2);
