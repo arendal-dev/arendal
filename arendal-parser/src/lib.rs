@@ -61,6 +61,11 @@ impl Pos {
         self.index += bytes;
     }
 
+    // Advances the current position the length of the provided char
+    fn advance_char(&mut self, c: char) {
+        self.advance(c.len_utf8());
+    }
+
     // Resets the current position
     fn reset(&mut self) {
         self.index = 0;

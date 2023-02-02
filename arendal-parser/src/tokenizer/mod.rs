@@ -72,25 +72,14 @@ impl TokenKind {
         matches!(self, TokenKind::Spaces(_) | TokenKind::Tabs(_))
     }
 
-    fn single(c: char) -> Option<TokenKind> {
-        match c {
-            '+' => Some(TokenKind::Plus),
-            '-' => Some(TokenKind::Minus),
-            '*' => Some(TokenKind::Star),
-            '/' => Some(TokenKind::Slash),
-            '.' => Some(TokenKind::Dot),
-            '>' => Some(TokenKind::Greater),
-            '<' => Some(TokenKind::Less),
-            '!' => Some(TokenKind::Bang),
-            '=' => Some(TokenKind::Equal),
-            '(' => Some(TokenKind::Open(Enclosure::Parens)),
-            ')' => Some(TokenKind::Close(Enclosure::Parens)),
-            '{' => Some(TokenKind::Open(Enclosure::Curly)),
-            '}' => Some(TokenKind::Close(Enclosure::Curly)),
-            '[' => Some(TokenKind::Open(Enclosure::Square)),
-            ']' => Some(TokenKind::Close(Enclosure::Square)),
-            '_' => Some(TokenKind::Underscore),
-            _ => None,
+    fn chars(&self) -> usize {
+        match self {
+            TokenKind::Spaces(n) => *n,
+            TokenKind::Tabs(n) => *n,
+            TokenKind::EndOfLine(nl) => nl.chars(),
+            TokenKind::Digits(s) => s.chars().count(),
+            TokenKind::Word(s) => s.chars().count(),
+            _ => 1,
         }
     }
 }
@@ -99,12 +88,8 @@ struct Tokenizer {
     chars: Vec<char>,
     tokens: Tokens,
     errors: Errors,
-    // Positions
-    pos: Pos,
-    // Current char index from the beginning of the input
-    char_index: usize,
-    // Start of the current token
-    token_start: Pos,
+    pos: Pos,          // Current position
+    char_index: usize, // Current char index from the beginning of the input
 }
 
 impl Tokenizer {
@@ -114,9 +99,8 @@ impl Tokenizer {
             chars: input.chars().collect(),
             tokens: Default::default(),
             errors: Default::default(),
-            pos: pos.clone(),
+            pos,
             char_index: 0,
-            token_start: pos,
         }
     }
 
@@ -127,149 +111,143 @@ impl Tokenizer {
 
     // Consumes one char, advancing the indices accordingly.
     fn consume(&mut self) {
-        let bytes = self.chars[self.char_index].len_utf8();
-        self.pos.advance(bytes);
+        self.pos.advance_char(self.chars[self.char_index]);
         self.char_index += 1;
     }
 
-    // Returns the char at the current index.
-    // Panics if we have reached the end of the input
-    fn peek(&self) -> char {
-        self.chars[self.char_index]
-    }
-
-    // Returns true if there's a next char and it's equal to the provided one.
-    fn next_matches(&self, c: char) -> bool {
-        let i = self.char_index + 1;
-        if i >= self.chars.len() {
-            false
-        } else {
-            c == self.chars[i]
+    // Consumes multiple chars, advancing the indices accordingly.
+    fn consume_chars(&mut self, n: usize) {
+        for _ in 0..n {
+            self.consume();
         }
     }
 
-    fn tokenize(mut self) -> Result<Tokens> {
-        while !self.is_done() {
-            self.token_start = self.pos.clone();
-            let c = self.peek();
-            if let Some(t) = TokenKind::single(c) {
-                self.consume_single_char_token(t);
+    // Returns the char at the current index if any
+    fn peek(&self) -> Option<char> {
+        if self.is_done() {
+            None
+        } else {
+            Some(self.chars[self.char_index])
+        }
+    }
+
+    // Returns the char at the current index if any
+    fn peek_ahead(&self, n: usize) -> Option<char> {
+        let index = self.char_index + n;
+        if index >= self.chars.len() {
+            None
+        } else {
+            Some(self.chars[index])
+        }
+    }
+
+    fn count_while(&self, c: char) -> usize {
+        let mut n = 1;
+        while let Some(ahead) = self.peek_ahead(n) {
+            if c == ahead {
+                n += 1;
             } else {
-                match c {
-                    ' ' => self.consume_spaces(),
-                    '\t' => self.consume_tabs(),
-                    _ => self.tokenize2(c),
-                }
+                break;
+            }
+        }
+        n
+    }
+
+    // Creates a substring of the input that starts at the current position, includes the initial
+    // char and any subsequent char until the predicate is false.
+    fn substr_while<P>(&self, initial: char, predicate: P) -> Substr
+    where
+        P: Fn(char) -> bool,
+    {
+        let mut n = 1;
+        let mut pos = self.pos.clone();
+        pos.advance_char(initial);
+        while let Some(c) = self.peek_ahead(n) {
+            if predicate(c) {
+                n += 1;
+                pos.advance_char(c);
+            } else {
+                break;
+            }
+        }
+        self.pos.str_to(&pos)
+    }
+
+    fn tokenize(mut self) -> Result<Tokens> {
+        while let Some(c) = self.peek() {
+            if !self.add_known_first_char(c) && !self.add_digits(c) && !self.add_word(c) {
+                self.add_error(ErrorKind::UnexpectedChar(c));
+                self.consume();
             }
         }
         self.errors.to_result(self.tokens)
     }
 
-    fn tokenize2(&mut self, c: char) {
-        if !self.consume_eol(c) && !self.consume_digits(c) && !self.consume_word(c) {
-            self.add_error(ErrorKind::UnexpectedChar(c));
-        }
-    }
-
-    // Consumes a char, creating the provided lexer
-    fn consume_single_char_token(&mut self, token_type: TokenKind) {
-        self.consume();
-        self.add_token(token_type);
-    }
-
-    // Returns whether the provided char is a newline, peeking the next if needed
-    // Consumes a new line if found in the current position
-    fn is_eol(&self, c: char) -> Option<NewLine> {
-        if c == '\n' {
-            Some(NewLine::LF)
-        } else if c == '\r' && self.next_matches('\n') {
-            Some(NewLine::CRLF)
-        } else {
-            None
-        }
-    }
-
-    // Consumes a new line if found in the current position
-    fn consume_eol(&mut self, c: char) -> bool {
-        match self.is_eol(c) {
-            Some(nl) => {
-                self.pos.advance(nl.bytes());
-                self.char_index += nl.chars();
-                self.add_token(TokenKind::EndOfLine(nl));
-                true
-            }
+    fn add_known_first_char(&mut self, c: char) -> bool {
+        match c {
+            '\n' => self.add_token(TokenKind::EndOfLine(NewLine::LF)),
+            '\r' => self.add_token_if_next(TokenKind::EndOfLine(NewLine::CRLF), '\n'),
+            ' ' => self.add_token(TokenKind::Spaces(self.count_while(' '))),
+            '\t' => self.add_token(TokenKind::Tabs(self.count_while('\t'))),
+            '+' => self.add_token(TokenKind::Plus),
+            '-' => self.add_token(TokenKind::Minus),
+            '*' => self.add_token(TokenKind::Star),
+            '/' => self.add_token(TokenKind::Slash),
+            '.' => self.add_token(TokenKind::Dot),
+            '>' => self.add_token(TokenKind::Greater),
+            '<' => self.add_token(TokenKind::Less),
+            '!' => self.add_token(TokenKind::Bang),
+            '=' => self.add_token(TokenKind::Equal),
+            '(' => self.add_token(TokenKind::Open(Enclosure::Parens)),
+            ')' => self.add_token(TokenKind::Close(Enclosure::Parens)),
+            '{' => self.add_token(TokenKind::Open(Enclosure::Curly)),
+            '}' => self.add_token(TokenKind::Close(Enclosure::Curly)),
+            '[' => self.add_token(TokenKind::Open(Enclosure::Square)),
+            ']' => self.add_token(TokenKind::Close(Enclosure::Square)),
+            '_' => self.add_token(TokenKind::Underscore),
             _ => false,
         }
     }
 
-    // Starts a lexer a consumes chars while they are equal to the one provided.
-    // Returns the number of chars consumed.
-    fn consume_multiple(&mut self, c: char) -> usize {
-        let mut count = 1;
-        self.consume();
-        while !self.is_done() && self.peek() == c {
-            self.consume();
-            count += 1
+    fn add_digits(&mut self, c: char) -> bool {
+        if c.is_ascii_digit() {
+            self.add_token(TokenKind::Digits(
+                self.substr_while(c, |n| n.is_ascii_digit()),
+            ))
+        } else {
+            false
         }
-        count
     }
 
-    fn consume_spaces(&mut self) {
-        let token = TokenKind::Spaces(self.consume_multiple(' '));
-        self.add_token(token);
+    fn add_word(&mut self, c: char) -> bool {
+        if c.is_ascii_alphabetic() {
+            self.add_token(TokenKind::Word(
+                self.substr_while(c, |n| n.is_ascii_alphanumeric()),
+            ))
+        } else {
+            false
+        }
     }
 
-    fn consume_tabs(&mut self) {
-        let token = TokenKind::Tabs(self.consume_multiple('\t'));
-        self.add_token(token);
-    }
-
-    fn consume_digits(&mut self, mut c: char) -> bool {
-        let mut consumed = false;
-        while c.is_ascii_digit() {
-            self.consume();
-            consumed = true;
-            if self.is_done() {
-                break;
-            } else {
-                c = self.peek();
-            }
-        }
-        if consumed {
-            self.add_token(TokenKind::Digits(self.get_token_str()));
-        }
-        consumed
-    }
-
-    fn consume_word(&mut self, mut c: char) -> bool {
-        if !c.is_ascii_alphabetic() {
-            return false;
-        }
-        let mut consumed = false;
-        while c.is_ascii_alphanumeric() {
-            self.consume();
-            consumed = true;
-            if self.is_done() {
-                break;
-            } else {
-                c = self.peek();
-            }
-        }
-        if consumed {
-            self.add_token(TokenKind::Word(self.get_token_str()));
-        }
-        consumed
-    }
-
-    fn get_token_str(&self) -> Substr {
-        self.token_start.str_to(&self.pos)
-    }
-
-    fn add_token(&mut self, token_type: TokenKind) {
+    // Creates a token of the provided type consuming the needed chars.
+    // Returns true to allow being the tail call of other add_ methods.
+    fn add_token(&mut self, kind: TokenKind) -> bool {
+        let chars = kind.chars();
         self.tokens.tokens.push(Token {
-            pos: self.token_start.clone(),
-            kind: token_type,
+            pos: self.pos.clone(),
+            kind,
         });
+        self.consume_chars(chars);
+        true
+    }
+
+    fn add_token_if_next(&mut self, kind: TokenKind, c: char) -> bool {
+        if let Some(next) = self.peek_ahead(1) {
+            if next == c {
+                return self.add_token(kind);
+            }
+        }
+        false
     }
 
     fn add_error(&mut self, error: ErrorKind) {

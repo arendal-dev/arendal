@@ -109,8 +109,12 @@ fn singles() {
 }
 
 #[test]
-fn digits() {
+fn digits1() {
     TestCase::new("1234").digits("1234").ok();
+}
+
+#[test]
+fn digits2() {
     TestCase::new("12 34")
         .digits("12")
         .spaces(1)
@@ -119,9 +123,17 @@ fn digits() {
 }
 
 #[test]
-fn word() {
+fn word1() {
     TestCase::new("abc").word("abc").ok();
+}
+
+#[test]
+fn word2() {
     TestCase::new("abc4e").word("abc4e").ok();
+}
+
+#[test]
+fn word3() {
     TestCase::new("4bc5e").digits("4").word("bc5e").ok();
 }
 
