@@ -100,24 +100,6 @@ pub enum LexemeKind {
     Word(Substr),
 }
 
-impl LexemeKind {
-    fn single(t: &TokenKind) -> Option<LexemeKind> {
-        match t {
-            TokenKind::Plus => Some(LexemeKind::Plus),
-            TokenKind::Minus => Some(LexemeKind::Minus),
-            TokenKind::Star => Some(LexemeKind::Star),
-            TokenKind::Slash => Some(LexemeKind::Slash),
-            TokenKind::Dot => Some(LexemeKind::Dot),
-            TokenKind::Greater => Some(LexemeKind::Greater),
-            TokenKind::Less => Some(LexemeKind::Less),
-            TokenKind::Equal => Some(LexemeKind::Equal),
-            TokenKind::NotEquals => Some(LexemeKind::NotEquals),
-            TokenKind::Underscore => Some(LexemeKind::Underscore),
-            _ => None,
-        }
-    }
-}
-
 struct Lexer {
     input: Tokens,
     lexemes: Lexemes,
@@ -180,6 +162,11 @@ impl Lexer {
                     self.advance(1);
                     self.add_indentation();
                 }
+                TokenKind::Open(e) => {
+                    self.enclosures.push(e);
+                    self.add_lexeme(LexemeKind::Open(e), 1)
+                }
+                TokenKind::Close(e) => self.add_close(&t, e),
                 TokenKind::Digits(s) => self.add_digits(&s),
                 _ => self.add_error(&t, ErrorKind::UnexpectedToken, 1),
             }
@@ -266,6 +253,31 @@ impl Lexer {
         }
     }
 
+    fn add_close(&mut self, token: &Token, e: Enclosure) {
+        match self.enclosures.pop() {
+            Some(last) => {
+                if e == last {
+                    self.add_lexeme(LexemeKind::Close(e), 1);
+                    return;
+                }
+                // Advance until the right close token
+                let mut n = 1;
+                while let Some(t) = self.peek_ahead(n) {
+                    if TokenKind::Close(e) == t.kind {
+                        self.enclosures.push(e); // we add it again so that it is closed in the next cycle
+                        break;
+                    } else {
+                        n += 1;
+                    }
+                }
+                self.add_error(token, ErrorKind::InvalidClose(e), n);
+            }
+            None => {
+                self.add_error(token, ErrorKind::InvalidClose(e), 1);
+            }
+        }
+    }
+
     fn add_digits(&mut self, digits: &Substr) {
         self.add_lexeme(LexemeKind::Integer(digits.parse().unwrap()), 1);
     }
@@ -294,6 +306,7 @@ impl Error {
 #[derive(Debug)]
 enum ErrorKind {
     IndentationError,
+    InvalidClose(Enclosure),
     UnexpectedToken,
 }
 
