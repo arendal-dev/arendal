@@ -2,8 +2,8 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::{
-    tokenizer, ArcStr, BigInt, Errors, Indentation, Loc, NewLine, Pos, Result, Substr, Token,
-    TokenKind, Tokens,
+    tokenizer, ArcStr, BigInt, Enclosure, Errors, Indentation, Loc, NewLine, Pos, Result, Substr,
+    Token, TokenKind, Tokens,
 };
 
 pub fn lex(input: &str) -> Result<Lexemes> {
@@ -83,7 +83,6 @@ impl fmt::Debug for Lexeme {
 pub enum LexemeKind {
     Indent(Indentation),
     Whitespace,
-    EndOfLine(NewLine),
     Plus,
     Minus,
     Star,
@@ -93,14 +92,10 @@ pub enum LexemeKind {
     Less,
     Bang,
     Equal,
-    NotEqual,
+    NotEquals,
     Integer(BigInt),
-    OpenParens,
-    CloseParens,
-    OpenCBracket,
-    CloseCBracket,
-    OpenSBracket,
-    CloseSBracket,
+    Open(Enclosure),
+    Close(Enclosure),
     Underscore,
     Word(Substr),
 }
@@ -116,6 +111,7 @@ impl LexemeKind {
             TokenKind::Greater => Some(LexemeKind::Greater),
             TokenKind::Less => Some(LexemeKind::Less),
             TokenKind::Equal => Some(LexemeKind::Equal),
+            TokenKind::NotEquals => Some(LexemeKind::NotEquals),
             TokenKind::Underscore => Some(LexemeKind::Underscore),
             _ => None,
         }
@@ -128,6 +124,7 @@ struct Lexer {
     errors: Errors,
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
+    enclosures: Vec<Enclosure>,
 }
 
 impl Lexer {
@@ -138,6 +135,7 @@ impl Lexer {
             errors: Default::default(),
             index: 0,
             lexeme_start: 0,
+            enclosures: Default::default(),
         }
     }
 
@@ -146,9 +144,9 @@ impl Lexer {
         !self.input.contains(self.index)
     }
 
-    // Consumes one lexer, advancing the index accordingly.
-    fn consume(&mut self) {
-        self.index += 1;
+    // Advances the index the provided number of tokens.
+    fn advance(&mut self, n: usize) {
+        self.index += n;
     }
 
     // Returns a clone of the lexer at the current index, if any
@@ -162,81 +160,60 @@ impl Lexer {
     }
 
     fn lex(mut self) -> Result<Lexemes> {
-        self.consume_indentation();
+        self.add_indentation();
         while let Some(t) = self.peek() {
             self.lexeme_start = self.index;
-            if self.consume_whitespace(true) {
-                continue;
-            }
-            if let Some(tt) = LexemeKind::single(&t.kind) {
-                self.consume();
-                self.add_token(tt);
-                continue;
-            }
             match t.kind {
+                TokenKind::Tabs(_) | TokenKind::Spaces(_) => self.advance_whitespace(true),
+                TokenKind::Plus => self.add_lexeme(LexemeKind::Plus, 1),
+                TokenKind::Minus => self.add_lexeme(LexemeKind::Minus, 1),
+                TokenKind::Star => self.add_lexeme(LexemeKind::Star, 1),
+                TokenKind::Slash => self.add_lexeme(LexemeKind::Slash, 1),
+                TokenKind::Dot => self.add_lexeme(LexemeKind::Dot, 1),
+                TokenKind::Greater => self.add_lexeme(LexemeKind::Greater, 1),
+                TokenKind::Less => self.add_lexeme(LexemeKind::Less, 1),
+                TokenKind::Bang => self.add_lexeme(LexemeKind::Bang, 1),
+                TokenKind::Equal => self.add_lexeme(LexemeKind::Equal, 1),
+                TokenKind::NotEquals => self.add_lexeme(LexemeKind::NotEquals, 1),
+                TokenKind::Underscore => self.add_lexeme(LexemeKind::Underscore, 1),
                 TokenKind::EndOfLine(_) => {
-                    self.consume();
-                    self.consume_indentation();
+                    self.advance(1);
+                    self.add_indentation();
                 }
-                TokenKind::Bang => self.consume_bang(),
-                TokenKind::Digits(s) => self.consume_digits(&s),
-                _ => self.add_error(&t, ErrorKind::UnexpectedToken),
+                TokenKind::Digits(s) => self.add_digits(&s),
+                _ => self.add_error(&t, ErrorKind::UnexpectedToken, 1),
             }
         }
         self.errors.to_result(self.lexemes)
     }
 
-    fn add_token(&mut self, token_type: LexemeKind) {
+    fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
         self.lexemes.lexemes.push(LexemeRef::new(Lexeme::new(
             &self.input.get(self.lexeme_start).unwrap(),
-            token_type,
+            kind,
         )));
+        self.advance(tokens);
     }
 
-    fn consume_tabs(&mut self) -> usize {
-        let mut tabs = 0;
-        while let Some(Token {
-            kind: TokenKind::Tabs(n),
-            ..
-        }) = self.peek()
-        {
-            tabs += n;
-            self.consume();
-        }
-        tabs
-    }
-
-    fn consume_spaces(&mut self) -> usize {
-        let mut spaces = 0;
-        while let Some(Token {
-            kind: TokenKind::Spaces(n),
-            ..
-        }) = self.peek()
-        {
-            spaces += n;
-            self.consume();
-        }
-        spaces
-    }
-
-    fn consume_whitespace(&mut self, add_token: bool) -> bool {
-        let mut found = false;
-        while let Some(t) = self.peek() {
+    fn advance_whitespace(&mut self, add_token: bool) {
+        let mut n = 0;
+        while let Some(t) = self.peek_ahead(n) {
             if t.is_whitespace() {
-                found = true;
-                self.consume();
+                n += 1;
             } else {
                 break;
             }
         }
-        if found && add_token {
-            self.add_token(LexemeKind::Whitespace);
+        if n > 0 {
+            if add_token {
+                self.add_lexeme(LexemeKind::Whitespace, n);
+            } else {
+                self.advance(n);
+            }
         }
-        found
     }
 
     fn skip_empty_lines(&mut self) {
-        // Skip empty lines
         let mut look_ahead: usize = 0;
         let mut remove: usize = 0;
         let mut line_index: usize = 0;
@@ -254,43 +231,48 @@ impl Lexer {
             }
             break; // any other lexer
         }
-        self.index += remove;
+        self.advance(remove);
     }
 
-    fn consume_indentation(&mut self) {
+    fn add_indentation(&mut self) {
         self.skip_empty_lines();
-        if self.peek().is_some() {
-            self.lexeme_start = self.index;
-            let tabs = self.consume_tabs();
-            let spaces = self.consume_spaces();
-            self.add_token(LexemeKind::Indent(Indentation::new(tabs, spaces)));
+        if !self.is_done() {
+            let mut tokens = 0;
+            let mut tabs = 0;
+            let mut spaces = 0;
+            while let Some(token) = self.peek_ahead(tokens) {
+                if let TokenKind::Tabs(n) = token.kind {
+                    tokens += 1;
+                    tabs += n;
+                } else {
+                    break;
+                }
+            }
+            while let Some(token) = self.peek_ahead(tokens) {
+                if let TokenKind::Spaces(n) = token.kind {
+                    tokens += 1;
+                    spaces += n;
+                } else {
+                    break;
+                }
+            }
+            self.add_lexeme(LexemeKind::Indent(Indentation::new(tabs, spaces)), tokens);
             if let Some(t) = self.peek() {
                 if t.is_whitespace() {
-                    self.add_error(&t, ErrorKind::IndentationError);
-                    self.consume_whitespace(false);
+                    self.add_error(&t, ErrorKind::IndentationError, 0);
+                    self.advance_whitespace(false);
                 }
             }
         }
     }
 
-    fn consume_bang(&mut self) {
-        let t = if let Some(TokenKind::Equal) = self.peek_ahead(1).map(|t| t.kind) {
-            self.consume();
-            LexemeKind::NotEqual
-        } else {
-            LexemeKind::Bang
-        };
-        self.add_token(t);
-        self.consume();
+    fn add_digits(&mut self, digits: &Substr) {
+        self.add_lexeme(LexemeKind::Integer(digits.parse().unwrap()), 1);
     }
 
-    fn consume_digits(&mut self, digits: &Substr) {
-        self.consume();
-        self.add_token(LexemeKind::Integer(digits.parse().unwrap()));
-    }
-
-    fn add_error(&mut self, token: &Token, kind: ErrorKind) {
-        self.errors.add(Error::new(token.clone(), kind))
+    fn add_error(&mut self, token: &Token, kind: ErrorKind, tokens: usize) {
+        self.errors.add(Error::new(token.clone(), kind));
+        self.advance(tokens)
     }
 }
 
