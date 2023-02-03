@@ -17,40 +17,34 @@ impl TestCase {
         }
     }
 
-    fn token(mut self, token_type: TokenKind, bytes: usize) -> Self {
+    fn token(mut self, kind: TokenKind) -> Self {
+        let bytes = kind.bytes();
         self.tokens.tokens.push(Token {
             pos: self.pos.clone(),
-            kind: token_type,
+            kind,
         });
         self.pos.advance(bytes);
         self
     }
 
     fn newline(self, nl: NewLine) -> Self {
-        self.token(TokenKind::EndOfLine(nl), nl.bytes())
-    }
-
-    fn single(self, token_type: TokenKind) -> Self {
-        self.token(token_type, 1)
+        self.token(TokenKind::EndOfLine(nl))
     }
 
     fn spaces(self, n: usize) -> Self {
-        self.token(TokenKind::Spaces(n), n)
+        self.token(TokenKind::Spaces(n))
     }
 
     fn tabs(self, n: usize) -> Self {
-        self.token(TokenKind::Tabs(n), n)
+        self.token(TokenKind::Tabs(n))
     }
 
     fn digits(self, digits: &str) -> Self {
-        self.token(
-            TokenKind::Digits(ArcStr::from(digits).substr(0..)),
-            digits.len(),
-        )
+        self.token(TokenKind::Digits(ArcStr::from(digits).substr(0..)))
     }
 
     fn word(self, word: &str) -> Self {
-        self.token(TokenKind::Word(ArcStr::from(word).substr(0..)), word.len())
+        self.token(TokenKind::Word(ArcStr::from(word).substr(0..)))
     }
 
     fn ok(&self) {
@@ -89,22 +83,32 @@ fn crlf() {
 #[test]
 fn singles() {
     TestCase::new("+-*./><!()={}[]_")
-        .single(TokenKind::Plus)
-        .single(TokenKind::Minus)
-        .single(TokenKind::Star)
-        .single(TokenKind::Dot)
-        .single(TokenKind::Slash)
-        .single(TokenKind::Greater)
-        .single(TokenKind::Less)
-        .single(TokenKind::Bang)
-        .single(TokenKind::Open(Enclosure::Parens))
-        .single(TokenKind::Close(Enclosure::Parens))
-        .single(TokenKind::Equal)
-        .single(TokenKind::Open(Enclosure::Curly))
-        .single(TokenKind::Close(Enclosure::Curly))
-        .single(TokenKind::Open(Enclosure::Square))
-        .single(TokenKind::Close(Enclosure::Square))
-        .single(TokenKind::Underscore)
+        .token(TokenKind::Plus)
+        .token(TokenKind::Minus)
+        .token(TokenKind::Star)
+        .token(TokenKind::Dot)
+        .token(TokenKind::Slash)
+        .token(TokenKind::Greater)
+        .token(TokenKind::Less)
+        .token(TokenKind::Bang)
+        .token(TokenKind::Open(Enclosure::Parens))
+        .token(TokenKind::Close(Enclosure::Parens))
+        .token(TokenKind::Equal)
+        .token(TokenKind::Open(Enclosure::Curly))
+        .token(TokenKind::Close(Enclosure::Curly))
+        .token(TokenKind::Open(Enclosure::Square))
+        .token(TokenKind::Close(Enclosure::Square))
+        .token(TokenKind::Underscore)
+        .ok();
+}
+
+#[test]
+fn bang() {
+    TestCase::new("!a!=b")
+        .token(TokenKind::Bang)
+        .word("a")
+        .token(TokenKind::NotEquals)
+        .word("b")
         .ok();
 }
 

@@ -60,6 +60,7 @@ pub enum TokenKind {
     Less,
     Bang,
     Equal,
+    NotEquals,
     Open(Enclosure),
     Close(Enclosure),
     Underscore,
@@ -79,6 +80,19 @@ impl TokenKind {
             TokenKind::EndOfLine(nl) => nl.chars(),
             TokenKind::Digits(s) => s.chars().count(),
             TokenKind::Word(s) => s.chars().count(),
+            TokenKind::NotEquals => 2,
+            _ => 1,
+        }
+    }
+
+    fn bytes(&self) -> usize {
+        match self {
+            TokenKind::Spaces(n) => *n,
+            TokenKind::Tabs(n) => *n,
+            TokenKind::EndOfLine(nl) => nl.bytes(),
+            TokenKind::Digits(s) => s.len(),
+            TokenKind::Word(s) => s.len(),
+            TokenKind::NotEquals => 2,
             _ => 1,
         }
     }
@@ -186,7 +200,7 @@ impl Tokenizer {
     fn add_known_first_char(&mut self, c: char) -> bool {
         match c {
             '\n' => self.add_token(TokenKind::EndOfLine(NewLine::LF)),
-            '\r' => self.add_token_if_next(TokenKind::EndOfLine(NewLine::CRLF), '\n'),
+            '\r' => self.add_token_if_next('\n', TokenKind::EndOfLine(NewLine::CRLF)),
             ' ' => self.add_token(TokenKind::Spaces(self.count_while(' '))),
             '\t' => self.add_token(TokenKind::Tabs(self.count_while('\t'))),
             '+' => self.add_token(TokenKind::Plus),
@@ -196,7 +210,7 @@ impl Tokenizer {
             '.' => self.add_token(TokenKind::Dot),
             '>' => self.add_token(TokenKind::Greater),
             '<' => self.add_token(TokenKind::Less),
-            '!' => self.add_token(TokenKind::Bang),
+            '!' => self.add_token_if_next_or_else('=', TokenKind::NotEquals, TokenKind::Bang),
             '=' => self.add_token(TokenKind::Equal),
             '(' => self.add_token(TokenKind::Open(Enclosure::Parens)),
             ')' => self.add_token(TokenKind::Close(Enclosure::Parens)),
@@ -241,13 +255,17 @@ impl Tokenizer {
         true
     }
 
-    fn add_token_if_next(&mut self, kind: TokenKind, c: char) -> bool {
+    fn add_token_if_next(&mut self, c: char, kind: TokenKind) -> bool {
         if let Some(next) = self.peek_ahead(1) {
             if next == c {
                 return self.add_token(kind);
             }
         }
         false
+    }
+
+    fn add_token_if_next_or_else(&mut self, c: char, kind2: TokenKind, kind1: TokenKind) -> bool {
+        self.add_token_if_next(c, kind2) || self.add_token(kind1)
     }
 
     fn add_error(&mut self, error: ErrorKind) {
