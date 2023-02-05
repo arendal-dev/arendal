@@ -13,6 +13,13 @@ name = "arendal-ast"
 version = "0.1.0"
 dependencies = [
  "arcstr",
+ "arendal-num",
+]
+
+[[package]]
+name = "arendal-num"
+version = "0.1.0"
+dependencies = [
  "num",
 ]
 

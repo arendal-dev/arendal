@@ -2,7 +2,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::{
-    tokenizer, ArcStr, BigInt, Enclosure, Errors, Indentation, Loc, NewLine, Pos, Result, Substr,
+    tokenizer, ArcStr, Enclosure, Errors, Indentation, Integer, Loc, NewLine, Pos, Result, Substr,
     Token, TokenKind, Tokens,
 };
 
@@ -93,7 +93,7 @@ pub enum LexemeKind {
     Bang,
     Equal,
     NotEquals,
-    Integer(BigInt),
+    Integer(Integer),
     Open(Enclosure),
     Close(Enclosure),
     Underscore,

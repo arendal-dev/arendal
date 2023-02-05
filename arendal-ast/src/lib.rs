@@ -2,7 +2,7 @@ pub mod bare;
 pub mod error;
 
 pub use arcstr::{literal, ArcStr, Substr};
-pub use num::bigint::{BigInt, ToBigInt};
+pub use arendal_num::{Integer, ToInteger};
 
 use std::cmp::{Eq, PartialEq};
 use std::fmt::Debug;
@@ -40,14 +40,14 @@ impl<L: Loc> Expression<L> {
 
     pub fn to_bare(&self) -> bare::Expression {
         match &self.expr {
-            Expr::IntLiteral(value) => bare::int_literal(value.clone()),
+            Expr::LitInteger(value) => bare::lit_integer(value.clone()),
             Expr::Unary(op, e) => bare::unary(*op, e.to_bare()),
             Expr::Binary(op, e1, e2) => bare::binary(*op, e1.to_bare(), e2.to_bare()),
         }
     }
 
-    pub fn int_literal(loc: L, value: BigInt) -> Self {
-        Self::new(loc, Expr::IntLiteral(value))
+    pub fn lit_integer(loc: L, value: Integer) -> Self {
+        Self::new(loc, Expr::LitInteger(value))
     }
 
     pub fn unary(loc: L, op: UnaryOp, expr: Expression<L>) -> Self {
@@ -61,7 +61,7 @@ impl<L: Loc> Expression<L> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expr<L: Loc> {
-    IntLiteral(BigInt),
+    LitInteger(Integer),
     Unary(UnaryOp, Box<Expression<L>>),
     Binary(BinaryOp, Box<Expression<L>>, Box<Expression<L>>),
 }

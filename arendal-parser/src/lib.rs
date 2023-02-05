@@ -9,7 +9,7 @@ pub use tokenizer::{Token, TokenKind, Tokens};
 
 use arendal_ast::error::{Error, Errors, Result};
 use arendal_ast::{ArcStr, Substr};
-use arendal_ast::{BigInt, Loc};
+use arendal_ast::{Integer, Loc};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

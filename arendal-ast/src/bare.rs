@@ -1,4 +1,4 @@
-use super::{BigInt, BinaryOp, UnaryOp};
+use super::{BinaryOp, Integer, UnaryOp};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct BareLoc {}
@@ -7,8 +7,8 @@ impl super::Loc for BareLoc {}
 
 pub type Expression = super::Expression<BareLoc>;
 
-pub fn int_literal(value: BigInt) -> Expression {
-    super::Expression::int_literal(BareLoc {}, value)
+pub fn lit_integer(value: Integer) -> Expression {
+    super::Expression::lit_integer(BareLoc {}, value)
 }
 
 pub fn unary(op: UnaryOp, expr: Expression) -> Expression {

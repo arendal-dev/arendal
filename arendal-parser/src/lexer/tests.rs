@@ -2,7 +2,7 @@ use super::{
     ArcStr, Enclosure, Indentation, Lexeme, LexemeKind, LexemeRef, Lexemes, Pos, Result, Token,
     TokenKind,
 };
-use arendal_ast::ToBigInt;
+use arendal_ast::ToInteger;
 
 fn eq_kinds(left: &Lexemes, right: &Lexemes) -> bool {
     let n = left.lexemes.len();
