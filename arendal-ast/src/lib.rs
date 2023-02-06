@@ -25,17 +25,15 @@ pub enum BinaryOp {
     NEq,
 }
 
-// We have a lifetime parameter as we expect locations to be a reference to some input
-// which will require a lifetime.
 #[derive(Debug, PartialEq, Eq)]
-pub struct Expression<L: Loc> {
-    loc: L,
-    expr: Expr<L>,
+pub struct Expression<P> {
+    payload: P,
+    expr: Expr<P>,
 }
 
-impl<L: Loc> Expression<L> {
-    fn new(loc: L, expr: Expr<L>) -> Self {
-        Expression { loc, expr }
+impl<P> Expression<P> {
+    fn new(payload: P, expr: Expr<P>) -> Self {
+        Expression { payload, expr }
     }
 
     pub fn to_bare(&self) -> bare::Expression {
@@ -46,21 +44,21 @@ impl<L: Loc> Expression<L> {
         }
     }
 
-    pub fn lit_integer(loc: L, value: Integer) -> Self {
-        Self::new(loc, Expr::LitInteger(value))
+    pub fn lit_integer(payload: P, value: Integer) -> Self {
+        Self::new(payload, Expr::LitInteger(value))
     }
 
-    pub fn unary(loc: L, op: UnaryOp, expr: Expression<L>) -> Self {
-        Self::new(loc, Expr::Unary(op, Box::new(expr)))
+    pub fn unary(payload: P, op: UnaryOp, expr: Expression<P>) -> Self {
+        Self::new(payload, Expr::Unary(op, Box::new(expr)))
     }
 
-    pub fn binary(loc: L, op: BinaryOp, expr1: Expression<L>, expr2: Expression<L>) -> Self {
-        Self::new(loc, Expr::Binary(op, Box::new(expr1), Box::new(expr2)))
+    pub fn binary(payload: P, op: BinaryOp, expr1: Expression<P>, expr2: Expression<P>) -> Self {
+        Self::new(payload, Expr::Binary(op, Box::new(expr1), Box::new(expr2)))
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Expr<L: Loc> {
+pub enum Expr<L> {
     LitInteger(Integer),
     Unary(UnaryOp, Box<Expression<L>>),
     Binary(BinaryOp, Box<Expression<L>>, Box<Expression<L>>),
