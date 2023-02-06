@@ -2,7 +2,7 @@ pub mod bare;
 pub mod error;
 
 pub use arcstr::{literal, ArcStr, Substr};
-pub use arendal_num::{Integer, ToInteger};
+pub use arendal_num::{Decimal, Integer};
 
 use std::cmp::{Eq, PartialEq};
 use std::fmt::Debug;

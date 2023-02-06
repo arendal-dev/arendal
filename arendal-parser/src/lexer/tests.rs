@@ -2,7 +2,6 @@ use super::{
     ArcStr, Enclosure, Indentation, Lexeme, LexemeKind, LexemeRef, Lexemes, Pos, Result, Token,
     TokenKind,
 };
-use arendal_ast::ToInteger;
 
 fn eq_kinds(left: &Lexemes, right: &Lexemes) -> bool {
     let n = left.lexemes.len();
@@ -55,8 +54,8 @@ impl TestCase {
         self.token(LexemeKind::Indent(Indentation::new(tabs, spaces)))
     }
 
-    fn integer(self, n: usize) -> Self {
-        self.token(LexemeKind::Integer(n.to_bigint().unwrap()))
+    fn integer(self, n: i64) -> Self {
+        self.token(LexemeKind::Integer(n.into()))
     }
 
     fn open(self, e: Enclosure) -> Self {
