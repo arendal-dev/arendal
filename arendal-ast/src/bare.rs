@@ -1,6 +1,6 @@
 use super::{BinaryOp, Integer, UnaryOp};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BareLoc {}
 
 impl super::Loc for BareLoc {}

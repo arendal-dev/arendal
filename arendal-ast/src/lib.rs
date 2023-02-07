@@ -1,13 +1,16 @@
 pub mod bare;
 pub mod error;
+pub mod types;
 
 pub use arcstr::{literal, ArcStr, Substr};
 pub use arendal_num::{Decimal, Integer};
 
+pub use types::Type;
+
 use std::cmp::{Eq, PartialEq};
 use std::fmt::Debug;
 
-pub trait Loc: Debug + PartialEq + Eq {}
+pub trait Loc: Debug + Clone + PartialEq + Eq {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -27,8 +30,8 @@ pub enum BinaryOp {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Expression<P> {
-    payload: P,
-    expr: Expr<P>,
+    pub payload: P,
+    pub expr: Expr<P>,
 }
 
 impl<P> Expression<P> {

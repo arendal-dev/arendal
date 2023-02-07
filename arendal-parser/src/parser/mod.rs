@@ -1,7 +1,7 @@
 use super::{lexer, Errors, Expression, Indentation, LexemeKind, LexemeRef, Lexemes, Result};
 
 // Parses a single expression
-fn parse_expression(input: &str) -> Result<Expression> {
+pub fn parse_expression(input: &str) -> Result<Expression> {
     let lexemes = lexer::lex(input)?;
     Parser::new(lexemes).parse_expression()
 }
