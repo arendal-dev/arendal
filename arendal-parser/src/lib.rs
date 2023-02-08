@@ -7,9 +7,9 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 pub use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes};
 pub use tokenizer::{Token, TokenKind, Tokens};
 
-use arendal_ast::error::{Error, Errors, Result};
-use arendal_ast::{ArcStr, Substr};
-use arendal_ast::{Integer, Loc};
+use ast::error::{Error, Errors, Result};
+use ast::{ArcStr, Loc, Substr};
+use num::Integer;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,7 +87,7 @@ impl fmt::Debug for Pos {
     }
 }
 
-type Expression = arendal_ast::Expression<LexemeRef>;
+type Expression = ast::Expression<LexemeRef>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Indentation {
@@ -126,7 +126,7 @@ impl PartialOrd for Indentation {
 #[cfg(test)]
 mod tests {
     use super::Pos;
-    use arendal_ast::literal;
+    use ast::literal;
 
     #[test]
     fn pos_harness() {

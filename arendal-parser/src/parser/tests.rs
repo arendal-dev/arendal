@@ -1,7 +1,7 @@
 use super::parse_expression;
 
-use arendal_ast::bare;
-use arendal_ast::bare::Expression;
+use ast::bare;
+use ast::bare::Expression;
 
 fn check_expression(input: &str, expr: Expression) {
     assert_eq!(parse_expression(input).unwrap().to_bare(), expr);

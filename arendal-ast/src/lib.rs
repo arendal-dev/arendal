@@ -3,10 +3,9 @@ pub mod error;
 pub mod types;
 
 pub use arcstr::{literal, ArcStr, Substr};
-pub use arendal_num::{Decimal, Integer};
-
 pub use types::Type;
 
+use num::{Decimal, Integer};
 use std::cmp::{Eq, PartialEq};
 use std::fmt::Debug;
 
