@@ -5,7 +5,7 @@ pub mod types;
 pub use arcstr::{literal, ArcStr, Substr};
 pub use types::Type;
 
-use num::{Decimal, Integer};
+use num::Integer;
 use std::cmp::{Eq, PartialEq};
 use std::fmt::Debug;
 
@@ -65,6 +65,22 @@ pub enum Expr<L> {
     Unary(UnaryOp, Box<Expression<L>>),
     Binary(BinaryOp, Box<Expression<L>>, Box<Expression<L>>),
 }
+
+pub struct Typed<L: Loc> {
+    pub loc: L,
+    pub t: Type,
+}
+
+impl<L: Loc> Typed<L> {
+    pub fn new(expr: &Expression<L>, t: Type) -> Self {
+        Typed {
+            loc: expr.payload.clone(),
+            t,
+        }
+    }
+}
+
+pub type TypedExpression<L> = Expression<Typed<L>>;
 
 #[cfg(test)]
 mod tests {

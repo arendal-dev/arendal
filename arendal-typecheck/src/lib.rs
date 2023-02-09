@@ -1,24 +1,8 @@
 use ast::error::{Error, Errors, Result};
-use ast::{Expression, Loc, Type};
-
-pub struct Typed<L: Loc> {
-    loc: L,
-    t: Type,
-}
-
-impl<L: Loc> Typed<L> {
-    fn new(expr: &Expression<L>, t: Type) -> Self {
-        Typed {
-            loc: expr.payload.clone(),
-            t,
-        }
-    }
-}
-
-pub type TypedExpr<L> = Expression<Typed<L>>;
+use ast::{Expression, Loc, Type, Typed, TypedExpression};
 
 // 'static here means that L is owned
-pub fn expression<L: Loc + 'static>(input: &Expression<L>) -> Result<TypedExpr<L>> {
+pub fn expression<L: Loc + 'static>(input: &Expression<L>) -> Result<TypedExpression<L>> {
     ExprChecker::new(input).check()
 }
 
@@ -35,7 +19,7 @@ impl<'a, L: Loc + 'static> ExprChecker<'a, L> {
         }
     }
 
-    fn check(mut self) -> Result<TypedExpr<L>> {
+    fn check(mut self) -> Result<TypedExpression<L>> {
         match self.check_expr(self.input) {
             Some(typed) => Ok(typed),
             None => Err(self.errors),
@@ -43,12 +27,16 @@ impl<'a, L: Loc + 'static> ExprChecker<'a, L> {
     }
 
     // Adds an error and returns `None` so that it can be used as tail call
-    fn add_error(&mut self, expr: &'a Expression<L>, kind: TypeErrorKind) -> Option<TypedExpr<L>> {
+    fn add_error(
+        &mut self,
+        expr: &'a Expression<L>,
+        kind: TypeErrorKind,
+    ) -> Option<TypedExpression<L>> {
         self.errors.add(TypeError::new(expr, kind));
         None
     }
 
-    fn check_expr(&mut self, expr: &'a Expression<L>) -> Option<TypedExpr<L>> {
+    fn check_expr(&mut self, expr: &'a Expression<L>) -> Option<TypedExpression<L>> {
         match &expr.expr {
             ast::Expr::LitInteger(value) => Some(Expression::lit_integer(
                 Typed::new(expr, Type::Integer),

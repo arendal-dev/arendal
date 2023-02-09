@@ -35,3 +35,11 @@ dependencies = [
  "arendal-ast",
  "arendal-num",
 ]
+
+[[package]]
+name = "arendal-wti"
+version = "0.1.0"
+dependencies = [
+ "arendal-ast",
+ "arendal-num",
+]
