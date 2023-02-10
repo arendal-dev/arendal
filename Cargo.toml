@@ -1,3 +1,10 @@
 [workspace]
 
-members = ["arendal-num", "arendal-ast", "arendal-parser", "arendal-typecheck", "arendal-wti"]
+members = [
+    "arendal-num",
+    "arendal-ast",
+    "arendal-parser",
+    "arendal-typecheck",
+    "arendal-wti",
+    "arendal"
+]

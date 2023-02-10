@@ -1,0 +1,13 @@
+[package]
+name = "arendal"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+num = { path = "../arendal-num", package = "arendal-num" }
+ast = { path = "../arendal-ast", package = "arendal-ast" }
+parser = { path = "../arendal-parser", package = "arendal-parser" }
+wti = { path = "../arendal-wti", package = "arendal-wti" }
+rustyline = "10.1.1"
