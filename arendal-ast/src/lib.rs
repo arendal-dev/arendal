@@ -66,21 +66,21 @@ pub enum Expr<L> {
     Binary(BinaryOp, Box<Expression<L>>, Box<Expression<L>>),
 }
 
-pub struct Typed<L: Loc> {
+pub struct TypedLoc<L: Loc> {
     pub loc: L,
-    pub t: Type,
+    pub loc_type: Type,
 }
 
-impl<L: Loc> Typed<L> {
-    pub fn new(expr: &Expression<L>, t: Type) -> Self {
-        Typed {
+impl<L: Loc> TypedLoc<L> {
+    pub fn new(expr: &Expression<L>, loc_type: Type) -> Self {
+        TypedLoc {
             loc: expr.payload.clone(),
-            t,
+            loc_type,
         }
     }
 }
 
-pub type TypedExpression<L> = Expression<Typed<L>>;
+pub type TypedExpression<L> = Expression<TypedLoc<L>>;
 
 #[cfg(test)]
 mod tests {

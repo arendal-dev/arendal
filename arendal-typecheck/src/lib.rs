@@ -1,5 +1,5 @@
 use ast::error::{Error, Errors, Result};
-use ast::{Expression, Loc, Type, Typed, TypedExpression};
+use ast::{Expression, Loc, Type, TypedExpression, TypedLoc};
 
 // 'static here means that L is owned
 pub fn expression<L: Loc + 'static>(input: &Expression<L>) -> Result<TypedExpression<L>> {
@@ -39,7 +39,7 @@ impl<'a, L: Loc + 'static> ExprChecker<'a, L> {
     fn check_expr(&mut self, expr: &'a Expression<L>) -> Option<TypedExpression<L>> {
         match &expr.expr {
             ast::Expr::LitInteger(value) => Some(Expression::lit_integer(
-                Typed::new(expr, Type::Integer),
+                TypedLoc::new(expr, Type::Integer),
                 value.clone(),
             )),
             _ => self.add_error(&expr, TypeErrorKind::InvalidType),
