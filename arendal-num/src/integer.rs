@@ -1,7 +1,8 @@
+use std::fmt;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Integer {
     value: i64, // Temporary
 }
@@ -18,5 +19,17 @@ impl FromStr for Integer {
 impl From<i64> for Integer {
     fn from(value: i64) -> Self {
         Integer { value }
+    }
+}
+
+impl fmt::Display for Integer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.value.fmt(f)
+    }
+}
+
+impl fmt::Debug for Integer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.value.fmt(f)
     }
 }

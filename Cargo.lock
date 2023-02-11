@@ -15,6 +15,7 @@ dependencies = [
  "arendal-ast",
  "arendal-num",
  "arendal-parser",
+ "arendal-typecheck",
  "arendal-wti",
  "rustyline",
 ]

@@ -5,6 +5,7 @@ pub mod tokenizer;
 use std::cmp::{Ord, Ordering, PartialOrd};
 
 pub use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes};
+pub use parser::parse_expression;
 pub use tokenizer::{Token, TokenKind, Tokens};
 
 use ast::error::{Error, Errors, Result};
