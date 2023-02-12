@@ -1,3 +1,7 @@
+use std::fmt::Binary;
+
+use ast::BinaryOp;
+
 use super::{lexer, Errors, Expression, Indentation, LexemeKind, LexemeRef, Lexemes, Result};
 
 // Parses a single expression
@@ -62,8 +66,7 @@ impl Parser {
     // Parses a single expression, if any, consuming as many tokens as needed.
     // Assumes that the expression starts on a line.
     fn expression(&mut self, min_indent: Indentation) -> Option<Expression> {
-        let peek = self.peek();
-        if let Some(lexeme) = peek {
+        if let Some(lexeme) = self.peek() {
             match lexeme.kind() {
                 LexemeKind::Indent(indentation) => {
                     if *indentation >= min_indent {
@@ -90,10 +93,28 @@ impl Parser {
     }
 
     fn rule_expression(&mut self, ctx: ExprCtx) -> ExprResult {
-        self.rule_primary(ctx)
+        self.rule_term(ctx)
     }
 
-    // primary -> IntLiteral
+    fn rule_term(&mut self, ctx: ExprCtx) -> ExprResult {
+        let mut left = self.rule_primary(ctx.clone())?;
+        while let Some(lexeme) = self.peek() {
+            let maybe = match lexeme.kind() {
+                LexemeKind::Plus => Some(BinaryOp::Add),
+                LexemeKind::Minus => Some(BinaryOp::Sub),
+                _ => None,
+            };
+            if let Some(op) = maybe {
+                self.consume();
+                let right = self.rule_primary(ctx.last_seen(&lexeme))?;
+                left = Expression::binary(lexeme.pos(), op, left, right);
+            } else {
+                break;
+            }
+        }
+        Ok(left)
+    }
+
     fn rule_primary(&mut self, ctx: ExprCtx) -> ExprResult {
         if let Some(lexeme) = self.peek() {
             match &lexeme.kind() {
@@ -118,18 +139,22 @@ impl Parser {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ExprCtx {
     ref_indent: Indentation, // Indentation to use as reference for this token
     last_seen: LexemeRef,    // Last lexeme seen, used for errors
 }
 
 impl ExprCtx {
-    fn new(ref_indent: Indentation, last_seen: &LexemeRef) -> ExprCtx {
+    fn new(ref_indent: Indentation, last_seen: &LexemeRef) -> Self {
         ExprCtx {
             ref_indent,
             last_seen: last_seen.clone(),
         }
+    }
+
+    fn last_seen(&self, last_seen: &LexemeRef) -> Self {
+        Self::new(self.ref_indent, last_seen)
     }
 }
 
