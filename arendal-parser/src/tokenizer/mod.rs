@@ -1,12 +1,12 @@
 use super::{ArcStr, Enclosure, Errors, NewLine, Pos, Result, Substr};
 use std::fmt;
 
-pub fn tokenize(input: &str) -> Result<Tokens> {
+pub(crate) fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(ArcStr::from(input)).tokenize()
 }
 
 #[derive(Default, PartialEq, Eq)]
-pub struct Tokens {
+pub(crate) struct Tokens {
     tokens: Vec<Token>,
 }
 
@@ -29,7 +29,7 @@ impl fmt::Debug for Tokens {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Token {
+pub(crate) struct Token {
     pub pos: Pos, // Starting position of the token
     pub kind: TokenKind,
 }
@@ -47,7 +47,7 @@ impl fmt::Debug for Token {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenKind {
+pub(crate) enum TokenKind {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),

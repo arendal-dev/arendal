@@ -99,7 +99,7 @@ impl Parser {
             match &lexeme.kind() {
                 LexemeKind::Integer(n) => {
                     self.consume();
-                    Ok(Expression::lit_integer(lexeme.clone(), n.clone()))
+                    Ok(Expression::lit_integer(lexeme.pos(), n.clone()))
                 }
                 _ => Err(Error::new(&lexeme, ErrorKind::ParsingError)),
             }

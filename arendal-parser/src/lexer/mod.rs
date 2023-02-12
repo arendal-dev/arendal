@@ -6,7 +6,7 @@ use super::{
     Token, TokenKind, Tokens,
 };
 
-pub fn lex(input: &str) -> Result<Lexemes> {
+pub(crate) fn lex(input: &str) -> Result<Lexemes> {
     let pass1 = tokenizer::tokenize(input)?;
     lex2(pass1)
 }
@@ -16,7 +16,7 @@ fn lex2(input: Tokens) -> Result<Lexemes> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct LexemeRef {
+pub(crate) struct LexemeRef {
     lex_ref: Rc<Lexeme>,
 }
 
@@ -30,12 +30,15 @@ impl LexemeRef {
     pub fn kind(&self) -> &LexemeKind {
         &self.lex_ref.kind
     }
+
+    // Returns a clone of the position
+    pub fn pos(&self) -> Pos {
+        self.lex_ref.token.pos.clone()
+    }
 }
 
-impl Loc for LexemeRef {}
-
 #[derive(Default)]
-pub struct Lexemes {
+pub(crate) struct Lexemes {
     lexemes: Vec<LexemeRef>,
 }
 
@@ -58,7 +61,7 @@ impl fmt::Debug for Lexemes {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Lexeme {
+pub(crate) struct Lexeme {
     pub token: Token, // Starting token of the lexeme
     pub kind: LexemeKind,
 }
@@ -79,7 +82,7 @@ impl fmt::Debug for Lexeme {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LexemeKind {
+pub(crate) enum LexemeKind {
     Indent(Indentation),
     Whitespace,
     Plus,

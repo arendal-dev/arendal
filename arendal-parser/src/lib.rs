@@ -4,9 +4,10 @@ pub mod tokenizer;
 
 use std::cmp::{Ord, Ordering, PartialOrd};
 
-pub use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes};
+use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes};
+use tokenizer::{Token, TokenKind, Tokens};
+
 pub use parser::parse_expression;
-pub use tokenizer::{Token, TokenKind, Tokens};
 
 use ast::error::{Error, Errors, Result};
 use ast::{ArcStr, Loc, Substr};
@@ -82,13 +83,15 @@ impl Pos {
     }
 }
 
+impl Loc for Pos {}
+
 impl fmt::Debug for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Pos({})", self.index)
     }
 }
 
-type Expression = ast::Expression<LexemeRef>;
+type Expression = ast::Expression<Pos>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Indentation {
