@@ -145,3 +145,14 @@ fn word3() {
 fn harness() {
     TestCase::new("   \n\t").spaces(3).newline(LF).tabs(1).ok();
 }
+
+#[test]
+fn sum() {
+    TestCase::new("1 + 3")
+        .digits("1")
+        .spaces(1)
+        .token(TokenKind::Plus)
+        .spaces(1)
+        .digits("3")
+        .ok();
+}
