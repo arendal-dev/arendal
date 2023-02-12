@@ -84,7 +84,6 @@ impl fmt::Debug for Lexeme {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum LexemeKind {
     Indent(Indentation),
-    Whitespace,
     Plus,
     Minus,
     Star,
@@ -148,7 +147,7 @@ impl Lexer {
         while let Some(t) = self.peek() {
             self.lexeme_start = self.index;
             match t.kind {
-                TokenKind::Tabs(_) | TokenKind::Spaces(_) => self.advance_whitespace(true),
+                TokenKind::Tabs(_) | TokenKind::Spaces(_) => self.advance_whitespace(),
                 TokenKind::Plus => self.add_lexeme(LexemeKind::Plus, 1),
                 TokenKind::Minus => self.add_lexeme(LexemeKind::Minus, 1),
                 TokenKind::Star => self.add_lexeme(LexemeKind::Star, 1),
@@ -184,7 +183,7 @@ impl Lexer {
         self.advance(tokens);
     }
 
-    fn advance_whitespace(&mut self, add_token: bool) {
+    fn advance_whitespace(&mut self) {
         let mut n = 0;
         while let Some(t) = self.peek_ahead(n) {
             if t.is_whitespace() {
@@ -194,11 +193,7 @@ impl Lexer {
             }
         }
         if n > 0 {
-            if add_token {
-                self.add_lexeme(LexemeKind::Whitespace, n);
-            } else {
-                self.advance(n);
-            }
+            self.advance(n);
         }
     }
 
@@ -249,7 +244,7 @@ impl Lexer {
             if let Some(t) = self.peek() {
                 if t.is_whitespace() {
                     self.add_error(&t, ErrorKind::IndentationError, 0);
-                    self.advance_whitespace(false);
+                    self.advance_whitespace();
                 }
             }
         }

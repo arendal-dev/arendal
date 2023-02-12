@@ -46,10 +46,6 @@ impl TestCase {
         self
     }
 
-    fn whitespace(self) -> Self {
-        self.token(LexemeKind::Whitespace)
-    }
-
     fn indentation(self, tabs: usize, spaces: usize) -> Self {
         self.token(LexemeKind::Indent(Indentation::new(tabs, spaces)))
     }
@@ -130,9 +126,7 @@ fn sum2() {
     TestCase::new("  1234 +  456")
         .indentation(0, 2)
         .integer(1234)
-        .whitespace()
         .token(LexemeKind::Plus)
-        .whitespace()
         .integer(456)
         .ok_without_pos();
 }
@@ -142,7 +136,6 @@ fn sum3() {
     TestCase::new("  1234 +\n\t456")
         .indentation(0, 2)
         .integer(1234)
-        .whitespace()
         .token(LexemeKind::Plus)
         .indentation(1, 0)
         .integer(456)
