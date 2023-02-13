@@ -21,6 +21,10 @@ impl Errors {
         }
     }
 
+    pub fn append(&mut self, mut other: Errors) {
+        self.errors.append(&mut other.errors)
+    }
+
     pub fn to_result<T>(self, value: T) -> Result<T> {
         if self.errors.is_empty() {
             Ok(value)
