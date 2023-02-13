@@ -15,8 +15,8 @@ dependencies = [
  "arendal-ast",
  "arendal-num",
  "arendal-parser",
+ "arendal-twi",
  "arendal-typecheck",
- "arendal-wti",
  "rustyline",
 ]
 
@@ -41,7 +41,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "arendal-typecheck"
+name = "arendal-twi"
 version = "0.1.0"
 dependencies = [
  "arendal-ast",
@@ -49,7 +49,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "arendal-wti"
+name = "arendal-typecheck"
 version = "0.1.0"
 dependencies = [
  "arendal-ast",

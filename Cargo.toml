@@ -5,6 +5,6 @@ members = [
     "arendal-ast",
     "arendal-parser",
     "arendal-typecheck",
-    "arendal-wti",
+    "arendal-twi",
     "arendal"
 ]

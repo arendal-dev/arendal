@@ -1,5 +1,5 @@
 use ast::error::Result;
-use wti::TypedValue;
+use twi::TypedValue;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -23,7 +23,7 @@ fn main() -> rustyline::Result<()> {
 fn eval(input: &str) -> Result<TypedValue> {
     let parsed = parser::parse_expression(input)?;
     let checked = typecheck::expression(&parsed)?;
-    wti::expression(&checked)
+    twi::expression(&checked)
 }
 
 fn eval_and_print(input: &str) {

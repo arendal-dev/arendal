@@ -10,5 +10,5 @@ num = { path = "../arendal-num", package = "arendal-num" }
 ast = { path = "../arendal-ast", package = "arendal-ast" }
 parser = { path = "../arendal-parser", package = "arendal-parser" }
 typecheck = { path = "../arendal-typecheck", package = "arendal-typecheck" }
-wti = { path = "../arendal-wti", package = "arendal-wti" }
+twi = { path = "../arendal-twi", package = "arendal-twi" }
 rustyline = "10.1.1"

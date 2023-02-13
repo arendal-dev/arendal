@@ -1,7 +1,7 @@
 use super::eval;
 use ast::Type;
 use num::Integer;
-use wti::{TypedValue, Value};
+use twi::{TypedValue, Value};
 
 fn eval_ok(input: &str, result: TypedValue) {
     if let Ok(v) = eval(input) {
