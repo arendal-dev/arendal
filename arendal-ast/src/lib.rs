@@ -8,6 +8,7 @@ pub use types::Type;
 use num::Integer;
 use std::cmp::{Eq, PartialEq};
 use std::fmt::Debug;
+use std::rc::Rc;
 
 pub trait Loc: Debug + Clone + PartialEq + Eq {}
 
@@ -27,19 +28,28 @@ pub enum BinaryOp {
     NEq,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Expression<P> {
-    pub payload: P,
-    pub expr: Expr<P>,
+    inner: Rc<InnerExpr<P>>,
 }
 
 impl<P> Expression<P> {
     fn new(payload: P, expr: Expr<P>) -> Self {
-        Expression { payload, expr }
+        Expression {
+            inner: Rc::new(InnerExpr::new(payload, expr)),
+        }
+    }
+
+    pub fn borrow_expr(&self) -> &Expr<P> {
+        &self.inner.expr
+    }
+
+    pub fn borrow_payload(&self) -> &P {
+        &self.inner.payload
     }
 
     pub fn to_bare(&self) -> bare::Expression {
-        match &self.expr {
+        match &self.inner.expr {
             Expr::LitInteger(value) => bare::lit_integer(value.clone()),
             Expr::Unary(op, e) => bare::unary(*op, e.to_bare()),
             Expr::Binary(op, e1, e2) => bare::binary(*op, e1.to_bare(), e2.to_bare()),
@@ -51,19 +61,37 @@ impl<P> Expression<P> {
     }
 
     pub fn unary(payload: P, op: UnaryOp, expr: Expression<P>) -> Self {
-        Self::new(payload, Expr::Unary(op, Box::new(expr)))
+        Self::new(payload, Expr::Unary(op, expr))
     }
 
     pub fn binary(payload: P, op: BinaryOp, expr1: Expression<P>, expr2: Expression<P>) -> Self {
-        Self::new(payload, Expr::Binary(op, Box::new(expr1), Box::new(expr2)))
+        Self::new(payload, Expr::Binary(op, expr1, expr2))
+    }
+}
+
+impl<P: Clone> Expression<P> {
+    pub fn clone_payload(&self) -> P {
+        self.inner.payload.clone()
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Expr<L> {
+struct InnerExpr<P> {
+    payload: P,
+    expr: Expr<P>,
+}
+
+impl<P> InnerExpr<P> {
+    fn new(payload: P, expr: Expr<P>) -> Self {
+        InnerExpr { payload, expr }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum Expr<P> {
     LitInteger(Integer),
-    Unary(UnaryOp, Box<Expression<L>>),
-    Binary(BinaryOp, Box<Expression<L>>, Box<Expression<L>>),
+    Unary(UnaryOp, Expression<P>),
+    Binary(BinaryOp, Expression<P>, Expression<P>),
 }
 
 pub struct TypedLoc<L: Loc> {
@@ -74,17 +102,10 @@ pub struct TypedLoc<L: Loc> {
 impl<L: Loc> TypedLoc<L> {
     pub fn new(expr: &Expression<L>, loc_type: Type) -> Self {
         TypedLoc {
-            loc: expr.payload.clone(),
+            loc: expr.clone_payload(),
             loc_type,
         }
     }
 }
 
 pub type TypedExpression<L> = Expression<TypedLoc<L>>;
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn it_works() {}
-}

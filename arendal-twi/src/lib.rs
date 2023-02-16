@@ -1,3 +1,4 @@
+mod expr;
 mod value;
 
 use ast::error::{Error, Errors, Result};
@@ -39,28 +40,6 @@ pub struct RuntimeError<L: Loc> {
 
 impl<L: Loc> Error for RuntimeError<L> {}
 
-fn ok(value: Value, value_type: Type) -> Result<TypedValue> {
-    Ok(TypedValue::new(value, value_type))
-}
-
-fn err<L: Loc + 'static>(expr: &TypedExpression<L>) -> Result<TypedValue> {
-    let mut errors: Errors = Default::default();
-    errors.add(RuntimeError {
-        loc: expr.payload.loc.clone(),
-    });
-    Err(errors)
-}
-
-pub fn expression<L: Loc + 'static>(expr: &TypedExpression<L>) -> Result<TypedValue> {
-    match &expr.expr {
-        ast::Expr::LitInteger(i) => ok(Value::Integer(i.clone()), expr.payload.loc_type.clone()),
-        _ => err(&expr),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn it_works() {}
+pub fn expression<L: Loc + 'static>(expr: TypedExpression<L>) -> Result<TypedValue> {
+    expr::eval(expr)
 }

@@ -4,7 +4,7 @@ use ast::error::{Error, Errors, Result};
 use ast::{Expression, Loc, Type, TypedExpression, TypedLoc};
 
 // 'static here means that L is owned
-pub fn expression<L: Loc + 'static>(input: &Expression<L>) -> Result<TypedExpression<L>> {
+pub fn expression<L: Loc + 'static>(input: Expression<L>) -> Result<TypedExpression<L>> {
     expr::check(input)
 }
 
@@ -15,11 +15,8 @@ struct TypeError<L: Loc> {
 }
 
 impl<L: Loc> TypeError<L> {
-    fn new(expr: &Expression<L>, kind: TypeErrorKind) -> Self {
-        TypeError {
-            loc: expr.payload.clone(),
-            kind,
-        }
+    fn new(loc: L, kind: TypeErrorKind) -> Self {
+        TypeError { loc, kind }
     }
 }
 

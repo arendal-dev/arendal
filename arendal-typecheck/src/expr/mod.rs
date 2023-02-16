@@ -3,43 +3,43 @@ use ast::error::{Errors, Result};
 use ast::{Expression, Loc, Type, TypedExpression, TypedLoc};
 
 // 'static here means that L is owned
-pub(crate) fn check<L: Loc + 'static>(input: &Expression<L>) -> Result<TypedExpression<L>> {
+pub(crate) fn check<L: Loc + 'static>(input: Expression<L>) -> Result<TypedExpression<L>> {
     Checker::new(input).check()
 }
 
 fn type_eq<L: Loc>(e: &TypedExpression<L>, t: Type) -> bool {
-    e.payload.loc_type == t
+    e.borrow_payload().loc_type == t
 }
 
-struct Checker<'a, L: Loc> {
-    input: &'a Expression<L>,
+struct Checker<L: Loc> {
+    input: Expression<L>,
 }
 
-impl<'a, L: Loc + 'static> Checker<'a, L> {
-    fn new(input: &'a Expression<L>) -> Self {
+impl<L: Loc + 'static> Checker<L> {
+    fn new(input: Expression<L>) -> Self {
         Checker { input }
     }
 
     fn loc(&self, loc_type: Type) -> TypedLoc<L> {
-        TypedLoc::new(self.input, loc_type)
+        TypedLoc::new(&self.input, loc_type)
     }
 
     // Creates and returns an error
-    fn error(&mut self, kind: TypeErrorKind) -> Result<TypedExpression<L>> {
+    fn error(self, kind: TypeErrorKind) -> Result<TypedExpression<L>> {
         let mut errors: Errors = Default::default();
-        errors.add(TypeError::new(self.input, kind));
+        errors.add(TypeError::new(self.input.clone_payload(), kind));
         Err(errors)
     }
 
-    fn check(&mut self) -> Result<TypedExpression<L>> {
-        match &self.input.expr {
+    fn check(self) -> Result<TypedExpression<L>> {
+        match self.input.borrow_expr() {
             ast::Expr::LitInteger(value) => Ok(Expression::lit_integer(
                 self.loc(Type::Integer),
                 value.clone(),
             )),
             ast::Expr::Binary(op, e1, e2) => {
-                let c1 = Self::new(e1.as_ref()).check();
-                let c2 = Self::new(e2.as_ref()).check();
+                let c1 = Self::new(e1.clone()).check();
+                let c2 = Self::new(e2.clone()).check();
                 if c1.is_err() || c2.is_err() {
                     let mut errors: Errors = Default::default();
                     c1.map_err(|e| errors.append(e));
@@ -59,7 +59,7 @@ impl<'a, L: Loc + 'static> Checker<'a, L> {
     }
 
     fn check_add(
-        &mut self,
+        self,
         e1: TypedExpression<L>,
         e2: TypedExpression<L>,
     ) -> Result<TypedExpression<L>> {
