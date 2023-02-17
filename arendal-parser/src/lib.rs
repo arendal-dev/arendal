@@ -10,7 +10,7 @@ use tokenizer::{Token, TokenKind, Tokens};
 pub use parser::parse_expression;
 
 use ast::error::{Error, Errors, Result};
-use ast::{ArcStr, Loc, Substr};
+use ast::{ArcStr, Loc, SafeLoc, Substr};
 use num::Integer;
 use std::fmt;
 
@@ -82,6 +82,8 @@ impl Pos {
         self.input.substr(self.index..to.index)
     }
 }
+
+impl SafeLoc for Pos {}
 
 impl Loc for Pos {}
 

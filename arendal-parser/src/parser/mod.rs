@@ -1,5 +1,3 @@
-use std::fmt::Binary;
-
 use ast::BinaryOp;
 
 use super::{lexer, Errors, Expression, Indentation, LexemeKind, LexemeRef, Lexemes, Result};

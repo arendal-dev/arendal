@@ -2,8 +2,8 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::{
-    tokenizer, ArcStr, Enclosure, Errors, Indentation, Integer, Loc, NewLine, Pos, Result, Substr,
-    Token, TokenKind, Tokens,
+    tokenizer, ArcStr, Enclosure, Errors, Indentation, Integer, NewLine, Pos, Result, SafeLoc,
+    Substr, Token, TokenKind, Tokens,
 };
 
 pub(crate) fn lex(input: &str) -> Result<Lexemes> {

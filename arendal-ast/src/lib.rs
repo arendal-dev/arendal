@@ -10,7 +10,11 @@ use std::cmp::{Eq, PartialEq};
 use std::fmt::Debug;
 use std::rc::Rc;
 
-pub trait Loc: Debug + Clone + PartialEq + Eq {}
+// Object-safe part of the loc trait
+pub trait SafeLoc: Debug {}
+
+// Loc isn't object safe, as Clone requires Sized
+pub trait Loc: SafeLoc + Clone {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -94,7 +98,7 @@ pub enum Expr<P> {
     Binary(BinaryOp, Expression<P>, Expression<P>),
 }
 
-pub struct TypedLoc<L: Loc> {
+pub struct TypedLoc<L: SafeLoc> {
     pub loc: L,
     pub loc_type: Type,
 }

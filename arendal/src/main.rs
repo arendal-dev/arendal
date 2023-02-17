@@ -1,5 +1,4 @@
-use ast::error::Result;
-use twi::TypedValue;
+use twi::ValueResult;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -20,7 +19,7 @@ fn main() -> rustyline::Result<()> {
     Ok(())
 }
 
-fn eval(input: &str) -> Result<TypedValue> {
+fn eval(input: &str) -> ValueResult {
     let parsed = parser::parse_expression(input)?;
     let checked = typecheck::expression(parsed)?;
     twi::expression(checked)

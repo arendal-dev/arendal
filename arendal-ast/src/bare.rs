@@ -3,6 +3,8 @@ use super::{BinaryOp, Integer, UnaryOp};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BareLoc {}
 
+impl super::SafeLoc for BareLoc {}
+
 impl super::Loc for BareLoc {}
 
 pub type Expression = super::Expression<BareLoc>;

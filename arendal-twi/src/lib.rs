@@ -1,8 +1,8 @@
 mod expr;
 mod value;
 
-use ast::error::{Error, Errors, Result};
-use ast::{Loc, Type, TypedExpression};
+use ast::error::{Error, Result};
+use ast::{Loc, SafeLoc, Type, TypedExpression};
 use std::fmt;
 
 pub use value::Value;
@@ -34,12 +34,20 @@ impl fmt::Display for TypedValue {
 }
 
 #[derive(Debug)]
-pub struct RuntimeError<L: Loc> {
-    loc: L,
+pub struct RuntimeError {
+    loc: Box<dyn SafeLoc>,
 }
 
-impl<L: Loc> Error for RuntimeError<L> {}
+impl RuntimeError {
+    fn new<L: Loc + 'static>(loc: L) -> Self {
+        RuntimeError { loc: Box::new(loc) }
+    }
+}
 
-pub fn expression<L: Loc + 'static>(expr: TypedExpression<L>) -> Result<TypedValue> {
+impl Error for RuntimeError {}
+
+pub type ValueResult = Result<TypedValue>;
+
+pub fn expression<L: Loc + 'static>(expr: TypedExpression<L>) -> ValueResult {
     expr::eval(expr)
 }

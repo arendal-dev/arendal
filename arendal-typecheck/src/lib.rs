@@ -1,7 +1,7 @@
 mod expr;
 
-use ast::error::{Error, Errors, Result};
-use ast::{Expression, Loc, Type, TypedExpression, TypedLoc};
+use ast::error::{Error, Result};
+use ast::{Expression, Loc, SafeLoc, TypedExpression};
 
 // 'static here means that L is owned
 pub fn expression<L: Loc + 'static>(input: Expression<L>) -> Result<TypedExpression<L>> {
@@ -9,14 +9,17 @@ pub fn expression<L: Loc + 'static>(input: Expression<L>) -> Result<TypedExpress
 }
 
 #[derive(Debug)]
-struct TypeError<L: Loc> {
-    loc: L,
+struct TypeError {
+    loc: Box<dyn SafeLoc>,
     kind: TypeErrorKind,
 }
 
-impl<L: Loc> TypeError<L> {
-    fn new(loc: L, kind: TypeErrorKind) -> Self {
-        TypeError { loc, kind }
+impl TypeError {
+    fn new<L: Loc + 'static>(loc: L, kind: TypeErrorKind) -> Self {
+        TypeError {
+            loc: Box::new(loc),
+            kind,
+        }
     }
 }
 
@@ -25,4 +28,4 @@ enum TypeErrorKind {
     InvalidType, // placeholder, temporary error
 }
 
-impl<L: Loc> Error for TypeError<L> {}
+impl Error for TypeError {}

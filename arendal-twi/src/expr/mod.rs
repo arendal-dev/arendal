@@ -1,9 +1,10 @@
-use ast::error::{Errors, Result};
-use ast::{Loc, Type, TypedExpression};
+use super::ValueResult;
+use ast::{error::Errors, BinaryOp, Loc, Type, TypedExpression};
+use num::Integer;
 
 use super::{RuntimeError, TypedValue, Value};
 
-pub(crate) fn eval<L: Loc + 'static>(expr: TypedExpression<L>) -> Result<TypedValue> {
+pub(crate) fn eval<L: Loc + 'static>(expr: TypedExpression<L>) -> ValueResult {
     Eval::new(expr).eval()
 }
 
@@ -11,13 +12,21 @@ struct Eval<L: Loc> {
     expr: TypedExpression<L>,
 }
 
+fn ok(value: Value, value_type: Type) -> ValueResult {
+    Ok(TypedValue::new(value, value_type))
+}
+
+fn integer(value: Integer) -> ValueResult {
+    ok(Value::Integer(value.clone()), Type::Integer)
+}
+
 impl<L: Loc + 'static> Eval<L> {
     fn new(expr: TypedExpression<L>) -> Self {
         Eval { expr }
     }
 
-    fn ok(&self, value: Value, value_type: Type) -> Result<TypedValue> {
-        Ok(TypedValue::new(value, value_type))
+    fn eval_child(&self, expr: TypedExpression<L>) -> ValueResult {
+        todo!()
     }
 
     fn loc(&self) -> L {
@@ -28,16 +37,20 @@ impl<L: Loc + 'static> Eval<L> {
         self.expr.borrow_payload().loc_type.clone()
     }
 
-    fn err(&self) -> Result<TypedValue> {
+    fn err(self) -> ValueResult {
         let mut errors: Errors = Default::default();
-        errors.add(RuntimeError { loc: self.loc() });
+        errors.add(RuntimeError::new(self.loc()));
         Err(errors)
     }
 
-    fn eval(self) -> Result<TypedValue> {
+    fn eval(self) -> ValueResult {
         match self.expr.borrow_expr() {
-            ast::Expr::LitInteger(i) => self.ok(Value::Integer(i.clone()), self.loc_type()),
+            ast::Expr::LitInteger(i) => integer(i.clone()),
             _ => self.err(),
         }
+    }
+
+    fn binary(self, op: BinaryOp, e1: TypedExpression<L>, e2: TypedExpression<L>) -> ValueResult {
+        self.err()
     }
 }
