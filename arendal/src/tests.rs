@@ -1,9 +1,7 @@
 use super::eval;
-use ast::Type;
-use num::Integer;
-use twi::{TypedValue, Value};
+use twi::Value;
 
-fn eval_ok(input: &str, result: TypedValue) {
+fn eval_ok(input: &str, result: Value) {
     if let Ok(v) = eval(input) {
         assert_eq!(v, result);
     } else {
@@ -13,5 +11,15 @@ fn eval_ok(input: &str, result: TypedValue) {
 
 #[test]
 fn integer() {
-    eval_ok("1234", TypedValue::int64(1234));
+    eval_ok("1234", Value::int64(1234));
+}
+
+#[test]
+fn sum1() {
+    eval_ok("1+2", Value::int64(3));
+}
+
+#[test]
+fn sum2() {
+    eval_ok("1 + 2 + 3", Value::int64(6));
 }

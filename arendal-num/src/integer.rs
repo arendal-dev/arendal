@@ -1,5 +1,6 @@
 use std::fmt;
 use std::num::ParseIntError;
+use std::ops;
 use std::str::FromStr;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -31,5 +32,13 @@ impl fmt::Display for Integer {
 impl fmt::Debug for Integer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.value.fmt(f)
+    }
+}
+
+impl ops::Add for Integer {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        (self.value + other.value).into()
     }
 }

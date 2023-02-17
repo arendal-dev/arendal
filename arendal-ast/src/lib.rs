@@ -98,7 +98,8 @@ pub enum Expr<P> {
     Binary(BinaryOp, Expression<P>, Expression<P>),
 }
 
-pub struct TypedLoc<L: SafeLoc> {
+#[derive(Debug, Clone)]
+pub struct TypedLoc<L: Loc> {
     pub loc: L,
     pub loc_type: Type,
 }
