@@ -21,7 +21,7 @@ impl<L: Loc + 'static> Checker<L> {
     }
 
     fn loc(&self, loc_type: Type) -> TypedLoc<L> {
-        TypedLoc::new(&self.input, loc_type)
+        TypedLoc::new(self.input.clone_payload(), loc_type)
     }
 
     // Creates and returns an error

@@ -62,3 +62,6 @@ impl<L: Loc + 'static> Eval<L> {
         integer(v1.as_integer().unwrap() + v2.as_integer().unwrap())
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -105,11 +105,8 @@ pub struct TypedLoc<L: Loc> {
 }
 
 impl<L: Loc> TypedLoc<L> {
-    pub fn new(expr: &Expression<L>, loc_type: Type) -> Self {
-        TypedLoc {
-            loc: expr.clone_payload(),
-            loc_type,
-        }
+    pub fn new(loc: L, loc_type: Type) -> Self {
+        TypedLoc { loc, loc_type }
     }
 }
 
