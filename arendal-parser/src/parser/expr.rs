@@ -1,21 +1,19 @@
 use super::{Error, ErrorKind};
-use crate::{Errors, Expression, Indentation, LexemeKind, LexemeRef, Lexemes, Result};
+use crate::{Errors, Expression, LexemeKind, LexemeRef, Lexemes, Result};
 use ast::BinaryOp;
 use std::rc::Rc;
 
 pub(crate) struct Parser {
-    input: Rc<Lexemes>,
-    start: usize, // Start index for the expression
+    input: Lexemes,
     index: usize,
     errors: Errors,
 }
 
 impl Parser {
-    pub(crate) fn new(input: Rc<Lexemes>, start: usize) -> Parser {
+    pub(crate) fn new(input: Lexemes) -> Parser {
         Parser {
             input,
-            start,
-            index: start,
+            index: 0,
             errors: Default::default(),
         }
     }

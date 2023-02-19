@@ -48,12 +48,12 @@ impl Lexemes {
     }
 
     #[inline]
-    pub fn contains(&self, index: usize) -> bool {
+    pub(crate) fn contains(&self, index: usize) -> bool {
         index < self.lexemes.len()
     }
 
     #[inline]
-    pub fn get(&self, index: usize) -> Option<LexemeRef> {
+    pub(crate) fn get(&self, index: usize) -> Option<LexemeRef> {
         self.lexemes.get(index).cloned()
     }
 }
@@ -104,10 +104,10 @@ pub(crate) enum LexemeKind {
     Word(Substr),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Line {
-    indentation: Indentation,
-    lexemes: Lexemes,
+    pub(crate) indentation: Indentation,
+    pub(crate) lexemes: Lexemes,
 }
 
 impl Line {
@@ -130,7 +130,17 @@ impl Lines {
     }
 
     #[inline]
-    pub fn get_lexemes_at(&self, index: usize) -> Option<Lexemes> {
+    pub(crate) fn contains(&self, index: usize) -> bool {
+        index < self.lines.len()
+    }
+
+    #[inline]
+    pub(crate) fn get(&self, index: usize) -> Option<Line> {
+        self.lines.get(index).cloned()
+    }
+
+    #[inline]
+    pub(crate) fn get_lexemes_at(&self, index: usize) -> Option<Lexemes> {
         self.lines.get(index).map(|line| line.lexemes.clone())
     }
 }
