@@ -2,9 +2,10 @@ use std::rc::Rc;
 
 use super::{lexer, Errors, Expression, Indentation, LexemeKind, LexemeRef, Lexemes, Result};
 
-// Parses a single expression
+// Parses a single expression (a single line for now)
 pub fn parse_expression(input: &str) -> Result<Expression> {
-    let lexemes = lexer::lex(input)?;
+    let lines = lexer::lex(input)?;
+    let lexemes = lines.get_lexemes_at(0).unwrap_or_default();
     Parser::new(lexemes).parse_expression()
 }
 
@@ -49,12 +50,9 @@ impl Parser {
         self.input.get(self.index + n)
     }
 
-    // Parses the input as single expression, if any, consuming as many tokens as needed.
-    // Assumes that the expression starts on a line.
+    // Parses the input as single expression.
     fn parse_expression(mut self) -> Result<Expression> {
-        if self.is_done() {
-            self.empty_input()
-        } else if let Some(e) = self.expression(Indentation::new(0, 0)) {
+        if let Some(e) = self.expression() {
             self.errors.to_result(e)
         } else {
             self.empty_input()
@@ -63,28 +61,16 @@ impl Parser {
 
     // Parses a single expression, if any, consuming as many tokens as needed.
     // Assumes that the expression starts on a line.
-    fn expression(&mut self, min_indent: Indentation) -> Option<Expression> {
+    fn expression(&mut self) -> Option<Expression> {
         if let Some(lexeme) = self.peek() {
-            match lexeme.kind() {
-                LexemeKind::Indent(indentation) => {
-                    if *indentation >= min_indent {
-                        self.consume();
-                        let parser =
-                            expr::Parser::new(self.input.clone(), self.index, *indentation);
-                        let rule_result = parser.parse();
-                        match rule_result {
-                            Ok(maybe) => maybe,
-                            Err(error) => {
-                                self.errors.append(error);
-                                // TODO advance until next "resonable" line
-                                None
-                            }
-                        }
-                    } else {
-                        self.add_error(&lexeme, ErrorKind::ParsingError)
-                    }
+            let parser = expr::Parser::new(self.input.clone(), self.index);
+            match parser.parse() {
+                Ok(maybe) => maybe,
+                Err(error) => {
+                    self.errors.append(error);
+                    // TODO advance until next "resonable" line
+                    None
                 }
-                _ => self.add_error(&lexeme, ErrorKind::ParsingError),
             }
         } else {
             None

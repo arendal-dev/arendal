@@ -7,17 +7,15 @@ pub(crate) struct Parser {
     input: Rc<Lexemes>,
     start: usize, // Start index for the expression
     index: usize,
-    indentation: Indentation,
     errors: Errors,
 }
 
 impl Parser {
-    pub(crate) fn new(input: Rc<Lexemes>, start: usize, indentation: Indentation) -> Parser {
+    pub(crate) fn new(input: Rc<Lexemes>, start: usize) -> Parser {
         Parser {
             input,
             start,
             index: start,
-            indentation,
             errors: Default::default(),
         }
     }

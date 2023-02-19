@@ -2,17 +2,13 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::{
-    tokenizer, ArcStr, Enclosure, Errors, Indentation, Integer, NewLine, Pos, Result, SafeLoc,
-    Substr, Token, TokenKind, Tokens,
+    tokenizer, Enclosure, Errors, Indentation, Integer, Pos, Result, Substr, Token, TokenKind,
+    Tokens,
 };
 
-pub(crate) fn lex(input: &str) -> Result<Lexemes> {
-    let pass1 = tokenizer::tokenize(input)?;
-    lex2(pass1)
-}
-
-fn lex2(input: Tokens) -> Result<Lexemes> {
-    Lexer::new(input).lex()
+pub(crate) fn lex(input: &str) -> Result<Lines> {
+    let tokens = tokenizer::tokenize(input)?;
+    Lexer::new(tokens).lex()
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -37,12 +33,20 @@ impl LexemeRef {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub(crate) struct Lexemes {
-    lexemes: Vec<LexemeRef>,
+    lexemes: Rc<Vec<LexemeRef>>,
 }
 
 impl Lexemes {
+    fn new(lexref: &mut Vec<LexemeRef>) -> Self {
+        let mut lexemes: Vec<LexemeRef> = Default::default();
+        lexemes.append(lexref);
+        Lexemes {
+            lexemes: Rc::new(lexemes),
+        }
+    }
+
     #[inline]
     pub fn contains(&self, index: usize) -> bool {
         index < self.lexemes.len()
@@ -56,7 +60,7 @@ impl Lexemes {
 
 impl fmt::Debug for Lexemes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.lexemes)
+        write!(f, "{:?}", self.lexemes.as_ref())
     }
 }
 
@@ -83,7 +87,6 @@ impl fmt::Debug for Lexeme {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum LexemeKind {
-    Indent(Indentation),
     Plus,
     Minus,
     Star,
@@ -101,9 +104,42 @@ pub(crate) enum LexemeKind {
     Word(Substr),
 }
 
+#[derive(Debug)]
+pub(crate) struct Line {
+    indentation: Indentation,
+    lexemes: Lexemes,
+}
+
+impl Line {
+    fn new(indentation: Indentation, lexref: &mut Vec<LexemeRef>) -> Self {
+        Line {
+            indentation,
+            lexemes: Lexemes::new(lexref),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Lines {
+    lines: Vec<Line>,
+}
+
+impl Lines {
+    fn add(&mut self, indentation: Indentation, lexref: &mut Vec<LexemeRef>) {
+        self.lines.push(Line::new(indentation, lexref));
+    }
+
+    #[inline]
+    pub fn get_lexemes_at(&self, index: usize) -> Option<Lexemes> {
+        self.lines.get(index).map(|line| line.lexemes.clone())
+    }
+}
+
 struct Lexer {
     input: Tokens,
-    lexemes: Lexemes,
+    lexemes: Vec<LexemeRef>,  // Lexemes in the current line
+    indentation: Indentation, // Current line indentation,
+    lines: Lines,             // Output lines
     errors: Errors,
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
@@ -115,6 +151,8 @@ impl Lexer {
         Lexer {
             input,
             lexemes: Default::default(),
+            indentation: Indentation::new(0, 0),
+            lines: Default::default(),
             errors: Default::default(),
             index: 0,
             lexeme_start: 0,
@@ -142,8 +180,8 @@ impl Lexer {
         self.input.get(self.index + n)
     }
 
-    fn lex(mut self) -> Result<Lexemes> {
-        self.add_indentation();
+    fn lex(mut self) -> Result<Lines> {
+        self.begin_line();
         while let Some(t) = self.peek() {
             self.lexeme_start = self.index;
             match t.kind {
@@ -161,7 +199,8 @@ impl Lexer {
                 TokenKind::Underscore => self.add_lexeme(LexemeKind::Underscore, 1),
                 TokenKind::EndOfLine(_) => {
                     self.advance(1);
-                    self.add_indentation();
+                    self.end_line();
+                    self.begin_line();
                 }
                 TokenKind::Open(e) => {
                     self.enclosures.push(e);
@@ -172,11 +211,12 @@ impl Lexer {
                 _ => self.add_error(&t, ErrorKind::UnexpectedToken, 1),
             }
         }
-        self.errors.to_result(self.lexemes)
+        self.end_line();
+        self.errors.to_result(self.lines)
     }
 
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
-        self.lexemes.lexemes.push(LexemeRef::new(Lexeme::new(
+        self.lexemes.push(LexemeRef::new(Lexeme::new(
             &self.input.get(self.lexeme_start).unwrap(),
             kind,
         )));
@@ -218,7 +258,7 @@ impl Lexer {
         self.advance(remove);
     }
 
-    fn add_indentation(&mut self) {
+    fn begin_line(&mut self) {
         self.skip_empty_lines();
         if !self.is_done() {
             let mut tokens = 0;
@@ -240,13 +280,20 @@ impl Lexer {
                     break;
                 }
             }
-            self.add_lexeme(LexemeKind::Indent(Indentation::new(tabs, spaces)), tokens);
+            self.indentation = Indentation::new(tabs, spaces);
+            self.advance(tokens);
             if let Some(t) = self.peek() {
                 if t.is_whitespace() {
                     self.add_error(&t, ErrorKind::IndentationError, 0);
                     self.advance_whitespace();
                 }
             }
+        }
+    }
+
+    fn end_line(&mut self) {
+        if !self.lexemes.is_empty() {
+            self.lines.add(self.indentation, &mut self.lexemes);
         }
     }
 
