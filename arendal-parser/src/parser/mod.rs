@@ -1,7 +1,9 @@
 use super::{lexer, Errors, Expression, LexemeRef, Lexemes, Line, Lines, Result};
 
+pub type Parsed<T> = Result<Option<T>>;
+
 // Parses a single expression (a single line for now)
-pub fn parse_expression(input: &str) -> Result<Expression> {
+pub fn parse_expression(input: &str) -> Parsed<Expression> {
     let lines = lexer::lex(input)?;
     Parser::new(lines).parse_expression()
 }
@@ -48,13 +50,10 @@ impl Parser {
     }
 
     // Parses the current line as a single expression.
-    fn parse_expression(mut self) -> Result<Expression> {
+    fn parse_expression(mut self) -> Parsed<Expression> {
         if let Some(line) = self.peek() {
-            if let Some(e) = self.expression(line.lexemes.clone()) {
-                self.errors.to_result(e)
-            } else {
-                Err(self.errors)
-            }
+            let parsed = self.expression(line.lexemes.clone());
+            self.errors.to_result(parsed)
         } else {
             self.empty_input()
         }

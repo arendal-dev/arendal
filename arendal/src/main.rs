@@ -21,8 +21,12 @@ fn main() -> rustyline::Result<()> {
 
 fn eval(input: &str) -> ValueResult {
     let parsed = parser::parse_expression(input)?;
-    let checked = typecheck::expression(parsed)?;
-    twi::expression(checked)
+    if let Some(expr) = parsed {
+        let checked = typecheck::expression(expr)?;
+        twi::expression(checked)
+    } else {
+        Ok(twi::Value::Integer(0.into()))
+    }
 }
 
 fn eval_and_print(input: &str) {

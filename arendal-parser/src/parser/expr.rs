@@ -1,7 +1,6 @@
-use super::{Error, ErrorKind};
-use crate::{Errors, Expression, LexemeKind, LexemeRef, Lexemes, Result};
+use super::{Error, ErrorKind, Parsed};
+use crate::{Errors, Expression, LexemeKind, LexemeRef, Lexemes};
 use ast::BinaryOp;
-use std::rc::Rc;
 
 pub(crate) struct Parser {
     input: Lexemes,
@@ -45,7 +44,7 @@ impl Parser {
     }
 
     // Parses a single expression, if any, consuming as many tokens as needed.
-    pub(crate) fn parse(mut self) -> Result<Option<Expression>> {
+    pub(crate) fn parse(mut self) -> Parsed<Expression> {
         let maybe = self.rule_expression();
         self.errors.to_result(maybe)
     }
