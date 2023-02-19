@@ -1,4 +1,4 @@
-use ast::BinaryOp;
+use std::rc::Rc;
 
 use super::{lexer, Errors, Expression, Indentation, LexemeKind, LexemeRef, Lexemes, Result};
 
@@ -9,7 +9,7 @@ pub fn parse_expression(input: &str) -> Result<Expression> {
 }
 
 struct Parser {
-    input: Lexemes,
+    input: Rc<Lexemes>,
     index: usize, // Index of the current input lexer
     errors: Errors,
 }
@@ -17,7 +17,7 @@ struct Parser {
 impl Parser {
     fn new(input: Lexemes) -> Parser {
         Parser {
-            input,
+            input: Rc::new(input),
             index: 0,
             errors: Default::default(),
         }
@@ -57,7 +57,7 @@ impl Parser {
         } else if let Some(e) = self.expression(Indentation::new(0, 0)) {
             self.errors.to_result(e)
         } else {
-            Err(self.errors)
+            self.empty_input()
         }
     }
 
@@ -69,90 +69,36 @@ impl Parser {
                 LexemeKind::Indent(indentation) => {
                     if *indentation >= min_indent {
                         self.consume();
-                        let ctx = ExprCtx::new(*indentation, &lexeme);
-                        let rule_result = self.rule_expression(ctx);
+                        let parser =
+                            expr::Parser::new(self.input.clone(), self.index, *indentation);
+                        let rule_result = parser.parse();
                         match rule_result {
-                            Ok(expr) => return Some(expr),
+                            Ok(maybe) => maybe,
                             Err(error) => {
-                                self.errors.add(error);
+                                self.errors.append(error);
                                 // TODO advance until next "resonable" line
+                                None
                             }
                         }
                     } else {
-                        self.add_error(&lexeme, ErrorKind::ParsingError);
+                        self.add_error(&lexeme, ErrorKind::ParsingError)
                     }
                 }
-                _ => {
-                    self.add_error(&lexeme, ErrorKind::ParsingError);
-                }
-            }
-        }
-        None
-    }
-
-    fn rule_expression(&mut self, ctx: ExprCtx) -> ExprResult {
-        self.rule_term(ctx)
-    }
-
-    fn rule_term(&mut self, ctx: ExprCtx) -> ExprResult {
-        let mut left = self.rule_primary(ctx.clone())?;
-        while let Some(lexeme) = self.peek() {
-            let maybe = match lexeme.kind() {
-                LexemeKind::Plus => Some(BinaryOp::Add),
-                LexemeKind::Minus => Some(BinaryOp::Sub),
-                _ => None,
-            };
-            if let Some(op) = maybe {
-                self.consume();
-                let right = self.rule_primary(ctx.last_seen(&lexeme))?;
-                left = Expression::binary(lexeme.pos(), op, left, right);
-            } else {
-                break;
-            }
-        }
-        Ok(left)
-    }
-
-    fn rule_primary(&mut self, ctx: ExprCtx) -> ExprResult {
-        if let Some(lexeme) = self.peek() {
-            match &lexeme.kind() {
-                LexemeKind::Integer(n) => {
-                    self.consume();
-                    Ok(Expression::lit_integer(lexeme.pos(), n.clone()))
-                }
-                _ => Err(Error::new(&lexeme, ErrorKind::ParsingError)),
+                _ => self.add_error(&lexeme, ErrorKind::ParsingError),
             }
         } else {
-            Err(Error::new(&ctx.last_seen, ErrorKind::ParsingError))
+            None
         }
     }
 
-    fn add_error(&mut self, lexeme: &LexemeRef, kind: ErrorKind) {
+    fn add_error(&mut self, lexeme: &LexemeRef, kind: ErrorKind) -> Option<Expression> {
         self.errors.add(Error::new(lexeme, kind));
+        None
     }
 
     fn empty_input<T>(mut self) -> Result<T> {
         self.errors.add(EmptyInputError {});
         Err(self.errors)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct ExprCtx {
-    ref_indent: Indentation, // Indentation to use as reference for this token
-    last_seen: LexemeRef,    // Last lexeme seen, used for errors
-}
-
-impl ExprCtx {
-    fn new(ref_indent: Indentation, last_seen: &LexemeRef) -> Self {
-        ExprCtx {
-            ref_indent,
-            last_seen: last_seen.clone(),
-        }
-    }
-
-    fn last_seen(&self, last_seen: &LexemeRef) -> Self {
-        Self::new(self.ref_indent, last_seen)
     }
 }
 
@@ -166,8 +112,6 @@ struct Error {
     lexeme: LexemeRef,
     kind: ErrorKind,
 }
-
-type ExprResult = std::result::Result<Expression, Error>;
 
 impl Error {
     fn new(lexeme: &LexemeRef, kind: ErrorKind) -> Self {
@@ -184,6 +128,8 @@ enum ErrorKind {
 }
 
 impl super::Error for Error {}
+
+mod expr;
 
 #[cfg(test)]
 mod tests;
