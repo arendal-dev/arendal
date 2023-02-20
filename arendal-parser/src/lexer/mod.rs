@@ -56,6 +56,14 @@ impl Lexemes {
     pub(crate) fn get(&self, index: usize) -> Option<LexemeRef> {
         self.lexemes.get(index).cloned()
     }
+
+    pub(crate) fn merge<'a, I: IntoIterator<Item = Lexemes>>(values: I) -> Self {
+        let mut lexemes: Vec<LexemeRef> = Default::default();
+        values
+            .into_iter()
+            .for_each(|v| v.lexemes.iter().for_each(|l| lexemes.push(l.clone())));
+        Self::new(&mut lexemes)
+    }
 }
 
 impl fmt::Debug for Lexemes {

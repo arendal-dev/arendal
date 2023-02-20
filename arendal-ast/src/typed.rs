@@ -1,4 +1,5 @@
 use super::{BinaryOp, Integer, Loc, Type, UnaryOp};
+use std::fmt;
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -8,7 +9,7 @@ struct Inner {
     expr: TExpr,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TypedExpr {
     inner: Rc<Inner>,
 }
@@ -52,6 +53,12 @@ impl TypedExpr {
         expr2: TypedExpr,
     ) -> Self {
         Self::new(loc, expr_type, TExpr::Binary(op, expr1, expr2))
+    }
+}
+
+impl fmt::Debug for TypedExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?} : {:?}", self.borrow_expr(), self.borrow_type())
     }
 }
 

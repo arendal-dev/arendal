@@ -60,7 +60,21 @@ impl Parser {
 
     // Get the lexemes needed to parse an expression.
     fn get_expr_lexemes(&mut self, line: Line) -> Lexemes {
-        line.lexemes.clone()
+        let mut lines = vec![line.lexemes.clone()];
+        self.consume();
+        while let Some(additional) = self.peek() {
+            if additional.indentation > line.indentation {
+                lines.push(additional.lexemes.clone());
+                self.consume()
+            } else {
+                break;
+            }
+        }
+        if lines.len() > 1 {
+            Lexemes::merge(lines)
+        } else {
+            lines.pop().unwrap()
+        }
     }
 
     fn add_error(&mut self, lexeme: &LexemeRef, kind: ErrorKind) -> Option<Expression> {

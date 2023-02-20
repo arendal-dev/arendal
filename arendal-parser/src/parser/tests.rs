@@ -64,3 +64,8 @@ fn sum3() {
 fn sum4() {
     check_expression("1 + 2 + 3", add(add_i64(1, 2), lit_i64(3)));
 }
+
+#[test]
+fn sum5() {
+    check_expression("1 +\t2 + 3\n+ 4", add(add_i64(1, 2), lit_i64(3)));
+}
