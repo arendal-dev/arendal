@@ -69,7 +69,7 @@ impl Parser {
             if let Some(op) = maybe {
                 self.consume();
                 let right = self.rule_primary()?;
-                left = Expression::binary(lexeme.pos(), op, left, right);
+                left = Expression::binary(lexeme.pos().into(), op, left, right);
             } else {
                 break;
             }
@@ -82,7 +82,7 @@ impl Parser {
             match &lexeme.kind() {
                 LexemeKind::Integer(n) => {
                     self.consume();
-                    Some(Expression::lit_integer(lexeme.pos(), n.clone()))
+                    Some(Expression::lit_integer(lexeme.pos().into(), n.clone()))
                 }
                 _ => self.add_error(&lexeme, ErrorKind::ParsingError),
             }

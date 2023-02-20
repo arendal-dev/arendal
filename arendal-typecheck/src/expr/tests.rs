@@ -1,9 +1,8 @@
-use super::check;
-use ast::bare::*;
-use ast::Type;
+use super::{check, Expression, Type};
+use ast::helper::*;
 
 fn ok_type(expr: Expression, t: Type) {
-    assert_eq!(check(expr).unwrap().borrow_payload().loc_type, t);
+    assert_eq!(*check(expr).unwrap().borrow_type(), t);
 }
 
 fn ok_int(expr: Expression) {

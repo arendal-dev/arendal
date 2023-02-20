@@ -10,7 +10,7 @@ use tokenizer::{Token, TokenKind, Tokens};
 pub use parser::parse_expression;
 
 use ast::error::{Error, Errors, Result};
-use ast::{ArcStr, Loc, SafeLoc, Substr};
+use ast::{ArcStr, Expression, Loc, Substr};
 use num::Integer;
 use std::fmt;
 
@@ -22,7 +22,7 @@ pub enum Enclosure {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NewLine {
+enum NewLine {
     LF,
     CRLF,
 }
@@ -42,7 +42,7 @@ impl NewLine {
 
 // This struct represents an input string and a byte index in it.
 #[derive(Clone, PartialEq, Eq)]
-pub struct Pos {
+struct Pos {
     input: ArcStr, // Input string
     index: usize,  // Byte index from the beginning of the input
 }
@@ -83,17 +83,17 @@ impl Pos {
     }
 }
 
-impl SafeLoc for Pos {}
-
-impl Loc for Pos {}
-
 impl fmt::Debug for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Pos({})", self.index)
     }
 }
 
-type Expression = ast::Expression<Pos>;
+impl From<Pos> for Loc {
+    fn from(value: Pos) -> Self {
+        Loc::input(value.input.clone(), value.index)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Indentation {

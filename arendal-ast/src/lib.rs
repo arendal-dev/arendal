@@ -1,20 +1,18 @@
-pub mod bare;
 pub mod error;
+pub mod loc;
+pub mod typed;
 pub mod types;
 
 pub use arcstr::{literal, ArcStr, Substr};
+pub use loc::Loc;
+pub use typed::{TExpr, TypedExpr};
 pub use types::Type;
 
 use num::Integer;
 use std::cmp::{Eq, PartialEq};
+use std::fmt;
 use std::fmt::Debug;
 use std::rc::Rc;
-
-// Object-safe part of the loc trait
-pub trait SafeLoc: Debug {}
-
-// Loc isn't object safe, as Clone requires Sized
-pub trait Loc: SafeLoc + Clone {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -32,82 +30,82 @@ pub enum BinaryOp {
     NEq,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Expression<P> {
-    inner: Rc<InnerExpr<P>>,
+#[derive(Debug)]
+struct Inner {
+    loc: Loc,
+    expr: Expr,
 }
 
-impl<P> Expression<P> {
-    fn new(payload: P, expr: Expr<P>) -> Self {
+#[derive(Clone)]
+pub struct Expression {
+    inner: Rc<Inner>,
+}
+
+impl Expression {
+    fn new(loc: Loc, expr: Expr) -> Self {
         Expression {
-            inner: Rc::new(InnerExpr::new(payload, expr)),
+            inner: Rc::new(Inner { loc, expr }),
         }
     }
 
-    pub fn borrow_expr(&self) -> &Expr<P> {
+    pub fn borrow_loc(&self) -> &Loc {
+        &self.inner.loc
+    }
+
+    pub fn borrow_expr(&self) -> &Expr {
         &self.inner.expr
     }
 
-    pub fn borrow_payload(&self) -> &P {
-        &self.inner.payload
+    pub fn lit_integer(loc: Loc, value: Integer) -> Self {
+        Self::new(loc, Expr::LitInteger(value))
     }
 
-    pub fn to_bare(&self) -> bare::Expression {
-        match &self.inner.expr {
-            Expr::LitInteger(value) => bare::lit_integer(value.clone()),
-            Expr::Unary(op, e) => bare::unary(*op, e.to_bare()),
-            Expr::Binary(op, e1, e2) => bare::binary(*op, e1.to_bare(), e2.to_bare()),
-        }
+    pub fn unary(loc: Loc, op: UnaryOp, expr: Expression) -> Self {
+        Self::new(loc, Expr::Unary(op, expr))
     }
 
-    pub fn lit_integer(payload: P, value: Integer) -> Self {
-        Self::new(payload, Expr::LitInteger(value))
-    }
-
-    pub fn unary(payload: P, op: UnaryOp, expr: Expression<P>) -> Self {
-        Self::new(payload, Expr::Unary(op, expr))
-    }
-
-    pub fn binary(payload: P, op: BinaryOp, expr1: Expression<P>, expr2: Expression<P>) -> Self {
-        Self::new(payload, Expr::Binary(op, expr1, expr2))
+    pub fn binary(loc: Loc, op: BinaryOp, expr1: Expression, expr2: Expression) -> Self {
+        Self::new(loc, Expr::Binary(op, expr1, expr2))
     }
 }
 
-impl<P: Clone> Expression<P> {
-    pub fn clone_payload(&self) -> P {
-        self.inner.payload.clone()
+impl fmt::Debug for Expression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.inner.expr.fmt(f)
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct InnerExpr<P> {
-    payload: P,
-    expr: Expr<P>,
-}
-
-impl<P> InnerExpr<P> {
-    fn new(payload: P, expr: Expr<P>) -> Self {
-        InnerExpr { payload, expr }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Expr<P> {
+#[derive(Debug)]
+pub enum Expr {
     LitInteger(Integer),
-    Unary(UnaryOp, Expression<P>),
-    Binary(BinaryOp, Expression<P>, Expression<P>),
+    Unary(UnaryOp, Expression),
+    Binary(BinaryOp, Expression, Expression),
 }
 
-#[derive(Debug, Clone)]
-pub struct TypedLoc<L: Loc> {
-    pub loc: L,
-    pub loc_type: Type,
-}
+pub mod helper {
+    use super::{BinaryOp, Expression, Integer, Loc, UnaryOp};
 
-impl<L: Loc> TypedLoc<L> {
-    pub fn new(loc: L, loc_type: Type) -> Self {
-        TypedLoc { loc, loc_type }
+    pub fn lit_integer(value: Integer) -> Expression {
+        Expression::lit_integer(Loc::none(), value)
+    }
+
+    pub fn lit_i64(value: i64) -> Expression {
+        lit_integer(value.into())
+    }
+
+    pub fn unary(op: UnaryOp, expr: Expression) -> Expression {
+        Expression::unary(Loc::none(), op, expr)
+    }
+
+    pub fn binary(op: BinaryOp, expr1: Expression, expr2: Expression) -> Expression {
+        Expression::binary(Loc::none(), op, expr1, expr2)
+    }
+
+    pub fn add(expr1: Expression, expr2: Expression) -> Expression {
+        binary(BinaryOp::Add, expr1, expr2)
+    }
+
+    pub fn add_i64(value1: i64, value2: i64) -> Expression {
+        add(lit_i64(value1), lit_i64(value2))
     }
 }
-
-pub type TypedExpression<L> = Expression<TypedLoc<L>>;

@@ -1,36 +1,36 @@
-use super::ValueResult;
-use ast::{error::Errors, BinaryOp, Expr, Loc, Type, TypedExpression};
+use super::TExpr::*;
+use super::{BinaryOp, Errors, Loc, Type, TypedExpr, ValueResult};
 use num::Integer;
 
 use super::{RuntimeError, Value};
 
-pub(crate) fn eval<L: Loc + 'static>(expr: TypedExpression<L>) -> ValueResult {
+pub(crate) fn eval(expr: TypedExpr) -> ValueResult {
     Eval::new(expr).eval()
 }
 
-struct Eval<L: Loc> {
-    expr: TypedExpression<L>,
+struct Eval {
+    expr: TypedExpr,
 }
 
 fn integer(value: Integer) -> ValueResult {
     Ok(Value::Integer(value))
 }
 
-impl<L: Loc + 'static> Eval<L> {
-    fn new(expr: TypedExpression<L>) -> Self {
+impl Eval {
+    fn new(expr: TypedExpr) -> Self {
         Eval { expr }
     }
 
-    fn eval_child(&self, expr: TypedExpression<L>) -> ValueResult {
+    fn eval_child(&self, expr: TypedExpr) -> ValueResult {
         Self::new(expr).eval()
     }
 
-    fn loc(&self) -> L {
-        self.expr.borrow_payload().loc.clone()
+    fn loc(&self) -> Loc {
+        self.expr.borrow_loc().clone()
     }
 
     fn loc_type(&self) -> Type {
-        self.expr.borrow_payload().loc_type.clone()
+        self.expr.borrow_type().clone()
     }
 
     fn err(&self) -> ValueResult {
@@ -41,14 +41,14 @@ impl<L: Loc + 'static> Eval<L> {
 
     fn eval(self) -> ValueResult {
         match self.expr.borrow_expr() {
-            Expr::LitInteger(i) => integer(i.clone()),
-            Expr::Binary(op, e1, e2) => self.binary(*op, e1.clone(), e2.clone()),
+            LitInteger(i) => integer(i.clone()),
+            Binary(op, e1, e2) => self.binary(*op, e1.clone(), e2.clone()),
 
             _ => self.err(),
         }
     }
 
-    fn binary(&self, op: BinaryOp, e1: TypedExpression<L>, e2: TypedExpression<L>) -> ValueResult {
+    fn binary(&self, op: BinaryOp, e1: TypedExpr, e2: TypedExpr) -> ValueResult {
         let v1 = self.eval_child(e1)?;
         match op {
             BinaryOp::Add => self.add(v1, e2),
@@ -56,7 +56,7 @@ impl<L: Loc + 'static> Eval<L> {
         }
     }
 
-    fn add(&self, v1: Value, e2: TypedExpression<L>) -> ValueResult {
+    fn add(&self, v1: Value, e2: TypedExpr) -> ValueResult {
         let v2 = self.eval_child(e2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() + v2.as_integer().unwrap())

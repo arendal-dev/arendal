@@ -1,19 +1,19 @@
 mod expr;
 mod value;
 
-use ast::error::{Error, Result};
-use ast::{Loc, SafeLoc, TypedExpression};
+use ast::error::{Error, Errors, Result};
+use ast::{BinaryOp, Loc, TExpr, Type, TypedExpr};
 
 pub use value::Value;
 
 #[derive(Debug)]
 pub struct RuntimeError {
-    loc: Box<dyn SafeLoc>,
+    loc: Loc,
 }
 
 impl RuntimeError {
-    fn new<L: Loc + 'static>(loc: L) -> Self {
-        RuntimeError { loc: Box::new(loc) }
+    fn new(loc: Loc) -> Self {
+        RuntimeError { loc }
     }
 }
 
@@ -21,6 +21,6 @@ impl Error for RuntimeError {}
 
 pub type ValueResult = Result<Value>;
 
-pub fn expression<L: Loc + 'static>(expr: TypedExpression<L>) -> ValueResult {
+pub fn expression(expr: TypedExpr) -> ValueResult {
     expr::eval(expr)
 }
