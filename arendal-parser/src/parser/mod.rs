@@ -1,9 +1,7 @@
 use super::{lexer, Errors, Expression, LexemeRef, Lexemes, Line, Lines, Result};
 
-pub type Parsed<T> = Result<Option<T>>;
-
 // Parses a single expression (a single line for now)
-pub fn parse_expression(input: &str) -> Parsed<Expression> {
+pub fn parse_expression(input: &str) -> Result<Expression> {
     let lines = lexer::lex(input)?;
     Parser::new(lines).parse_expression()
 }
@@ -50,29 +48,19 @@ impl Parser {
     }
 
     // Parses the current line as a single expression.
-    fn parse_expression(mut self) -> Parsed<Expression> {
+    fn parse_expression(mut self) -> Result<Expression> {
         if let Some(line) = self.peek() {
-            let parsed = self.expression(line.lexemes.clone());
-            self.errors.to_result(parsed)
+            let lexemes = self.get_expr_lexemes(line);
+            self.errors
+                .result_to_result(expr::Parser::new(lexemes).parse())
         } else {
-            self.empty_input()
+            self.expression_expected()
         }
     }
 
-    // Parses a list of lexemes as an expression.
-    fn expression(&mut self, lexemes: Lexemes) -> Option<Expression> {
-        if let Some(lexeme) = self.peek() {
-            let parser = expr::Parser::new(lexemes);
-            match parser.parse() {
-                Ok(maybe) => maybe,
-                Err(error) => {
-                    self.errors.append(error);
-                    None
-                }
-            }
-        } else {
-            None
-        }
+    // Get the lexemes needed to parse an expression.
+    fn get_expr_lexemes(&mut self, line: Line) -> Lexemes {
+        line.lexemes.clone()
     }
 
     fn add_error(&mut self, lexeme: &LexemeRef, kind: ErrorKind) -> Option<Expression> {
@@ -80,9 +68,17 @@ impl Parser {
         None
     }
 
-    fn empty_input<T>(mut self) -> Result<T> {
-        self.errors.add(EmptyInputError {});
+    fn err_no_lexeme<T: super::Error + 'static>(mut self, error: T) -> Result<Expression> {
+        self.errors.add(error);
         Err(self.errors)
+    }
+
+    fn empty_input(mut self) -> Result<Expression> {
+        self.err_no_lexeme(EmptyInputError {})
+    }
+
+    fn expression_expected(mut self) -> Result<Expression> {
+        self.err_no_lexeme(ExpressionExpectedError {})
     }
 }
 
@@ -90,6 +86,11 @@ impl Parser {
 struct EmptyInputError {}
 
 impl super::Error for EmptyInputError {}
+
+#[derive(Debug)]
+struct ExpressionExpectedError {}
+
+impl super::Error for ExpressionExpectedError {}
 
 #[derive(Debug)]
 struct Error {

@@ -1,4 +1,4 @@
-use super::{Error, ErrorKind, Parsed};
+use super::{Error, ErrorKind, Result};
 use crate::{Errors, Expression, LexemeKind, LexemeRef, Lexemes};
 use ast::BinaryOp;
 
@@ -44,9 +44,14 @@ impl Parser {
     }
 
     // Parses a single expression, if any, consuming as many tokens as needed.
-    pub(crate) fn parse(mut self) -> Parsed<Expression> {
-        let maybe = self.rule_expression();
-        self.errors.to_result(maybe)
+    pub(crate) fn parse(mut self) -> Result<Expression> {
+        match self.rule_expression() {
+            Some(expr) => self.errors.to_result(expr),
+            None => {
+                self.errors.add(super::ExpressionExpectedError {});
+                Err(self.errors)
+            }
+        }
     }
 
     fn rule_expression(&mut self) -> Option<Expression> {

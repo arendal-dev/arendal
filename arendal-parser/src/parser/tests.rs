@@ -3,7 +3,7 @@ use super::parse_expression;
 use ast::bare::*;
 
 fn check_expression(input: &str, expr: Expression) {
-    assert_eq!(parse_expression(input).unwrap().unwrap().to_bare(), expr);
+    assert_eq!(parse_expression(input).unwrap().to_bare(), expr);
 }
 
 #[test]

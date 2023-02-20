@@ -25,11 +25,27 @@ impl Errors {
         self.errors.append(&mut other.errors)
     }
 
+    pub fn append_result<T>(&mut self, result: Result<T>) {
+        if let Err(other) = result {
+            self.append(other);
+        }
+    }
+
     pub fn to_result<T>(self, value: T) -> Result<T> {
         if self.errors.is_empty() {
             Ok(value)
         } else {
             Err(self)
+        }
+    }
+
+    pub fn result_to_result<T>(mut self, result: Result<T>) -> Result<T> {
+        match result {
+            Ok(value) => self.to_result(value),
+            Err(errors) => {
+                self.append(errors);
+                Err(self)
+            }
         }
     }
 }
