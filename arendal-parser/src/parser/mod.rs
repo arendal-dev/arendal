@@ -1,4 +1,4 @@
-use super::{lexer, Errors, Expression, LexemeRef, Lexemes, Line, Lines, Result};
+use super::{lexer, Errors, Expression, LexemeRef, Lexemes, Line, Lines, Loc, Result};
 
 // Parses a single expression (a single line for now)
 pub fn parse_expression(input: &str) -> Result<Expression> {
@@ -77,13 +77,13 @@ impl Parser {
         }
     }
 
-    fn add_error(&mut self, lexeme: &LexemeRef, kind: ErrorKind) -> Option<Expression> {
-        self.errors.add(Error::new(lexeme, kind));
+    fn add_error(&mut self, lexeme: &LexemeRef, error: Error) -> Option<Expression> {
+        self.errors.add(lexeme.pos().into(), error);
         None
     }
 
     fn err_no_lexeme<T: super::Error + 'static>(mut self, error: T) -> Result<Expression> {
-        self.errors.add(error);
+        self.errors.add(Loc::none(), error);
         Err(self.errors)
     }
 
@@ -107,22 +107,7 @@ struct ExpressionExpectedError {}
 impl super::Error for ExpressionExpectedError {}
 
 #[derive(Debug)]
-struct Error {
-    lexeme: LexemeRef,
-    kind: ErrorKind,
-}
-
-impl Error {
-    fn new(lexeme: &LexemeRef, kind: ErrorKind) -> Self {
-        Error {
-            lexeme: lexeme.clone(),
-            kind,
-        }
-    }
-}
-
-#[derive(Debug)]
-enum ErrorKind {
+enum Error {
     ParsingError, // placeholder, temporary error
 }
 

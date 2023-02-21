@@ -7,15 +7,7 @@ use ast::{BinaryOp, Loc, TExpr, Type, TypedExpr};
 pub use value::Value;
 
 #[derive(Debug)]
-pub struct RuntimeError {
-    loc: Loc,
-}
-
-impl RuntimeError {
-    fn new(loc: Loc) -> Self {
-        RuntimeError { loc }
-    }
-}
+pub struct RuntimeError {}
 
 impl Error for RuntimeError {}
 

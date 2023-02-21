@@ -35,7 +35,7 @@ impl Eval {
 
     fn err(&self) -> ValueResult {
         let mut errors: Errors = Default::default();
-        errors.add(RuntimeError::new(self.loc()));
+        errors.add(self.loc(), RuntimeError {});
         Err(errors)
     }
 

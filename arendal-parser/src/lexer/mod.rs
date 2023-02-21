@@ -2,7 +2,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::{
-    tokenizer, Enclosure, Errors, Indentation, Integer, Pos, Result, Substr, Token, TokenKind,
+    tokenizer, Enclosure, Errors, Indentation, Integer, Loc, Pos, Result, Substr, Token, TokenKind,
     Tokens,
 };
 
@@ -226,7 +226,7 @@ impl Lexer {
                 }
                 TokenKind::Close(e) => self.add_close(&t, e),
                 TokenKind::Digits(s) => self.add_digits(&s),
-                _ => self.add_error(&t, ErrorKind::UnexpectedToken, 1),
+                _ => self.add_error(&t, Error::UnexpectedToken, 1),
             }
         }
         self.end_line();
@@ -302,7 +302,7 @@ impl Lexer {
             self.advance(tokens);
             if let Some(t) = self.peek() {
                 if t.is_whitespace() {
-                    self.add_error(&t, ErrorKind::IndentationError, 0);
+                    self.add_error(&t, Error::IndentationError, 0);
                     self.advance_whitespace();
                 }
             }
@@ -332,10 +332,10 @@ impl Lexer {
                         n += 1;
                     }
                 }
-                self.add_error(token, ErrorKind::InvalidClose(e), n);
+                self.add_error(token, Error::InvalidClose(e), n);
             }
             None => {
-                self.add_error(token, ErrorKind::InvalidClose(e), 1);
+                self.add_error(token, Error::InvalidClose(e), 1);
             }
         }
     }
@@ -344,29 +344,14 @@ impl Lexer {
         self.add_lexeme(LexemeKind::Integer(digits.parse().unwrap()), 1);
     }
 
-    fn add_error(&mut self, token: &Token, kind: ErrorKind, tokens: usize) {
-        self.errors.add(Error::new(token.clone(), kind));
+    fn add_error(&mut self, token: &Token, error: Error, tokens: usize) {
+        self.errors.add(token.pos.clone().into(), error);
         self.advance(tokens)
     }
 }
 
 #[derive(Debug)]
-struct Error {
-    token: Token,
-    kind: ErrorKind,
-}
-
-impl Error {
-    fn new(token: Token, error_type: ErrorKind) -> Self {
-        Error {
-            token,
-            kind: error_type,
-        }
-    }
-}
-
-#[derive(Debug)]
-enum ErrorKind {
+enum Error {
     IndentationError,
     InvalidClose(Enclosure),
     UnexpectedToken,

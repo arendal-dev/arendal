@@ -1,6 +1,13 @@
+use super::Loc;
+
 pub trait Error: std::fmt::Debug {}
 
-type ErrorItem = Box<dyn Error>;
+#[derive(Debug)]
+struct ErrorItem {
+    _loc: Loc,
+    _error: Box<dyn Error>,
+}
+
 type ErrorVec = Vec<ErrorItem>;
 
 #[derive(Debug, Default)]
@@ -11,14 +18,12 @@ pub struct Errors {
 pub type Result<T> = std::result::Result<T, Errors>;
 
 impl Errors {
-    pub fn add<T: Error + 'static>(&mut self, error: T) {
-        self.errors.push(Box::new(error));
-    }
-
-    pub fn add_option<T: Error + 'static>(&mut self, error: Option<T>) {
-        if let Some(e) = error {
-            self.add(e)
-        }
+    pub fn add<T: Error + 'static>(&mut self, loc: Loc, error: T) {
+        let item = ErrorItem {
+            _loc: loc,
+            _error: Box::new(error),
+        };
+        self.errors.push(item);
     }
 
     pub fn append(&mut self, mut other: Errors) {

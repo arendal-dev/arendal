@@ -1,4 +1,4 @@
-use super::{Error, ErrorKind, Result};
+use super::{Error, Loc, Result};
 use crate::{Errors, Expression, LexemeKind, LexemeRef, Lexemes};
 use ast::BinaryOp;
 
@@ -48,7 +48,8 @@ impl Parser {
         match self.rule_expression() {
             Some(expr) => self.errors.to_result(expr),
             None => {
-                self.errors.add(super::ExpressionExpectedError {});
+                self.errors
+                    .add(Loc::none(), super::ExpressionExpectedError {});
                 Err(self.errors)
             }
         }
@@ -84,15 +85,15 @@ impl Parser {
                     self.consume();
                     Some(Expression::lit_integer(lexeme.pos().into(), n.clone()))
                 }
-                _ => self.add_error(&lexeme, ErrorKind::ParsingError),
+                _ => self.add_error(&lexeme, Error::ParsingError),
             }
         } else {
             None
         }
     }
 
-    fn add_error(&mut self, lexeme: &LexemeRef, kind: ErrorKind) -> Option<Expression> {
-        self.errors.add(Error::new(lexeme, kind));
+    fn add_error(&mut self, lexeme: &LexemeRef, error: Error) -> Option<Expression> {
+        self.errors.add(lexeme.pos().into(), error);
         None
     }
 }

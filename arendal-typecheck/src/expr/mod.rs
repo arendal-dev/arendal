@@ -1,4 +1,4 @@
-use super::{TypeError, TypeErrorKind};
+use super::TypeError;
 use ast::error::{Errors, Result};
 use ast::{BinaryOp, Expr, Expression, Loc, Type, TypedExpr};
 
@@ -25,9 +25,9 @@ impl Checker {
     }
 
     // Creates and returns an error
-    fn error(self, kind: TypeErrorKind) -> Result<TypedExpr> {
+    fn error(self, kind: TypeError) -> Result<TypedExpr> {
         let mut errors: Errors = Default::default();
-        errors.add(TypeError::new(self.loc(), kind));
+        errors.add(self.loc(), kind);
         Err(errors)
     }
 
@@ -47,11 +47,11 @@ impl Checker {
                     let e2 = c2.unwrap();
                     match op {
                         ast::BinaryOp::Add => self.check_add(e1, e2),
-                        _ => self.error(TypeErrorKind::InvalidType),
+                        _ => self.error(TypeError::InvalidType),
                     }
                 }
             }
-            _ => self.error(TypeErrorKind::InvalidType),
+            _ => self.error(TypeError::InvalidType),
         }
     }
 
@@ -65,7 +65,7 @@ impl Checker {
                 e2,
             ))
         } else {
-            self.error(TypeErrorKind::InvalidType)
+            self.error(TypeError::InvalidType)
         }
     }
 }

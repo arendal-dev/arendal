@@ -9,19 +9,7 @@ pub fn expression(input: Expression) -> Result<TypedExpr> {
 }
 
 #[derive(Debug)]
-struct TypeError {
-    loc: Loc,
-    kind: TypeErrorKind,
-}
-
-impl TypeError {
-    fn new(loc: Loc, kind: TypeErrorKind) -> Self {
-        TypeError { loc, kind }
-    }
-}
-
-#[derive(Debug)]
-enum TypeErrorKind {
+enum TypeError {
     InvalidType, // placeholder, temporary error
 }
 

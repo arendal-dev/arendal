@@ -190,7 +190,7 @@ impl Tokenizer {
     fn tokenize(mut self) -> Result<Tokens> {
         while let Some(c) = self.peek() {
             if !self.add_known_first_char(c) && !self.add_digits(c) && !self.add_word(c) {
-                self.add_error(ErrorKind::UnexpectedChar(c));
+                self.add_error(Error::UnexpectedChar(c));
                 self.consume();
             }
         }
@@ -268,28 +268,13 @@ impl Tokenizer {
         self.add_token_if_next(c, kind2) || self.add_token(kind1)
     }
 
-    fn add_error(&mut self, error: ErrorKind) {
-        self.errors.add(Error::new(&self.pos, error));
+    fn add_error(&mut self, error: Error) {
+        self.errors.add(self.pos.clone().into(), error);
     }
 }
 
 #[derive(Debug)]
-struct Error {
-    pos: Pos,
-    kind: ErrorKind,
-}
-
-impl Error {
-    fn new(pos: &Pos, kind: ErrorKind) -> Self {
-        Error {
-            pos: pos.clone(),
-            kind,
-        }
-    }
-}
-
-#[derive(Debug)]
-enum ErrorKind {
+enum Error {
     UnexpectedChar(char),
 }
 
