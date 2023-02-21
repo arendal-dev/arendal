@@ -95,4 +95,12 @@ pub mod helper {
     pub fn add_i64(value1: i64, value2: i64) -> TypedExpr {
         add(Type::Integer, lit_i64(value1), lit_i64(value2))
     }
+
+    pub fn sub(expr_type: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
+        binary(expr_type, BinaryOp::Sub, expr1, expr2)
+    }
+
+    pub fn sub_i64(value1: i64, value2: i64) -> TypedExpr {
+        sub(Type::Integer, lit_i64(value1), lit_i64(value2))
+    }
 }

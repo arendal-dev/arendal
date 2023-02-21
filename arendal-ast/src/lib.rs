@@ -108,4 +108,12 @@ pub mod helper {
     pub fn add_i64(value1: i64, value2: i64) -> Expression {
         add(lit_i64(value1), lit_i64(value2))
     }
+
+    pub fn sub(expr1: Expression, expr2: Expression) -> Expression {
+        binary(BinaryOp::Sub, expr1, expr2)
+    }
+
+    pub fn sub_i64(value1: i64, value2: i64) -> Expression {
+        sub(lit_i64(value1), lit_i64(value2))
+    }
 }

@@ -52,6 +52,7 @@ impl Eval {
         let v1 = self.eval_child(e1)?;
         match op {
             BinaryOp::Add => self.add(v1, e2),
+            BinaryOp::Sub => self.sub(v1, e2),
             _ => self.err(),
         }
     }
@@ -60,6 +61,12 @@ impl Eval {
         let v2 = self.eval_child(e2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() + v2.as_integer().unwrap())
+    }
+
+    fn sub(&self, v1: Value, e2: TypedExpr) -> ValueResult {
+        let v2 = self.eval_child(e2)?;
+        // We only have integers for now
+        integer(v1.as_integer().unwrap() - v2.as_integer().unwrap())
     }
 }
 

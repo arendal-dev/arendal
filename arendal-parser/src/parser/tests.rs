@@ -46,26 +46,31 @@ fn int_literal_expr() {
 }
 
 #[test]
-fn sum1() {
+fn add1() {
     check_expression("1+2", add_i64(1, 2));
 }
 
 #[test]
-fn sum2() {
+fn add2() {
     check_expression("1 + 2", add_i64(1, 2));
 }
 
 #[test]
-fn sum3() {
+fn add3() {
     check_expression("\t1 + 2", add_i64(1, 2));
 }
 
 #[test]
-fn sum4() {
+fn add4() {
     check_expression("1 + 2 + 3", add(add_i64(1, 2), lit_i64(3)));
 }
 
 #[test]
-fn sum5() {
+fn add5() {
     check_expression("1 +\t2 + 3\n+ 4", add(add_i64(1, 2), lit_i64(3)));
+}
+
+#[test]
+fn sub1() {
+    check_expression("1 - 2 + 1", add(sub_i64(1, 2), lit_i64(1)));
 }

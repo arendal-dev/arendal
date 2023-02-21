@@ -15,11 +15,16 @@ fn integer() {
 }
 
 #[test]
-fn sum1() {
+fn add1() {
     ok_int(add_i64(1, 2));
 }
 
 #[test]
-fn sum2() {
+fn add2() {
     ok_int(add(add_i64(1, 2), lit_i64(3)));
+}
+
+#[test]
+fn sub1() {
+    ok_int(sub_i64(1, 2));
 }

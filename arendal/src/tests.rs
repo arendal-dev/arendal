@@ -15,11 +15,16 @@ fn integer() {
 }
 
 #[test]
-fn sum1() {
+fn add1() {
     eval_ok("1+2", Value::int64(3));
 }
 
 #[test]
-fn sum2() {
+fn add2() {
     eval_ok("1 + 2 + 3", Value::int64(6));
+}
+
+#[test]
+fn sub1() {
+    eval_ok("1 - 2", Value::int64(-1));
 }
