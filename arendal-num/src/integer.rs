@@ -42,3 +42,27 @@ impl ops::Add for Integer {
         (self.value + other.value).into()
     }
 }
+
+impl ops::Sub for Integer {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        (self.value - other.value).into()
+    }
+}
+
+impl ops::Mul for Integer {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        (self.value * other.value).into()
+    }
+}
+
+impl ops::Div for Integer {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        (self.value / other.value).into()
+    }
+}
