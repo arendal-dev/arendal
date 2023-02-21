@@ -60,11 +60,30 @@ impl Parser {
     }
 
     fn rule_term(&mut self) -> Option<Expression> {
-        let mut left = self.rule_primary()?;
+        let mut left = self.rule_factor()?;
         while let Some(lexeme) = self.peek() {
             let maybe = match lexeme.kind() {
                 LexemeKind::Plus => Some(BinaryOp::Add),
                 LexemeKind::Minus => Some(BinaryOp::Sub),
+                _ => None,
+            };
+            if let Some(op) = maybe {
+                self.consume();
+                let right = self.rule_factor()?;
+                left = Expression::binary(lexeme.pos().into(), op, left, right);
+            } else {
+                break;
+            }
+        }
+        Some(left)
+    }
+
+    fn rule_factor(&mut self) -> Option<Expression> {
+        let mut left = self.rule_primary()?;
+        while let Some(lexeme) = self.peek() {
+            let maybe = match lexeme.kind() {
+                LexemeKind::Star => Some(BinaryOp::Mul),
+                LexemeKind::Slash => Some(BinaryOp::Div),
                 _ => None,
             };
             if let Some(op) = maybe {

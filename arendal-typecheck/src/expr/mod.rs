@@ -48,6 +48,8 @@ impl Checker {
                     match op {
                         ast::BinaryOp::Add => self.check_add(e1, e2),
                         ast::BinaryOp::Sub => self.check_sub(e1, e2),
+                        ast::BinaryOp::Mul => self.check_mul(e1, e2),
+                        ast::BinaryOp::Div => self.check_div(e1, e2),
                         _ => self.error(TypeError::InvalidType),
                     }
                 }
@@ -63,7 +65,7 @@ impl Checker {
         e1: TypedExpr,
         e2: TypedExpr,
     ) -> Result<TypedExpr> {
-        Ok(TypedExpr::binary(self.loc(), Type::Integer, op, e1, e2))
+        Ok(TypedExpr::binary(self.loc(), expr_type, op, e1, e2))
     }
 
     fn check_add(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
@@ -77,6 +79,22 @@ impl Checker {
     fn check_sub(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
         if type_eq(&e1, Type::Integer) && type_eq(&e2, Type::Integer) {
             self.ok_binary(Type::Integer, BinaryOp::Sub, e1, e2)
+        } else {
+            self.error(TypeError::InvalidType)
+        }
+    }
+
+    fn check_mul(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+        if type_eq(&e1, Type::Integer) && type_eq(&e2, Type::Integer) {
+            self.ok_binary(Type::Integer, BinaryOp::Mul, e1, e2)
+        } else {
+            self.error(TypeError::InvalidType)
+        }
+    }
+
+    fn check_div(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+        if type_eq(&e1, Type::Integer) && type_eq(&e2, Type::Integer) {
+            self.ok_binary(Type::Integer, BinaryOp::Div, e1, e2)
         } else {
             self.error(TypeError::InvalidType)
         }

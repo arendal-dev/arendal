@@ -5,7 +5,8 @@ This will be moved somewhere else at some point
 ```
 
 expression -> primary
-term -> primary ( ("+" | "-") primary )*
+term -> factor ( ("+" | "-") factor )*
+factor -> primary ( ("*" | "/") primary )*
 primary -> IntLiteral
 
 ```

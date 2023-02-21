@@ -28,3 +28,8 @@ fn add2() {
 fn sub1() {
     eval_ok("1 - 2", Value::int64(-1));
 }
+
+#[test]
+fn mul1() {
+    eval_ok("1 + 2 * 2", Value::int64(5));
+}

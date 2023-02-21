@@ -8,6 +8,12 @@ pub struct Integer {
     value: i64, // Temporary
 }
 
+impl Integer {
+    pub fn is_zero(&self) -> bool {
+        self.value == 0
+    }
+}
+
 impl FromStr for Integer {
     type Err = ParseIntError;
 

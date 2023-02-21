@@ -53,6 +53,8 @@ impl Eval {
         match op {
             BinaryOp::Add => self.add(v1, e2),
             BinaryOp::Sub => self.sub(v1, e2),
+            BinaryOp::Mul => self.mul(v1, e2),
+            BinaryOp::Div => self.div(v1, e2),
             _ => self.err(),
         }
     }
@@ -67,6 +69,23 @@ impl Eval {
         let v2 = self.eval_child(e2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() - v2.as_integer().unwrap())
+    }
+
+    fn mul(&self, v1: Value, e2: TypedExpr) -> ValueResult {
+        let v2 = self.eval_child(e2)?;
+        // We only have integers for now
+        integer(v1.as_integer().unwrap() * v2.as_integer().unwrap())
+    }
+
+    fn div(&self, v1: Value, e2: TypedExpr) -> ValueResult {
+        let v2 = self.eval_child(e2)?;
+        // We only have integers for now
+        let i2 = v2.as_integer().unwrap();
+        if i2.is_zero() {
+            self.err()
+        } else {
+            integer(v1.as_integer().unwrap() / i2)
+        }
     }
 }
 
