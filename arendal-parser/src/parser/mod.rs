@@ -1,9 +1,8 @@
 use super::{lexer, Errors, Expression, LexemeRef, Lexemes, Loc, Result};
 
-// Parses a single expression (a single line for now)
+// Parses the input as single expression
 pub fn parse_expression(input: &str) -> Result<Expression> {
     let lexemes = lexer::lex(input)?;
-    println!("{:?}", lexemes);
     Parser::new(lexemes).parse_expression()
 }
 
@@ -48,14 +47,28 @@ impl Parser {
         self.input.get(self.index + n)
     }
 
-    // Parses a single expression.
+    // Advances the index to point advances by the child parser
+    fn advance_child(
+        &mut self,
+        (result, index): (Result<Expression>, usize),
+    ) -> Result<Expression> {
+        self.index = index;
+        result
+    }
+
+    // Parses the input as a single expression.
     fn parse_expression(mut self) -> Result<Expression> {
-        if let Some(line) = self.peek() {
-            self.errors
-                .result_to_result(expr::Parser::new(self.input).parse())
-        } else {
+        let result = self.expression();
+        if let Some(_) = self.peek() {
             self.expression_expected()
+        } else {
+            self.errors.result_to_result(result)
         }
+    }
+
+    // Parses an expression in the current position.
+    fn expression(&mut self) -> Result<Expression> {
+        self.advance_child(expr::Parser::new(self.input.clone(), self.index).parse())
     }
 
     fn add_error(&mut self, lexeme: &LexemeRef, error: Error) -> Option<Expression> {

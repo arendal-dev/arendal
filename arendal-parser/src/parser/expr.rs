@@ -9,10 +9,10 @@ pub(crate) struct Parser {
 }
 
 impl Parser {
-    pub(crate) fn new(input: Lexemes) -> Parser {
+    pub(crate) fn new(input: Lexemes, index: usize) -> Parser {
         Parser {
             input,
-            index: 0,
+            index,
             errors: Default::default(),
         }
     }
@@ -43,16 +43,17 @@ impl Parser {
         self.input.get(self.index + n)
     }
 
-    // Parses a single expression, if any, consuming as many tokens as needed.
-    pub(crate) fn parse(mut self) -> Result<Expression> {
-        match self.rule_expression() {
+    // Parses a single expression, if any, consuming as many lexemes as needed.
+    pub(crate) fn parse(mut self) -> (Result<Expression>, usize) {
+        let result = match self.rule_expression() {
             Some(expr) => self.errors.to_result(expr),
             None => {
                 self.errors
                     .add(Loc::none(), super::ExpressionExpectedError {});
                 Err(self.errors)
             }
-        }
+        };
+        (result, self.index)
     }
 
     fn rule_expression(&mut self) -> Option<Expression> {
