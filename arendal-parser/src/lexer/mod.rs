@@ -1,12 +1,9 @@
 use std::fmt;
 use std::rc::Rc;
 
-use super::{
-    tokenizer, Enclosure, Errors, Indentation, Integer, Loc, Pos, Result, Substr, Token, TokenKind,
-    Tokens,
-};
+use super::{tokenizer, Enclosure, Errors, Integer, Pos, Result, Substr, Token, TokenKind, Tokens};
 
-pub(crate) fn lex(input: &str) -> Result<Lines> {
+pub(crate) fn lex(input: &str) -> Result<Lexemes> {
     let tokens = tokenizer::tokenize(input)?;
     Lexer::new(tokens).lex()
 }
@@ -112,52 +109,9 @@ pub(crate) enum LexemeKind {
     Word(Substr),
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct Line {
-    pub(crate) indentation: Indentation,
-    pub(crate) lexemes: Lexemes,
-}
-
-impl Line {
-    fn new(indentation: Indentation, lexref: &mut Vec<LexemeRef>) -> Self {
-        Line {
-            indentation,
-            lexemes: Lexemes::new(lexref),
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct Lines {
-    lines: Vec<Line>,
-}
-
-impl Lines {
-    fn add(&mut self, indentation: Indentation, lexref: &mut Vec<LexemeRef>) {
-        self.lines.push(Line::new(indentation, lexref));
-    }
-
-    #[inline]
-    pub(crate) fn contains(&self, index: usize) -> bool {
-        index < self.lines.len()
-    }
-
-    #[inline]
-    pub(crate) fn get(&self, index: usize) -> Option<Line> {
-        self.lines.get(index).cloned()
-    }
-
-    #[inline]
-    pub(crate) fn get_lexemes_at(&self, index: usize) -> Option<Lexemes> {
-        self.lines.get(index).map(|line| line.lexemes.clone())
-    }
-}
-
 struct Lexer {
     input: Tokens,
-    lexemes: Vec<LexemeRef>,  // Lexemes in the current line
-    indentation: Indentation, // Current line indentation,
-    lines: Lines,             // Output lines
+    lexemes: Vec<LexemeRef>,
     errors: Errors,
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
@@ -169,8 +123,6 @@ impl Lexer {
         Lexer {
             input,
             lexemes: Default::default(),
-            indentation: Indentation::new(0, 0),
-            lines: Default::default(),
             errors: Default::default(),
             index: 0,
             lexeme_start: 0,
@@ -198,12 +150,13 @@ impl Lexer {
         self.input.get(self.index + n)
     }
 
-    fn lex(mut self) -> Result<Lines> {
-        self.begin_line();
+    fn lex(mut self) -> Result<Lexemes> {
         while let Some(t) = self.peek() {
             self.lexeme_start = self.index;
             match t.kind {
-                TokenKind::Tabs(_) | TokenKind::Spaces(_) => self.advance_whitespace(),
+                TokenKind::Tabs(_) | TokenKind::Spaces(_) | TokenKind::EndOfLine(_) => {
+                    self.advance_whitespace()
+                }
                 TokenKind::Plus => self.add_lexeme(LexemeKind::Plus, 1),
                 TokenKind::Minus => self.add_lexeme(LexemeKind::Minus, 1),
                 TokenKind::Star => self.add_lexeme(LexemeKind::Star, 1),
@@ -215,11 +168,6 @@ impl Lexer {
                 TokenKind::Equal => self.add_lexeme(LexemeKind::Equal, 1),
                 TokenKind::NotEquals => self.add_lexeme(LexemeKind::NotEquals, 1),
                 TokenKind::Underscore => self.add_lexeme(LexemeKind::Underscore, 1),
-                TokenKind::EndOfLine(_) => {
-                    self.advance(1);
-                    self.end_line();
-                    self.begin_line();
-                }
                 TokenKind::Open(e) => {
                     self.enclosures.push(e);
                     self.add_lexeme(LexemeKind::Open(e), 1)
@@ -229,8 +177,7 @@ impl Lexer {
                 _ => self.add_error(&t, Error::UnexpectedToken, 1),
             }
         }
-        self.end_line();
-        self.errors.to_result(self.lines)
+        self.errors.to_result(Lexemes::new(&mut self.lexemes))
     }
 
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
@@ -252,66 +199,6 @@ impl Lexer {
         }
         if n > 0 {
             self.advance(n);
-        }
-    }
-
-    fn skip_empty_lines(&mut self) {
-        let mut look_ahead: usize = 0;
-        let mut remove: usize = 0;
-        let mut line_index: usize = 0;
-        while let Some(token) = self.peek_ahead(look_ahead) {
-            if token.is_whitespace() {
-                look_ahead += 1;
-                line_index += 1;
-                continue;
-            }
-            if let TokenKind::EndOfLine(_) = token.kind {
-                look_ahead += 1;
-                remove += line_index + 1; // the EOL itself
-                line_index = 0;
-                continue;
-            }
-            break; // any other lexer
-        }
-        self.advance(remove);
-    }
-
-    fn begin_line(&mut self) {
-        self.skip_empty_lines();
-        if !self.is_done() {
-            let mut tokens = 0;
-            let mut tabs = 0;
-            let mut spaces = 0;
-            while let Some(token) = self.peek_ahead(tokens) {
-                if let TokenKind::Tabs(n) = token.kind {
-                    tokens += 1;
-                    tabs += n;
-                } else {
-                    break;
-                }
-            }
-            while let Some(token) = self.peek_ahead(tokens) {
-                if let TokenKind::Spaces(n) = token.kind {
-                    tokens += 1;
-                    spaces += n;
-                } else {
-                    break;
-                }
-            }
-            self.indentation = Indentation::new(tabs, spaces);
-            self.advance(tokens);
-            if let Some(t) = self.peek() {
-                if t.is_whitespace() {
-                    self.add_error(&t, Error::IndentationError, 0);
-                    self.advance_whitespace();
-                }
-            }
-        }
-    }
-
-    fn end_line(&mut self) {
-        if !self.lexemes.is_empty() {
-            self.lines.add(self.indentation, &mut self.lexemes);
         }
     }
 

@@ -1,4 +1,4 @@
-use super::{ArcStr, Enclosure, Errors, NewLine, Pos, Result, Substr};
+use super::{ArcStr, Enclosure, Errors, Pos, Result, Substr};
 use std::fmt;
 
 pub(crate) fn tokenize(input: &str) -> Result<Tokens> {
@@ -46,6 +46,25 @@ impl fmt::Debug for Token {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum NewLine {
+    LF,
+    CRLF,
+}
+
+impl NewLine {
+    fn bytes(self) -> usize {
+        match self {
+            Self::LF => 1,
+            Self::CRLF => 2,
+        }
+    }
+
+    fn chars(self) -> usize {
+        self.bytes() // we have another method in case it's different in the future
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TokenKind {
     Spaces(usize),
@@ -70,7 +89,10 @@ pub(crate) enum TokenKind {
 
 impl TokenKind {
     fn is_whitespace(&self) -> bool {
-        matches!(self, TokenKind::Spaces(_) | TokenKind::Tabs(_))
+        matches!(
+            self,
+            TokenKind::Spaces(_) | TokenKind::Tabs(_) | TokenKind::EndOfLine(_)
+        )
     }
 
     fn chars(&self) -> usize {

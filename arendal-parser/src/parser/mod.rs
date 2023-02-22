@@ -1,19 +1,20 @@
-use super::{lexer, Errors, Expression, LexemeRef, Lexemes, Line, Lines, Loc, Result};
+use super::{lexer, Errors, Expression, LexemeRef, Lexemes, Loc, Result};
 
 // Parses a single expression (a single line for now)
 pub fn parse_expression(input: &str) -> Result<Expression> {
-    let lines = lexer::lex(input)?;
-    Parser::new(lines).parse_expression()
+    let lexemes = lexer::lex(input)?;
+    println!("{:?}", lexemes);
+    Parser::new(lexemes).parse_expression()
 }
 
 struct Parser {
-    input: Lines,
+    input: Lexemes,
     index: usize, // Index of the current input lexer
     errors: Errors,
 }
 
 impl Parser {
-    fn new(input: Lines) -> Parser {
+    fn new(input: Lexemes) -> Parser {
         Parser {
             input,
             index: 0,
@@ -32,48 +33,28 @@ impl Parser {
     }
 
     // Returns a clone of the line at the current index, if any
-    fn peek(&self) -> Option<Line> {
+    fn peek(&self) -> Option<LexemeRef> {
         self.input.get(self.index)
     }
 
     // Consumes one line a returns the next one, if any.
-    fn consume_and_peek(&mut self) -> Option<Line> {
+    fn consume_and_peek(&mut self) -> Option<LexemeRef> {
         self.consume();
         self.peek()
     }
 
     // Returns a clone of the line the requested positions after the current one, if any.
-    fn peek_ahead(&self, n: usize) -> Option<Line> {
+    fn peek_ahead(&self, n: usize) -> Option<LexemeRef> {
         self.input.get(self.index + n)
     }
 
-    // Parses the current line as a single expression.
+    // Parses a single expression.
     fn parse_expression(mut self) -> Result<Expression> {
         if let Some(line) = self.peek() {
-            let lexemes = self.get_expr_lexemes(line);
             self.errors
-                .result_to_result(expr::Parser::new(lexemes).parse())
+                .result_to_result(expr::Parser::new(self.input).parse())
         } else {
             self.expression_expected()
-        }
-    }
-
-    // Get the lexemes needed to parse an expression.
-    fn get_expr_lexemes(&mut self, line: Line) -> Lexemes {
-        let mut lines = vec![line.lexemes.clone()];
-        self.consume();
-        while let Some(additional) = self.peek() {
-            if additional.indentation > line.indentation {
-                lines.push(additional.lexemes.clone());
-                self.consume()
-            } else {
-                break;
-            }
-        }
-        if lines.len() > 1 {
-            Lexemes::merge(lines)
-        } else {
-            lines.pop().unwrap()
         }
     }
 

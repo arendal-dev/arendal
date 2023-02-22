@@ -4,7 +4,7 @@ pub mod tokenizer;
 
 use std::cmp::{Ord, Ordering, PartialOrd};
 
-use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes, Line, Lines};
+use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes};
 use tokenizer::{Token, TokenKind, Tokens};
 
 pub use parser::parse_expression;
@@ -19,25 +19,6 @@ pub enum Enclosure {
     Parens,
     Square,
     Curly,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum NewLine {
-    LF,
-    CRLF,
-}
-
-impl NewLine {
-    fn bytes(self) -> usize {
-        match self {
-            Self::LF => 1,
-            Self::CRLF => 2,
-        }
-    }
-
-    fn chars(self) -> usize {
-        self.bytes() // we have another method in case it's different in the future
-    }
 }
 
 // This struct represents an input string and a byte index in it.
@@ -92,40 +73,6 @@ impl fmt::Debug for Pos {
 impl From<Pos> for Loc {
     fn from(value: Pos) -> Self {
         Loc::input(value.input.clone(), value.index)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Indentation {
-    tabs: usize,
-    spaces: usize,
-}
-
-impl Indentation {
-    #[inline]
-    fn new(tabs: usize, spaces: usize) -> Indentation {
-        Indentation { tabs, spaces }
-    }
-
-    fn next(&self) -> Indentation {
-        Self::new(self.tabs, self.spaces + 1)
-    }
-}
-
-impl Ord for Indentation {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let ordering = self.tabs.cmp(&other.tabs);
-        if ordering == Ordering::Equal {
-            self.spaces.cmp(&other.spaces)
-        } else {
-            ordering
-        }
-    }
-}
-
-impl PartialOrd for Indentation {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
     }
 }
 

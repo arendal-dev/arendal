@@ -34,7 +34,7 @@ fn check_expression(input: &str, expected: Expression) {
     let actual = parse_expression(input).unwrap();
     assert!(
         expr_eq(&actual, &expected),
-        "\nActual: {:?}\nExpected: {:?}\n",
+        "\nActual  : {:?}\nExpected: {:?}\n",
         actual,
         expected
     );
@@ -67,7 +67,10 @@ fn add4() {
 
 #[test]
 fn add5() {
-    check_expression("1 +\t2 + 3\n+ 4", add(add_i64(1, 2), lit_i64(3)));
+    check_expression(
+        "1 +\t2 + 3\n+ 4",
+        add(add(add_i64(1, 2), lit_i64(3)), lit_i64(4)),
+    );
 }
 
 #[test]
