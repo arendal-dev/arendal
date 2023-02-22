@@ -1,5 +1,5 @@
 use super::{Error, Loc, Result};
-use crate::{Errors, Expression, LexemeKind, LexemeRef, Lexemes};
+use crate::{Enclosure, Errors, Expression, LexemeKind, LexemeRef, Lexemes};
 use ast::BinaryOp;
 
 pub(crate) struct Parser {
@@ -41,6 +41,17 @@ impl Parser {
     // Returns a clone of the lexer the requested positions after the current one, if any.
     fn peek_ahead(&self, n: usize) -> Option<LexemeRef> {
         self.input.get(self.index + n)
+    }
+
+    // If the next lexeme maches the provided one, advances it and returns true
+    fn match1(&mut self, kind: LexemeKind) -> bool {
+        if let Some(lexeme) = self.peek() {
+            if kind == *lexeme.kind() {
+                self.consume();
+                return true;
+            }
+        }
+        false
     }
 
     // Parses a single expression, if any, consuming as many lexemes as needed.
@@ -104,6 +115,14 @@ impl Parser {
                 LexemeKind::Integer(n) => {
                     self.consume();
                     Some(Expression::lit_integer(lexeme.pos().into(), n.clone()))
+                }
+                LexemeKind::Open(Enclosure::Parens) => {
+                    self.consume();
+                    let result = self.rule_expression();
+                    if !self.match1(LexemeKind::Close(Enclosure::Parens)) {
+                        self.add_error(&lexeme, Error::ParsingError);
+                    }
+                    result
                 }
                 _ => self.add_error(&lexeme, Error::ParsingError),
             }

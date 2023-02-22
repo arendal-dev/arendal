@@ -4,9 +4,9 @@ This will be moved somewhere else at some point
 
 ```
 
-expression -> primary
+expression -> term
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
-primary -> IntLiteral
+primary -> IntLiteral | "(" expression ")"
 
 ```
