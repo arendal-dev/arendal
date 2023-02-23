@@ -30,8 +30,8 @@ fn eval_and_print(input: &str) {
         Ok(tv) => {
             println!("{}", tv);
         }
-        Err(_) => {
-            println!("Error");
+        Err(errors) => {
+            println!("{}", errors);
         }
     }
 }

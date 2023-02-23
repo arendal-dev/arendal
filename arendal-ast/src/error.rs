@@ -1,6 +1,36 @@
-use super::Loc;
+use super::ArcStr;
+use std::fmt;
 
-pub trait Error: std::fmt::Debug {}
+#[derive(Debug, Clone)]
+pub struct Loc {
+    _inner: Inner,
+}
+
+impl Loc {
+    pub fn input(input: ArcStr, pos: usize) -> Self {
+        Loc {
+            _inner: Inner::Input(input, pos),
+        }
+    }
+
+    pub fn none() -> Self {
+        Loc {
+            _inner: Inner::None,
+        }
+    }
+
+    fn fmt(&self, f: &mut fmt::Formatter<'_>, error: &dyn Error) -> fmt::Result {
+        write!(f, "{:?}", error)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Inner {
+    None,
+    Input(ArcStr, usize),
+}
+
+pub trait Error: fmt::Debug {}
 
 #[derive(Debug)]
 struct ErrorItem {
@@ -13,6 +43,15 @@ type ErrorVec = Vec<ErrorItem>;
 #[derive(Debug, Default)]
 pub struct Errors {
     errors: ErrorVec,
+}
+
+impl fmt::Display for Errors {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for e in self.errors.iter() {
+            e._loc.fmt(f, e._error.as_ref())?
+        }
+        Ok(())
+    }
 }
 
 pub type Result<T> = std::result::Result<T, Errors>;

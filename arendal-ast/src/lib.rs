@@ -1,10 +1,9 @@
 pub mod error;
-pub mod loc;
 pub mod typed;
 pub mod types;
 
 pub use arcstr::{literal, ArcStr, Substr};
-pub use loc::Loc;
+pub use error::Loc;
 pub use typed::{TExpr, TypedExpr};
 pub use types::Type;
 
