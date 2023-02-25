@@ -42,6 +42,14 @@ impl std::convert::AsRef<Type> for TypeRef {
     }
 }
 
+impl std::ops::Deref for TypeRef {
+    type Target = Type;
+
+    fn deref(&self) -> &Type {
+        self.inner.deref()
+    }
+}
+
 impl fmt::Display for TypeRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.as_ref())
