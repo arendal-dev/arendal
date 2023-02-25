@@ -36,21 +36,27 @@ impl TypeRef {
     }
 }
 
+impl std::convert::AsRef<Type> for TypeRef {
+    fn as_ref(&self) -> &Type {
+        self.inner.as_ref()
+    }
+}
+
 impl fmt::Display for TypeRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.inner.as_ref())
+        write!(f, "{:?}", self.as_ref())
     }
 }
 
 impl fmt::Debug for TypeRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.inner.as_ref())
+        write!(f, "{:?}", self.as_ref())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Type, TypeRef};
+    use super::Type;
     #[test]
     fn eq() {
         let r = Type::Integer.to_ref();
