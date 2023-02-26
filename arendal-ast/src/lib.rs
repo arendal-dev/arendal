@@ -3,7 +3,7 @@ pub mod typed;
 pub mod types;
 
 pub use arcstr::{literal, ArcStr, Substr};
-pub use error::Loc;
+pub use error::{Error, Errors, Loc};
 pub use typed::{TExpr, TypedExpr};
 pub use types::Type;
 
@@ -79,6 +79,10 @@ pub enum Expr {
     LitInteger(Integer),
     Unary(UnaryOp, Expression),
     Binary(BinaryOp, Expression, Expression),
+}
+
+pub struct Identifier {
+    name: ArcStr,
 }
 
 pub mod helper {

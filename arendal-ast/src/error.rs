@@ -57,6 +57,12 @@ impl fmt::Display for Errors {
 pub type Result<T> = std::result::Result<T, Errors>;
 
 impl Errors {
+    pub fn new<T: Error + 'static>(loc: Loc, error: T) -> Self {
+        let mut errors: Errors = Default::default();
+        errors.add(loc, error);
+        errors
+    }
+
     pub fn add<T: Error + 'static>(&mut self, loc: Loc, error: T) {
         let item = ErrorItem {
             _loc: loc,
