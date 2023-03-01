@@ -1,6 +1,6 @@
 use super::{Error, Loc, Result};
 use crate::{Enclosure, Errors, Expression, Lexeme, LexemeKind, Lexemes};
-use ast::BinaryOp;
+use ast::{BinaryOp, TypeIdentifier};
 
 pub(crate) struct Parser {
     input: Lexemes,
@@ -116,6 +116,7 @@ impl Parser {
                     self.consume();
                     Some(Expression::lit_integer(lexeme.loc(), n.clone()))
                 }
+                LexemeKind::TypeId(id) => self.lit_type(lexeme.loc(), id.clone()),
                 LexemeKind::Open(Enclosure::Parens) => {
                     self.consume();
                     let result = self.rule_expression();
@@ -129,6 +130,12 @@ impl Parser {
         } else {
             None
         }
+    }
+
+    fn lit_type(&mut self, loc: Loc, id: TypeIdentifier) -> Option<Expression> {
+        // Very simple for now
+        self.consume();
+        Some(Expression::lit_type(loc, id))
     }
 
     fn add_error(&mut self, lexeme: &Lexeme, error: Error) -> Option<Expression> {

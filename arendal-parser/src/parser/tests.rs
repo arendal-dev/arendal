@@ -71,3 +71,8 @@ fn add5() {
 fn sub1() {
     check_expression("1 - 2 + 1", add(sub_i64(1, 2), lit_i64(1)));
 }
+
+#[test]
+fn lit_type() {
+    check_expression("  True ", lit_type_str("True"));
+}

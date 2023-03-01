@@ -61,6 +61,10 @@ impl Expression {
         Self::new(loc, Expr::LitInteger(value))
     }
 
+    pub fn lit_type(loc: Loc, id: TypeIdentifier) -> Self {
+        Self::new(loc, Expr::LitType(id))
+    }
+
     pub fn unary(loc: Loc, op: UnaryOp, expr: Expression) -> Self {
         Self::new(loc, Expr::Unary(op, expr))
     }
@@ -86,7 +90,7 @@ pub enum Expr {
 }
 
 pub mod helper {
-    use super::{BinaryOp, Expression, Integer, Loc, UnaryOp};
+    use super::{BinaryOp, Expression, Integer, Loc, TypeIdentifier, UnaryOp};
 
     pub fn lit_integer(value: Integer) -> Expression {
         Expression::lit_integer(Loc::none(), value)
@@ -94,6 +98,14 @@ pub mod helper {
 
     pub fn lit_i64(value: i64) -> Expression {
         lit_integer(value.into())
+    }
+
+    pub fn lit_type(id: TypeIdentifier) -> Expression {
+        Expression::lit_type(Loc::none(), id)
+    }
+
+    pub fn lit_type_str(id: &str) -> Expression {
+        lit_type(TypeIdentifier::new(id).unwrap())
     }
 
     pub fn unary(op: UnaryOp, expr: Expression) -> Expression {

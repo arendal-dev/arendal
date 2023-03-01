@@ -7,6 +7,6 @@ This will be moved somewhere else at some point
 expression -> term
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
-primary -> IntLiteral | "(" expression ")"
+primary -> IntLiteral | TypeLiteral | "(" expression ")"
 
 ```
