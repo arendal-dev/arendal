@@ -1,4 +1,7 @@
-use super::{Enclosure, Inner, Lexeme, LexemeKind, Lexemes, Result, Token, TokenKind};
+use super::{
+    Enclosure, Identifier, Inner, Keyword, Lexeme, LexemeKind, Lexemes, Result, Token, TokenKind,
+    TypeIdentifier,
+};
 use crate::{ArcStr, Pos};
 
 fn assert_eq_kinds(actual: &Lexemes, expected: &Lexemes) {
@@ -50,6 +53,18 @@ impl TestCase {
 
     fn lex(&self) -> Result<Lexemes> {
         super::lex(self.input.as_str())
+    }
+
+    fn id(self, name: &str) -> Self {
+        self.token(LexemeKind::Id(Identifier::new(name).unwrap()))
+    }
+
+    fn type_id(self, name: &str) -> Self {
+        self.token(LexemeKind::TypeId(TypeIdentifier::new(name).unwrap()))
+    }
+
+    fn keyword(self, keyword: Keyword) -> Self {
+        self.token(LexemeKind::Keyword(keyword))
     }
 
     fn ok_without_pos(mut self) {
@@ -181,5 +196,15 @@ fn enclosures_mixed_ok() {
         .close(Enclosure::Parens)
         .close(Enclosure::Curly)
         .close(Enclosure::Square)
+        .ok_without_pos();
+}
+
+#[test]
+fn assignment() {
+    TestCase::new("val x = True")
+        .keyword(Keyword::Val)
+        .id("x")
+        .token(LexemeKind::Equal)
+        .type_id("True")
         .ok_without_pos();
 }

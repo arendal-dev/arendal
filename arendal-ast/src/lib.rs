@@ -1,11 +1,13 @@
 pub mod error;
 pub mod id;
+pub mod keyword;
 pub mod typed;
 pub mod types;
 
 pub use arcstr::{literal, ArcStr, Substr};
 pub use error::{Error, Errors, Loc, Result};
 pub use id::{Identifier, TypeIdentifier};
+pub use keyword::Keyword;
 pub use typed::{TExpr, TypedExpr};
 pub use types::Type;
 

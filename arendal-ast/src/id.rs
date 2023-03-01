@@ -1,4 +1,4 @@
-use super::{ArcStr, Errors, Loc, Result};
+use super::{ArcStr, Errors, Keyword, Loc, Result};
 use std::fmt;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -10,6 +10,9 @@ impl Identifier {
     pub fn on(loc: Loc, name: &str) -> Result<Identifier> {
         if name.is_empty() {
             return err(loc, Error::Empty);
+        }
+        if let Some(k) = Keyword::parse(name) {
+            return err(loc, Error::Keyword(k));
         }
         for (i, c) in name.char_indices() {
             if i == 0 {
@@ -113,6 +116,7 @@ impl core::ops::Deref for TypeIdentifier {
 enum Error {
     Empty,
     TypeEmpty,
+    Keyword(Keyword),
     InvalidInitial(char),
     InvalidTypeInitial(char),
     InvalidChar(usize, char),

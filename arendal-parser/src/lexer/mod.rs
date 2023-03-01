@@ -2,8 +2,8 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::{
-    tokenizer, Enclosure, Errors, Identifier, Integer, Loc, Result, Substr, Token, TokenKind,
-    Tokens, TypeIdentifier,
+    tokenizer, Enclosure, Errors, Identifier, Integer, Keyword, Loc, Result, Substr, Token,
+    TokenKind, Tokens, TypeIdentifier,
 };
 
 pub(crate) fn lex(input: &str) -> Result<Lexemes> {
@@ -110,6 +110,7 @@ pub(crate) enum LexemeKind {
     Underscore,
     Id(Identifier),
     TypeId(TypeIdentifier),
+    Keyword(Keyword),
 }
 
 struct Lexer {
@@ -237,7 +238,9 @@ impl Lexer {
     }
 
     fn add_word(&mut self, loc: Loc, word: &Substr) {
-        if let Ok(name) = TypeIdentifier::new(word) {
+        if let Some(k) = Keyword::parse(word) {
+            self.add_lexeme(LexemeKind::Keyword(k), 1);
+        } else if let Ok(name) = TypeIdentifier::new(word) {
             self.add_lexeme(LexemeKind::TypeId(name), 1);
         } else {
             match Identifier::on(loc, word) {
