@@ -31,13 +31,13 @@ pub enum BinaryOp {
     NEq,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 struct Inner {
     loc: Loc,
     expr: Expr,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Expression {
     inner: Rc<Inner>,
 }
@@ -76,9 +76,11 @@ impl fmt::Debug for Expression {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
     LitInteger(Integer),
+    LitType(TypeIdentifier),
+    Id(Identifier),
     Unary(UnaryOp, Expression),
     Binary(BinaryOp, Expression, Expression),
 }

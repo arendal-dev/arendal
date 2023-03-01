@@ -1,6 +1,7 @@
 use super::{ArcStr, Errors, Loc, Result};
 use std::fmt;
 
+#[derive(Clone, PartialEq, Eq)]
 pub struct Identifier {
     name: ArcStr,
 }
@@ -27,6 +28,22 @@ impl Identifier {
     pub fn new(name: &str) -> Result<Identifier> {
         Self::on(Loc::none(), name)
     }
+
+    pub fn as_str(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+impl fmt::Debug for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Identifier({})", self.as_str())
+    }
 }
 
 impl core::ops::Deref for Identifier {
@@ -38,6 +55,7 @@ impl core::ops::Deref for Identifier {
     }
 }
 
+#[derive(Clone, PartialEq, Eq)]
 pub struct TypeIdentifier {
     name: ArcStr,
 }
@@ -63,6 +81,22 @@ impl TypeIdentifier {
 
     pub fn new(name: &str) -> Result<TypeIdentifier> {
         Self::on(Loc::none(), name)
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl fmt::Display for TypeIdentifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+impl fmt::Debug for TypeIdentifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "TypeIdentifier({})", self.as_str())
     }
 }
 

@@ -1,7 +1,7 @@
 use super::ArcStr;
 use std::fmt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Loc {
     _inner: Inner,
 }

@@ -82,7 +82,7 @@ impl Parser {
             if let Some(op) = maybe {
                 self.consume();
                 let right = self.rule_factor()?;
-                left = Expression::binary(lexeme.pos().into(), op, left, right);
+                left = Expression::binary(lexeme.loc(), op, left, right);
             } else {
                 break;
             }
@@ -101,7 +101,7 @@ impl Parser {
             if let Some(op) = maybe {
                 self.consume();
                 let right = self.rule_primary()?;
-                left = Expression::binary(lexeme.pos().into(), op, left, right);
+                left = Expression::binary(lexeme.loc(), op, left, right);
             } else {
                 break;
             }
@@ -114,7 +114,7 @@ impl Parser {
             match &lexeme.kind() {
                 LexemeKind::Integer(n) => {
                     self.consume();
-                    Some(Expression::lit_integer(lexeme.pos().into(), n.clone()))
+                    Some(Expression::lit_integer(lexeme.loc(), n.clone()))
                 }
                 LexemeKind::Open(Enclosure::Parens) => {
                     self.consume();
@@ -132,7 +132,7 @@ impl Parser {
     }
 
     fn add_error(&mut self, lexeme: &LexemeRef, error: Error) -> Option<Expression> {
-        self.errors.add(lexeme.pos().into(), error);
+        self.errors.add(lexeme.loc(), error);
         None
     }
 }

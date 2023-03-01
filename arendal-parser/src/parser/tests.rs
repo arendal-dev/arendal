@@ -6,13 +6,6 @@ use ast::Expr::*;
 fn expr_eq(actual: &Expression, expected: &Expression) -> bool {
     let (e1, e2) = (actual.borrow_expr(), expected.borrow_expr());
     match e1 {
-        LitInteger(v1) => {
-            if let LitInteger(v2) = e2 {
-                v1 == v2
-            } else {
-                false
-            }
-        }
         Unary(op1, ce1) => {
             if let Unary(op2, ce2) = e2 {
                 op1 == op2 && expr_eq(ce1, ce2)
@@ -27,6 +20,7 @@ fn expr_eq(actual: &Expression, expected: &Expression) -> bool {
                 false
             }
         }
+        e2 => e1 == e2,
     }
 }
 

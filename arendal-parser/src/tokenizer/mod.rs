@@ -1,4 +1,4 @@
-use super::{ArcStr, Enclosure, Errors, Pos, Result, Substr};
+use super::{ArcStr, Enclosure, Errors, Loc, Pos, Result, Substr};
 use std::fmt;
 
 pub(crate) fn tokenize(input: &str) -> Result<Tokens> {
@@ -30,13 +30,17 @@ impl fmt::Debug for Tokens {
 
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct Token {
-    pub pos: Pos, // Starting position of the token
-    pub kind: TokenKind,
+    pub(crate) pos: Pos, // Starting position of the token
+    pub(crate) kind: TokenKind,
 }
 
 impl Token {
     pub fn is_whitespace(&self) -> bool {
         self.kind.is_whitespace()
+    }
+
+    pub fn loc(&self) -> Loc {
+        self.pos.clone().into()
     }
 }
 

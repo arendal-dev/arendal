@@ -1,5 +1,5 @@
-use super::{Enclosure, Lexeme, LexemeKind, LexemeRef, Lexemes, Pos, Result, Token, TokenKind};
-use crate::ArcStr;
+use super::{Enclosure, Lexeme, LexemeKind, LexemeRef, Lexemes, Result, Token, TokenKind};
+use crate::{ArcStr, Pos};
 
 fn assert_eq_kinds(actual: &Lexemes, expected: &Lexemes) {
     assert_eq!(actual.lexemes.len(), expected.lexemes.len());

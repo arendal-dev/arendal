@@ -1,7 +1,10 @@
 use std::fmt;
 use std::rc::Rc;
 
-use super::{tokenizer, Enclosure, Errors, Integer, Pos, Result, Substr, Token, TokenKind, Tokens};
+use super::{
+    tokenizer, Enclosure, Errors, Identifier, Integer, Loc, Result, Substr, Token, TokenKind,
+    Tokens, TypeIdentifier,
+};
 
 pub(crate) fn lex(input: &str) -> Result<Lexemes> {
     let tokens = tokenizer::tokenize(input)?;
@@ -24,9 +27,8 @@ impl LexemeRef {
         &self.lex_ref.kind
     }
 
-    // Returns a clone of the position
-    pub fn pos(&self) -> Pos {
-        self.lex_ref.token.pos.clone()
+    pub fn loc(&self) -> Loc {
+        self.lex_ref.token.loc()
     }
 }
 
@@ -106,7 +108,8 @@ pub(crate) enum LexemeKind {
     Open(Enclosure),
     Close(Enclosure),
     Underscore,
-    Word(Substr),
+    Id(Identifier),
+    TypeId(TypeIdentifier),
 }
 
 struct Lexer {
@@ -153,6 +156,7 @@ impl Lexer {
     fn lex(mut self) -> Result<Lexemes> {
         while let Some(t) = self.peek() {
             self.lexeme_start = self.index;
+            let loc = t.loc();
             match t.kind {
                 TokenKind::Tabs(_) | TokenKind::Spaces(_) | TokenKind::EndOfLine(_) => {
                     self.advance_whitespace()
@@ -172,9 +176,10 @@ impl Lexer {
                     self.enclosures.push(e);
                     self.add_lexeme(LexemeKind::Open(e), 1)
                 }
-                TokenKind::Close(e) => self.add_close(&t, e),
+                TokenKind::Close(e) => self.add_close(loc, e),
                 TokenKind::Digits(s) => self.add_digits(&s),
-                _ => self.add_error(&t, Error::UnexpectedToken, 1),
+                TokenKind::Word(s) => self.add_word(loc, &s),
+                _ => self.add_error(loc, Error::UnexpectedToken, 1),
             }
         }
         self.errors.to_result(Lexemes::new(&mut self.lexemes))
@@ -202,7 +207,7 @@ impl Lexer {
         }
     }
 
-    fn add_close(&mut self, token: &Token, e: Enclosure) {
+    fn add_close(&mut self, loc: Loc, e: Enclosure) {
         match self.enclosures.pop() {
             Some(last) => {
                 if e == last {
@@ -219,10 +224,10 @@ impl Lexer {
                         n += 1;
                     }
                 }
-                self.add_error(token, Error::InvalidClose(e), n);
+                self.add_error(loc, Error::InvalidClose(e), n);
             }
             None => {
-                self.add_error(token, Error::InvalidClose(e), 1);
+                self.add_error(loc, Error::InvalidClose(e), 1);
             }
         }
     }
@@ -231,8 +236,19 @@ impl Lexer {
         self.add_lexeme(LexemeKind::Integer(digits.parse().unwrap()), 1);
     }
 
-    fn add_error(&mut self, token: &Token, error: Error, tokens: usize) {
-        self.errors.add(token.pos.clone().into(), error);
+    fn add_word(&mut self, loc: Loc, word: &Substr) {
+        if let Ok(name) = TypeIdentifier::new(word) {
+            self.add_lexeme(LexemeKind::TypeId(name), 1);
+        } else {
+            match Identifier::on(loc, word) {
+                Ok(name) => self.add_lexeme(LexemeKind::Id(name), 1),
+                Err(errors) => self.errors.append(errors),
+            }
+        }
+    }
+
+    fn add_error(&mut self, loc: Loc, error: Error, tokens: usize) {
+        self.errors.add(loc, error);
         self.advance(tokens)
     }
 }

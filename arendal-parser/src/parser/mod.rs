@@ -72,7 +72,7 @@ impl Parser {
     }
 
     fn add_error(&mut self, lexeme: &LexemeRef, error: Error) -> Option<Expression> {
-        self.errors.add(lexeme.pos().into(), error);
+        self.errors.add(lexeme.loc(), error);
         None
     }
 

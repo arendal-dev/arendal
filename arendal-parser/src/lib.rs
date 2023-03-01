@@ -2,14 +2,12 @@ pub mod lexer;
 pub mod parser;
 pub mod tokenizer;
 
-use std::cmp::{Ord, Ordering, PartialOrd};
-
-use lexer::{Lexeme, LexemeKind, LexemeRef, Lexemes};
+use lexer::{LexemeKind, LexemeRef, Lexemes};
 use tokenizer::{Token, TokenKind, Tokens};
 
 pub use parser::parse_expression;
 
-use ast::{ArcStr, Error, Errors, Expression, Loc, Result, Substr};
+use ast::{ArcStr, Error, Errors, Expression, Identifier, Loc, Result, Substr, TypeIdentifier};
 use num::Integer;
 use std::fmt;
 
