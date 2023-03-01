@@ -12,34 +12,34 @@ pub(crate) fn lex(input: &str) -> Result<Lexemes> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct LexemeRef {
-    lex_ref: Rc<Lexeme>,
+pub(crate) struct Lexeme {
+    inner: Rc<Inner>,
 }
 
-impl LexemeRef {
-    fn new(lexeme: Lexeme) -> Self {
-        LexemeRef {
-            lex_ref: Rc::new(lexeme),
+impl Lexeme {
+    fn new(lexeme: Inner) -> Self {
+        Lexeme {
+            inner: Rc::new(lexeme),
         }
     }
 
     pub fn kind(&self) -> &LexemeKind {
-        &self.lex_ref.kind
+        &self.inner.kind
     }
 
     pub fn loc(&self) -> Loc {
-        self.lex_ref.token.loc()
+        self.inner.token.loc()
     }
 }
 
 #[derive(Default, Clone)]
 pub(crate) struct Lexemes {
-    lexemes: Rc<Vec<LexemeRef>>,
+    lexemes: Rc<Vec<Lexeme>>,
 }
 
 impl Lexemes {
-    fn new(lexref: &mut Vec<LexemeRef>) -> Self {
-        let mut lexemes: Vec<LexemeRef> = Default::default();
+    fn new(lexref: &mut Vec<Lexeme>) -> Self {
+        let mut lexemes: Vec<Lexeme> = Default::default();
         lexemes.append(lexref);
         Lexemes {
             lexemes: Rc::new(lexemes),
@@ -52,12 +52,12 @@ impl Lexemes {
     }
 
     #[inline]
-    pub(crate) fn get(&self, index: usize) -> Option<LexemeRef> {
+    pub(crate) fn get(&self, index: usize) -> Option<Lexeme> {
         self.lexemes.get(index).cloned()
     }
 
     pub(crate) fn merge<'a, I: IntoIterator<Item = Lexemes>>(values: I) -> Self {
-        let mut lexemes: Vec<LexemeRef> = Default::default();
+        let mut lexemes: Vec<Lexeme> = Default::default();
         values
             .into_iter()
             .for_each(|v| v.lexemes.iter().for_each(|l| lexemes.push(l.clone())));
@@ -72,21 +72,21 @@ impl fmt::Debug for Lexemes {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub(crate) struct Lexeme {
-    pub token: Token, // Starting token of the lexeme
-    pub kind: LexemeKind,
+struct Inner {
+    token: Token, // Starting token of the lexeme
+    kind: LexemeKind,
 }
 
-impl Lexeme {
+impl Inner {
     fn new(token: &Token, kind: LexemeKind) -> Self {
-        Lexeme {
+        Inner {
             token: token.clone(),
             kind,
         }
     }
 }
 
-impl fmt::Debug for Lexeme {
+impl fmt::Debug for Inner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}[{:?}]", self.kind, self.token)
     }
@@ -114,7 +114,7 @@ pub(crate) enum LexemeKind {
 
 struct Lexer {
     input: Tokens,
-    lexemes: Vec<LexemeRef>,
+    lexemes: Vec<Lexeme>,
     errors: Errors,
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
@@ -186,7 +186,7 @@ impl Lexer {
     }
 
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
-        self.lexemes.push(LexemeRef::new(Lexeme::new(
+        self.lexemes.push(Lexeme::new(Inner::new(
             &self.input.get(self.lexeme_start).unwrap(),
             kind,
         )));

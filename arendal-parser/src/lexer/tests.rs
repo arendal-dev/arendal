@@ -1,4 +1,4 @@
-use super::{Enclosure, Lexeme, LexemeKind, LexemeRef, Lexemes, Result, Token, TokenKind};
+use super::{Enclosure, Inner, Lexeme, LexemeKind, Lexemes, Result, Token, TokenKind};
 use crate::{ArcStr, Pos};
 
 fn assert_eq_kinds(actual: &Lexemes, expected: &Lexemes) {
@@ -14,7 +14,7 @@ fn assert_eq_kinds(actual: &Lexemes, expected: &Lexemes) {
 
 struct TestCase {
     input: ArcStr,
-    lexemes: Vec<LexemeRef>,
+    lexemes: Vec<Lexeme>,
 }
 
 impl TestCase {
@@ -26,7 +26,7 @@ impl TestCase {
     }
 
     fn token(mut self, kind: LexemeKind) -> Self {
-        self.lexemes.push(LexemeRef::new(Lexeme {
+        self.lexemes.push(Lexeme::new(Inner {
             token: Token {
                 pos: Pos::new(self.input.clone()),
                 kind: TokenKind::Equal,

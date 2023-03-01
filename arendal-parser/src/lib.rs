@@ -2,7 +2,7 @@ pub mod lexer;
 pub mod parser;
 pub mod tokenizer;
 
-use lexer::{LexemeKind, LexemeRef, Lexemes};
+use lexer::{Lexeme, LexemeKind, Lexemes};
 use tokenizer::{Token, TokenKind, Tokens};
 
 pub use parser::parse_expression;

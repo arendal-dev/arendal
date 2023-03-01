@@ -1,5 +1,5 @@
 use super::{Error, Loc, Result};
-use crate::{Enclosure, Errors, Expression, LexemeKind, LexemeRef, Lexemes};
+use crate::{Enclosure, Errors, Expression, Lexeme, LexemeKind, Lexemes};
 use ast::BinaryOp;
 
 pub(crate) struct Parser {
@@ -28,18 +28,18 @@ impl Parser {
     }
 
     // Returns a clone of the lexer at the current index, if any
-    fn peek(&self) -> Option<LexemeRef> {
+    fn peek(&self) -> Option<Lexeme> {
         self.input.get(self.index)
     }
 
     // Consumes one lexer a returns the next one, if any.
-    fn consume_and_peek(&mut self) -> Option<LexemeRef> {
+    fn consume_and_peek(&mut self) -> Option<Lexeme> {
         self.consume();
         self.peek()
     }
 
     // Returns a clone of the lexer the requested positions after the current one, if any.
-    fn peek_ahead(&self, n: usize) -> Option<LexemeRef> {
+    fn peek_ahead(&self, n: usize) -> Option<Lexeme> {
         self.input.get(self.index + n)
     }
 
@@ -131,7 +131,7 @@ impl Parser {
         }
     }
 
-    fn add_error(&mut self, lexeme: &LexemeRef, error: Error) -> Option<Expression> {
+    fn add_error(&mut self, lexeme: &Lexeme, error: Error) -> Option<Expression> {
         self.errors.add(lexeme.loc(), error);
         None
     }

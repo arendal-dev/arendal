@@ -1,4 +1,4 @@
-use super::{lexer, Errors, Expression, LexemeRef, Lexemes, Loc, Result};
+use super::{lexer, Errors, Expression, Lexeme, Lexemes, Loc, Result};
 
 // Parses the input as single expression
 pub fn parse_expression(input: &str) -> Result<Expression> {
@@ -32,18 +32,18 @@ impl Parser {
     }
 
     // Returns a clone of the line at the current index, if any
-    fn peek(&self) -> Option<LexemeRef> {
+    fn peek(&self) -> Option<Lexeme> {
         self.input.get(self.index)
     }
 
     // Consumes one line a returns the next one, if any.
-    fn consume_and_peek(&mut self) -> Option<LexemeRef> {
+    fn consume_and_peek(&mut self) -> Option<Lexeme> {
         self.consume();
         self.peek()
     }
 
     // Returns a clone of the line the requested positions after the current one, if any.
-    fn peek_ahead(&self, n: usize) -> Option<LexemeRef> {
+    fn peek_ahead(&self, n: usize) -> Option<Lexeme> {
         self.input.get(self.index + n)
     }
 
@@ -71,7 +71,7 @@ impl Parser {
         self.advance_child(expr::Parser::new(self.input.clone(), self.index).parse())
     }
 
-    fn add_error(&mut self, lexeme: &LexemeRef, error: Error) -> Option<Expression> {
+    fn add_error(&mut self, lexeme: &Lexeme, error: Error) -> Option<Expression> {
         self.errors.add(lexeme.loc(), error);
         None
     }
