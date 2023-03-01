@@ -1,7 +1,6 @@
 mod expr;
 
-use ast::error::{Error, Result};
-use ast::{Expression, Loc, TExpr, TypedExpr};
+use ast::{Error, Expression, Result, TypedExpr};
 
 // 'static here means that L is owned
 pub fn expression(input: Expression) -> Result<TypedExpr> {

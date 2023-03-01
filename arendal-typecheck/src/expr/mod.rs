@@ -1,6 +1,5 @@
 use super::TypeError;
-use ast::error::{Errors, Result};
-use ast::{BinaryOp, Expr, Expression, Loc, Type, TypedExpr};
+use ast::{BinaryOp, Errors, Expr, Expression, Loc, Result, Type, TypedExpr};
 
 // 'static here means that L is owned
 pub(crate) fn check(input: Expression) -> Result<TypedExpr> {

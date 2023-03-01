@@ -9,8 +9,7 @@ use tokenizer::{Token, TokenKind, Tokens};
 
 pub use parser::parse_expression;
 
-use ast::error::{Error, Errors, Result};
-use ast::{ArcStr, Expression, Loc, Substr};
+use ast::{ArcStr, Error, Errors, Expression, Loc, Result, Substr};
 use num::Integer;
 use std::fmt;
 

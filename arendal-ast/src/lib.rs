@@ -5,6 +5,7 @@ pub mod types;
 
 pub use arcstr::{literal, ArcStr, Substr};
 pub use error::{Error, Errors, Loc, Result};
+pub use id::{Identifier, TypeIdentifier};
 pub use typed::{TExpr, TypedExpr};
 pub use types::Type;
 

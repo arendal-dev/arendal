@@ -1,8 +1,7 @@
 mod expr;
 mod value;
 
-use ast::error::{Error, Errors, Result};
-use ast::{BinaryOp, Loc, TExpr, Type, TypedExpr};
+use ast::{BinaryOp, Error, Errors, Loc, Result, TExpr, Type, TypedExpr};
 
 pub use value::Value;
 
