@@ -1,6 +1,8 @@
 use std::fmt;
 use std::rc::Rc;
 
+use crate::{literal, ArcStr};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Inner {
     Boolean,
@@ -9,11 +11,30 @@ enum Inner {
     Integer,
     None,
     Some(Type),
+    Option(Type),
+    Singleton(ArcStr),
 }
 
-impl fmt::Display for Inner {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+static BOOLEAN: ArcStr = literal!("Boolean");
+static TRUE: ArcStr = literal!("True");
+static FALSE: ArcStr = literal!("False");
+static INTEGER: ArcStr = literal!("Integer");
+static NONE: ArcStr = literal!("None");
+static SOME: ArcStr = literal!("Some");
+static OPTION: ArcStr = literal!("Option");
+
+impl Inner {
+    fn get_name(&self) -> ArcStr {
+        match self {
+            Inner::Boolean => BOOLEAN.clone(),
+            Inner::True => TRUE.clone(),
+            Inner::False => FALSE.clone(),
+            Inner::Integer => INTEGER.clone(),
+            Inner::None => NONE.clone(),
+            Inner::Some(t) => format!("Some({})", t).into(),
+            Inner::Option(t) => format!("Option({})", t).into(),
+            Inner::Singleton(s) => s.clone(),
+        }
     }
 }
 
@@ -27,6 +48,10 @@ impl Type {
         Type {
             inner: Rc::new(tipo),
         }
+    }
+
+    fn get_name(&self) -> ArcStr {
+        self.inner.get_name()
     }
 
     pub fn integer() -> Self {
@@ -78,13 +103,20 @@ impl Type {
     }
 
     pub fn is_option(&self) -> bool {
-        matches!(*self.inner, Inner::None | Inner::Some(_))
+        matches!(*self.inner, Inner::None | Inner::Some(_) | Inner::Option(_))
+    }
+
+    pub fn is_singleton(&self) -> bool {
+        matches!(
+            *self.inner,
+            Inner::True | Inner::False | Inner::None | Inner::Singleton(_)
+        )
     }
 }
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.inner.as_ref())
+        f.write_str(self.get_name().as_str())
     }
 }
 
