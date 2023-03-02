@@ -23,7 +23,7 @@ fn add1() {
 #[test]
 fn add2() {
     eval_ok(
-        add(Type::Integer, lit_i64(3), add_i64(1, 2)),
+        add(Type::integer(), lit_i64(3), add_i64(1, 2)),
         Value::int64(6),
     );
 }
@@ -31,7 +31,7 @@ fn add2() {
 #[test]
 fn add_sub() {
     eval_ok(
-        sub(Type::Integer, lit_i64(3), add_i64(1, 2)),
+        sub(Type::integer(), lit_i64(3), add_i64(1, 2)),
         Value::int64(0),
     );
 }

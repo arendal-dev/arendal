@@ -6,7 +6,7 @@ fn ok_type(expr: Expression, t: Type) {
 }
 
 fn ok_int(expr: Expression) {
-    ok_type(expr, Type::Integer);
+    ok_type(expr, Type::integer());
 }
 
 #[test]

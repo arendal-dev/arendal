@@ -1,13 +1,8 @@
 use super::TypeError;
 use ast::{BinaryOp, Errors, Expr, Expression, Loc, Result, Type, TypedExpr};
 
-// 'static here means that L is owned
 pub(crate) fn check(input: Expression) -> Result<TypedExpr> {
     Checker::new(input).check()
-}
-
-fn type_eq(e: &TypedExpr, t: Type) -> bool {
-    *e.borrow_type() == t
 }
 
 struct Checker {
@@ -59,41 +54,41 @@ impl Checker {
 
     fn ok_binary(
         &self,
-        expr_type: Type,
+        tipo: Type,
         op: BinaryOp,
         e1: TypedExpr,
         e2: TypedExpr,
     ) -> Result<TypedExpr> {
-        Ok(TypedExpr::binary(self.loc(), expr_type, op, e1, e2))
+        Ok(TypedExpr::binary(self.loc(), tipo, op, e1, e2))
     }
 
     fn check_add(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
-        if type_eq(&e1, Type::Integer) && type_eq(&e2, Type::Integer) {
-            self.ok_binary(Type::Integer, BinaryOp::Add, e1, e2)
+        if e1.is_integer() && e2.is_integer() {
+            self.ok_binary(Type::integer(), BinaryOp::Add, e1, e2)
         } else {
             self.error(TypeError::InvalidType)
         }
     }
 
     fn check_sub(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
-        if type_eq(&e1, Type::Integer) && type_eq(&e2, Type::Integer) {
-            self.ok_binary(Type::Integer, BinaryOp::Sub, e1, e2)
+        if e1.is_integer() && e2.is_integer() {
+            self.ok_binary(Type::integer(), BinaryOp::Sub, e1, e2)
         } else {
             self.error(TypeError::InvalidType)
         }
     }
 
     fn check_mul(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
-        if type_eq(&e1, Type::Integer) && type_eq(&e2, Type::Integer) {
-            self.ok_binary(Type::Integer, BinaryOp::Mul, e1, e2)
+        if e1.is_integer() && e2.is_integer() {
+            self.ok_binary(Type::integer(), BinaryOp::Mul, e1, e2)
         } else {
             self.error(TypeError::InvalidType)
         }
     }
 
     fn check_div(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
-        if type_eq(&e1, Type::Integer) && type_eq(&e2, Type::Integer) {
-            self.ok_binary(Type::Integer, BinaryOp::Div, e1, e2)
+        if e1.is_integer() && e2.is_integer() {
+            self.ok_binary(Type::integer(), BinaryOp::Div, e1, e2)
         } else {
             self.error(TypeError::InvalidType)
         }

@@ -5,7 +5,7 @@ use std::rc::Rc;
 #[derive(Debug)]
 struct Inner {
     loc: Loc,
-    expr_type: Type,
+    tipo: Type,
     expr: TExpr,
 }
 
@@ -15,13 +15,9 @@ pub struct TypedExpr {
 }
 
 impl TypedExpr {
-    fn new(loc: Loc, expr_type: Type, expr: TExpr) -> Self {
+    fn new(loc: Loc, tipo: Type, expr: TExpr) -> Self {
         TypedExpr {
-            inner: Rc::new(Inner {
-                loc,
-                expr_type,
-                expr,
-            }),
+            inner: Rc::new(Inner { loc, tipo, expr }),
         }
     }
 
@@ -30,7 +26,7 @@ impl TypedExpr {
     }
 
     pub fn borrow_type(&self) -> &Type {
-        &self.inner.expr_type
+        &self.inner.tipo
     }
 
     pub fn borrow_expr(&self) -> &TExpr {
@@ -38,21 +34,43 @@ impl TypedExpr {
     }
 
     pub fn lit_integer(loc: Loc, value: Integer) -> Self {
-        Self::new(loc, Type::Integer, TExpr::LitInteger(value))
+        Self::new(loc, Type::integer(), TExpr::LitInteger(value))
     }
 
-    pub fn unary(loc: Loc, expr_type: Type, op: UnaryOp, expr: TypedExpr) -> Self {
-        Self::new(loc, expr_type, TExpr::Unary(op, expr))
+    pub fn unary(loc: Loc, tipo: Type, op: UnaryOp, expr: TypedExpr) -> Self {
+        Self::new(loc, tipo, TExpr::Unary(op, expr))
     }
 
-    pub fn binary(
-        loc: Loc,
-        expr_type: Type,
-        op: BinaryOp,
-        expr1: TypedExpr,
-        expr2: TypedExpr,
-    ) -> Self {
-        Self::new(loc, expr_type, TExpr::Binary(op, expr1, expr2))
+    pub fn binary(loc: Loc, tipo: Type, op: BinaryOp, expr1: TypedExpr, expr2: TypedExpr) -> Self {
+        Self::new(loc, tipo, TExpr::Binary(op, expr1, expr2))
+    }
+
+    pub fn is_integer(&self) -> bool {
+        self.inner.tipo.is_integer()
+    }
+
+    pub fn is_boolean(&self) -> bool {
+        self.inner.tipo.is_boolean()
+    }
+
+    pub fn is_boolean_true(&self) -> bool {
+        self.inner.tipo.is_boolean_true()
+    }
+
+    pub fn is_boolean_false(&self) -> bool {
+        self.inner.tipo.is_boolean_false()
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.inner.tipo.is_none()
+    }
+
+    pub fn is_some(&self) -> bool {
+        self.inner.tipo.is_some()
+    }
+
+    pub fn is_option(&self) -> bool {
+        self.inner.tipo.is_option()
     }
 }
 
@@ -80,27 +98,27 @@ pub mod helper {
         lit_integer(value.into())
     }
 
-    pub fn unary(expr_type: Type, op: UnaryOp, expr: TypedExpr) -> TypedExpr {
-        TypedExpr::unary(Loc::none(), expr_type, op, expr)
+    pub fn unary(tipo: Type, op: UnaryOp, expr: TypedExpr) -> TypedExpr {
+        TypedExpr::unary(Loc::none(), tipo, op, expr)
     }
 
-    pub fn binary(expr_type: Type, op: BinaryOp, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
-        TypedExpr::binary(Loc::none(), expr_type, op, expr1, expr2)
+    pub fn binary(tipo: Type, op: BinaryOp, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
+        TypedExpr::binary(Loc::none(), tipo, op, expr1, expr2)
     }
 
-    pub fn add(expr_type: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
-        binary(expr_type, BinaryOp::Add, expr1, expr2)
+    pub fn add(tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
+        binary(tipo, BinaryOp::Add, expr1, expr2)
     }
 
     pub fn add_i64(value1: i64, value2: i64) -> TypedExpr {
-        add(Type::Integer, lit_i64(value1), lit_i64(value2))
+        add(Type::integer(), lit_i64(value1), lit_i64(value2))
     }
 
-    pub fn sub(expr_type: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
-        binary(expr_type, BinaryOp::Sub, expr1, expr2)
+    pub fn sub(tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
+        binary(tipo, BinaryOp::Sub, expr1, expr2)
     }
 
     pub fn sub_i64(value1: i64, value2: i64) -> TypedExpr {
-        sub(Type::Integer, lit_i64(value1), lit_i64(value2))
+        sub(Type::integer(), lit_i64(value1), lit_i64(value2))
     }
 }

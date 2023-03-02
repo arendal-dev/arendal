@@ -1,4 +1,4 @@
-use ast::Type;
+use super::Type;
 use std::fmt;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -19,7 +19,7 @@ impl Value {
 
     pub fn get_type(&self) -> Type {
         match self {
-            Integer(_) => Type::Integer,
+            Integer(_) => Type::integer(),
         }
     }
 
