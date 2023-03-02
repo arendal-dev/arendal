@@ -1,16 +1,18 @@
-use super::Type;
 use std::fmt;
+
+use core::types::Type;
+use core::Integer;
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Value {
-    Integer(num::Integer),
+    Int(Integer),
 }
 
 use Value::*;
 
 impl Value {
-    pub fn integer(value: num::Integer) -> Self {
-        Integer(value)
+    pub fn integer(value: Integer) -> Self {
+        Int(value)
     }
 
     pub fn int64(value: i64) -> Self {
@@ -19,13 +21,13 @@ impl Value {
 
     pub fn get_type(&self) -> Type {
         match self {
-            Integer(_) => Type::integer(),
+            Int(_) => Type::integer(),
         }
     }
 
-    pub fn as_integer(self) -> Option<num::Integer> {
+    pub fn as_integer(self) -> Option<Integer> {
         match self {
-            Integer(v) => Some(v),
+            Int(v) => Some(v),
         }
     }
 }
@@ -33,7 +35,7 @@ impl Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Integer(value) => value.fmt(f),
+            Int(value) => value.fmt(f),
         }
     }
 }
@@ -41,7 +43,7 @@ impl fmt::Display for Value {
 impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Integer(value) => value.fmt(f),
+            Int(value) => value.fmt(f),
         }
     }
 }

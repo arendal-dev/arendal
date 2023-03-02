@@ -1,8 +1,12 @@
-use super::TExpr::*;
-use super::{BinaryOp, Errors, Loc, Type, TypedExpr, ValueResult};
-use num::Integer;
+use core::ast::BinaryOp;
+use core::error::{Errors, Loc};
+use core::typed::TExpr::*;
+use core::typed::TypedExpr;
+use core::types::Type;
+use core::Integer;
 
-use super::{RuntimeError, Value};
+use crate::value::Value;
+use crate::{RuntimeError, ValueResult};
 
 pub(crate) fn eval(expr: TypedExpr) -> ValueResult {
     Eval::new(expr).eval()
@@ -13,7 +17,7 @@ struct Eval {
 }
 
 fn integer(value: Integer) -> ValueResult {
-    Ok(Value::Integer(value))
+    Ok(Value::Int(value))
 }
 
 impl Eval {

@@ -1,5 +1,9 @@
+use crate::ast::{BinaryOp, Expr, Expression};
+use crate::error::{Errors, Loc, Result};
+use crate::typed::TypedExpr;
+use crate::types::Type;
+
 use super::TypeError;
-use ast::{BinaryOp, Errors, Expr, Expression, Loc, Result, Type, TypedExpr};
 
 pub(crate) fn check(input: Expression) -> Result<TypedExpr> {
     Checker::new(input).check()
@@ -40,10 +44,10 @@ impl Checker {
                     let e1 = c1.unwrap();
                     let e2 = c2.unwrap();
                     match op {
-                        ast::BinaryOp::Add => self.check_add(e1, e2),
-                        ast::BinaryOp::Sub => self.check_sub(e1, e2),
-                        ast::BinaryOp::Mul => self.check_mul(e1, e2),
-                        ast::BinaryOp::Div => self.check_div(e1, e2),
+                        BinaryOp::Add => self.check_add(e1, e2),
+                        BinaryOp::Sub => self.check_sub(e1, e2),
+                        BinaryOp::Mul => self.check_mul(e1, e2),
+                        BinaryOp::Div => self.check_div(e1, e2),
                         _ => self.error(TypeError::InvalidType),
                     }
                 }

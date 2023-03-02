@@ -1,4 +1,7 @@
-use super::{ArcStr, Errors, Keyword, Loc, Result};
+use super::ArcStr;
+use crate::error::{Errors, Loc, Result};
+use crate::keyword::Keyword;
+
 use std::fmt;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -122,7 +125,7 @@ enum Error {
     InvalidChar(usize, char),
 }
 
-impl super::Error for Error {}
+impl crate::error::Error for Error {}
 
 #[inline]
 fn err<T>(loc: Loc, error: Error) -> Result<T> {

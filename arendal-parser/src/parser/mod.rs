@@ -1,8 +1,11 @@
-use super::{lexer, Errors, Expression, Lexeme, Lexemes, Loc, Result};
+use core::ast::Expression;
+use core::error::{Error, Errors, Loc, Result};
+
+use crate::lexer::{lex, Lexeme, Lexemes};
 
 // Parses the input as single expression
 pub fn parse_expression(input: &str) -> Result<Expression> {
-    let lexemes = lexer::lex(input)?;
+    let lexemes = lex(input)?;
     Parser::new(lexemes).parse_expression()
 }
 
@@ -71,41 +74,33 @@ impl Parser {
         self.advance_child(expr::Parser::new(self.input.clone(), self.index).parse())
     }
 
-    fn add_error(&mut self, lexeme: &Lexeme, error: Error) -> Option<Expression> {
+    fn add_error(&mut self, lexeme: &Lexeme, error: ParserError) -> Option<Expression> {
         self.errors.add(lexeme.loc(), error);
         None
     }
 
-    fn err_no_lexeme<T: super::Error + 'static>(mut self, error: T) -> Result<Expression> {
+    fn err_no_lexeme(mut self, error: ParserError) -> Result<Expression> {
         self.errors.add(Loc::none(), error);
         Err(self.errors)
     }
 
     fn empty_input(mut self) -> Result<Expression> {
-        self.err_no_lexeme(EmptyInputError {})
+        self.err_no_lexeme(ParserError::EmptyInputError)
     }
 
     fn expression_expected(mut self) -> Result<Expression> {
-        self.err_no_lexeme(ExpressionExpectedError {})
+        self.err_no_lexeme(ParserError::ExpressionExpectedError)
     }
 }
 
 #[derive(Debug)]
-struct EmptyInputError {}
-
-impl super::Error for EmptyInputError {}
-
-#[derive(Debug)]
-struct ExpressionExpectedError {}
-
-impl super::Error for ExpressionExpectedError {}
-
-#[derive(Debug)]
-enum Error {
+enum ParserError {
+    EmptyInputError,
+    ExpressionExpectedError,
     ParsingError, // placeholder, temporary error
 }
 
-impl super::Error for Error {}
+impl Error for ParserError {}
 
 mod expr;
 

@@ -6,5 +6,4 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-num = { path = "../arendal-num", package = "arendal-num" }
-ast = { path = "../arendal-ast", package = "arendal-ast" }
+core = { path = "../arendal-core", package = "arendal-core" }

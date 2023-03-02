@@ -1,10 +1,11 @@
 [package]
-name = "arendal-typecheck"
+name = "arendal-core"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+arcstr = "1.1.5"
 num = { path = "../arendal-num", package = "arendal-num" }
-ast = { path = "../arendal-ast", package = "arendal-ast" }
+phf = { version = "0.11.1", features = ["macros"] }

@@ -1,5 +1,6 @@
+use twi::value::Value;
+
 use super::eval;
-use twi::Value;
 
 fn eval_ok(input: &str, result: Value) {
     if let Ok(v) = eval(input) {

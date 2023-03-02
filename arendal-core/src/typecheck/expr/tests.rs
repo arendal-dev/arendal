@@ -1,5 +1,5 @@
 use super::{check, Expression, Type};
-use ast::helper::*;
+use crate::ast::helper::*;
 
 fn ok_type(expr: Expression, t: Type) {
     assert_eq!(*check(expr).unwrap().borrow_type(), t);

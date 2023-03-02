@@ -1,6 +1,8 @@
+use core::typed::helper::*;
+use core::typed::TypedExpr;
+use core::types::Type;
+
 use super::{eval, Value};
-use ast::typed::helper::*;
-use ast::{Type, TypedExpr};
 
 fn eval_ok(input: TypedExpr, result: Value) {
     if let Ok(v) = eval(input) {

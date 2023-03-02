@@ -20,8 +20,8 @@ fn main() -> rustyline::Result<()> {
 }
 
 fn eval(input: &str) -> ValueResult {
-    let parsed = parser::parse_expression(input)?;
-    let checked = typecheck::expression(parsed)?;
+    let parsed = parser::parser::parse_expression(input)?;
+    let checked = core::typecheck::expression(parsed)?;
     twi::expression(checked)
 }
 

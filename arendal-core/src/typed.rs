@@ -1,4 +1,7 @@
-use super::{BinaryOp, Integer, Loc, Type, UnaryOp};
+use super::Integer;
+use crate::ast::{BinaryOp, UnaryOp};
+use crate::error::Loc;
+use crate::types::Type;
 use std::fmt;
 use std::rc::Rc;
 

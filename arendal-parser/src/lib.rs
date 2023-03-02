@@ -2,16 +2,10 @@ pub mod lexer;
 pub mod parser;
 pub mod tokenizer;
 
-use lexer::{Lexeme, LexemeKind, Lexemes};
-use tokenizer::{Token, TokenKind, Tokens};
-
-pub use parser::parse_expression;
-
-use ast::{
-    ArcStr, Error, Errors, Expression, Identifier, Keyword, Loc, Result, Substr, TypeIdentifier,
-};
-use num::Integer;
 use std::fmt;
+
+use core::error::Loc;
+use core::{ArcStr, Substr};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Enclosure {
@@ -78,7 +72,7 @@ impl From<Pos> for Loc {
 #[cfg(test)]
 mod tests {
     use super::Pos;
-    use ast::literal;
+    use core::literal;
 
     #[test]
     fn pos_harness() {

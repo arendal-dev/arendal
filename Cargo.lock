@@ -12,16 +12,14 @@ checksum = "3f907281554a3d0312bb7aab855a8e0ef6cbf1614d06de54105039ca8b34460e"
 name = "arendal"
 version = "0.1.0"
 dependencies = [
- "arendal-ast",
- "arendal-num",
+ "arendal-core",
  "arendal-parser",
  "arendal-twi",
- "arendal-typecheck",
  "rustyline",
 ]
 
 [[package]]
-name = "arendal-ast"
+name = "arendal-core"
 version = "0.1.0"
 dependencies = [
  "arcstr",
@@ -37,24 +35,14 @@ version = "0.1.0"
 name = "arendal-parser"
 version = "0.1.0"
 dependencies = [
- "arendal-ast",
- "arendal-num",
+ "arendal-core",
 ]
 
 [[package]]
 name = "arendal-twi"
 version = "0.1.0"
 dependencies = [
- "arendal-ast",
- "arendal-num",
-]
-
-[[package]]
-name = "arendal-typecheck"
-version = "0.1.0"
-dependencies = [
- "arendal-ast",
- "arendal-num",
+ "arendal-core",
 ]
 
 [[package]]

@@ -1,5 +1,8 @@
-use super::{ArcStr, Enclosure, Errors, Loc, Pos, Result, Substr};
 use std::fmt;
+
+use super::{Enclosure, Pos};
+use core::error::{Errors, Loc, Result};
+use core::{ArcStr, Substr};
 
 pub(crate) fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(ArcStr::from(input)).tokenize()
@@ -304,7 +307,7 @@ enum Error {
     UnexpectedChar(char),
 }
 
-impl super::Error for Error {}
+impl core::error::Error for Error {}
 
 #[cfg(test)]
 mod tests;

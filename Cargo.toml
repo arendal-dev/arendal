@@ -2,9 +2,8 @@
 
 members = [
     "arendal-num",
-    "arendal-ast",
+    "arendal-core",
     "arendal-parser",
-    "arendal-typecheck",
     "arendal-twi",
     "arendal"
 ]

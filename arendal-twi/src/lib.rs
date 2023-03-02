@@ -1,16 +1,16 @@
+pub mod value;
+
 mod expr;
-mod value;
 
-use ast::{BinaryOp, Error, Errors, Loc, Result, TExpr, Type, TypedExpr};
-
-pub use value::Value;
+use core::error::{Error, Result};
+use core::typed::TypedExpr;
 
 #[derive(Debug)]
 pub struct RuntimeError {}
 
 impl Error for RuntimeError {}
 
-pub type ValueResult = Result<Value>;
+pub type ValueResult = Result<value::Value>;
 
 pub fn expression(expr: TypedExpr) -> ValueResult {
     expr::eval(expr)

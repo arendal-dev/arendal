@@ -1,13 +1,15 @@
 use std::fmt;
 use std::rc::Rc;
 
-use super::{
-    tokenizer, Enclosure, Errors, Identifier, Integer, Keyword, Loc, Result, Substr, Token,
-    TokenKind, Tokens, TypeIdentifier,
-};
+use super::Enclosure;
+use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
+use core::error::{Errors, Loc, Result};
+use core::id::{Identifier, TypeIdentifier};
+use core::keyword::Keyword;
+use core::{Integer, Substr};
 
 pub(crate) fn lex(input: &str) -> Result<Lexemes> {
-    let tokens = tokenizer::tokenize(input)?;
+    let tokens = tokenize(input)?;
     Lexer::new(tokens).lex()
 }
 
@@ -263,7 +265,7 @@ enum Error {
     UnexpectedToken,
 }
 
-impl super::Error for Error {}
+impl core::error::Error for Error {}
 
 #[cfg(test)]
 mod tests;

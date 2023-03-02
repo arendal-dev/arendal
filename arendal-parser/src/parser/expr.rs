@@ -1,6 +1,11 @@
-use super::{Error, Loc, Result};
-use crate::{Enclosure, Errors, Expression, Lexeme, LexemeKind, Lexemes};
-use ast::{BinaryOp, TypeIdentifier};
+use core::ast::{BinaryOp, Expression};
+use core::error::{Errors, Loc, Result};
+use core::id::TypeIdentifier;
+
+use crate::lexer::{Lexeme, LexemeKind, Lexemes};
+use crate::Enclosure;
+
+use super::ParserError;
 
 pub(crate) struct Parser {
     input: Lexemes,
@@ -60,7 +65,7 @@ impl Parser {
             Some(expr) => self.errors.to_result(expr),
             None => {
                 self.errors
-                    .add(Loc::none(), super::ExpressionExpectedError {});
+                    .add(Loc::none(), ParserError::ExpressionExpectedError);
                 Err(self.errors)
             }
         };
@@ -121,11 +126,11 @@ impl Parser {
                     self.consume();
                     let result = self.rule_expression();
                     if !self.match1(LexemeKind::Close(Enclosure::Parens)) {
-                        self.add_error(&lexeme, Error::ParsingError);
+                        self.add_error(&lexeme, ParserError::ParsingError);
                     }
                     result
                 }
-                _ => self.add_error(&lexeme, Error::ParsingError),
+                _ => self.add_error(&lexeme, ParserError::ParsingError),
             }
         } else {
             None
@@ -138,7 +143,7 @@ impl Parser {
         Some(Expression::lit_type(loc, id))
     }
 
-    fn add_error(&mut self, lexeme: &Lexeme, error: Error) -> Option<Expression> {
+    fn add_error(&mut self, lexeme: &Lexeme, error: ParserError) -> Option<Expression> {
         self.errors.add(lexeme.loc(), error);
         None
     }

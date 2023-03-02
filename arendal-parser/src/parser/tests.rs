@@ -1,7 +1,8 @@
-use super::{parse_expression, Expression};
+use core::ast::helper::*;
+use core::ast::Expr::*;
+use core::ast::Expression;
 
-use ast::helper::*;
-use ast::Expr::*;
+use super::parse_expression;
 
 fn expr_eq(actual: &Expression, expected: &Expression) -> bool {
     let (e1, e2) = (actual.borrow_expr(), expected.borrow_expr());
