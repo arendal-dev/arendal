@@ -1,7 +1,8 @@
 use std::fmt;
 use std::rc::Rc;
 
-use crate::{literal, ArcStr};
+use crate::names::*;
+use crate::ArcStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Inner {
@@ -14,14 +15,6 @@ enum Inner {
     Option(Type),
     Singleton(ArcStr),
 }
-
-pub(crate) static BOOLEAN: ArcStr = literal!("Boolean");
-pub(crate) static TRUE: ArcStr = literal!("True");
-pub(crate) static FALSE: ArcStr = literal!("False");
-pub(crate) static INTEGER: ArcStr = literal!("Integer");
-pub(crate) static NONE: ArcStr = literal!("None");
-pub(crate) static SOME: ArcStr = literal!("Some");
-pub(crate) static OPTION: ArcStr = literal!("Option");
 
 impl Inner {
     fn get_name(&self) -> ArcStr {

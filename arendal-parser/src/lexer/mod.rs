@@ -4,7 +4,7 @@ use std::rc::Rc;
 use super::Enclosure;
 use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
 use core::error::{Errors, Loc, Result};
-use core::id::{Identifier, TypeIdentifier};
+use core::id::{Id, TypeId};
 use core::keyword::Keyword;
 use core::{Integer, Substr};
 
@@ -110,8 +110,8 @@ pub(crate) enum LexemeKind {
     Open(Enclosure),
     Close(Enclosure),
     Underscore,
-    Id(Identifier),
-    TypeId(TypeIdentifier),
+    Id(Id),
+    TypeId(TypeId),
     Keyword(Keyword),
 }
 
@@ -242,12 +242,12 @@ impl Lexer {
     fn add_word(&mut self, loc: Loc, word: &Substr) {
         if let Some(k) = Keyword::parse(word) {
             self.add_lexeme(LexemeKind::Keyword(k), 1);
-        } else if let Ok(name) = TypeIdentifier::new(word) {
+        } else if let Ok(name) = TypeId::new(word) {
             self.add_lexeme(LexemeKind::TypeId(name), 1);
         } else {
-            match Identifier::on(loc, word) {
+            match Id::new(word) {
                 Ok(name) => self.add_lexeme(LexemeKind::Id(name), 1),
-                Err(errors) => self.errors.append(errors),
+                Err(error) => self.errors.add(loc, error),
             }
         }
     }

@@ -6,6 +6,7 @@ pub mod typecheck;
 pub mod typed;
 pub mod types;
 
+mod names;
 mod scope;
 
 pub use arcstr::{literal, ArcStr, Substr};

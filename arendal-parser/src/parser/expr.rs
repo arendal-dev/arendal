@@ -1,6 +1,6 @@
 use core::ast::{BinaryOp, Expression};
 use core::error::{Errors, Loc, Result};
-use core::id::TypeIdentifier;
+use core::id::TypeId;
 
 use crate::lexer::{Lexeme, LexemeKind, Lexemes};
 use crate::Enclosure;
@@ -137,7 +137,7 @@ impl Parser {
         }
     }
 
-    fn lit_type(&mut self, loc: Loc, id: TypeIdentifier) -> Option<Expression> {
+    fn lit_type(&mut self, loc: Loc, id: TypeId) -> Option<Expression> {
         // Very simple for now
         self.consume();
         Some(Expression::lit_type(loc, id))

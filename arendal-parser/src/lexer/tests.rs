@@ -1,6 +1,5 @@
 use super::{
-    Enclosure, Identifier, Inner, Keyword, Lexeme, LexemeKind, Lexemes, Result, Token, TokenKind,
-    TypeIdentifier,
+    Enclosure, Id, Inner, Keyword, Lexeme, LexemeKind, Lexemes, Result, Token, TokenKind, TypeId,
 };
 use crate::{ArcStr, Pos};
 
@@ -56,11 +55,11 @@ impl TestCase {
     }
 
     fn id(self, name: &str) -> Self {
-        self.token(LexemeKind::Id(Identifier::new(name).unwrap()))
+        self.token(LexemeKind::Id(Id::new(name).unwrap()))
     }
 
     fn type_id(self, name: &str) -> Self {
-        self.token(LexemeKind::TypeId(TypeIdentifier::new(name).unwrap()))
+        self.token(LexemeKind::TypeId(TypeId::new(name).unwrap()))
     }
 
     fn keyword(self, keyword: Keyword) -> Self {

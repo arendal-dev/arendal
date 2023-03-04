@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use super::Integer;
 use crate::error::Loc;
-use crate::id::{Identifier, TypeIdentifier};
+use crate::id::{Id, TypeId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -53,7 +53,7 @@ impl Expression {
         Self::new(loc, Expr::LitInteger(value))
     }
 
-    pub fn lit_type(loc: Loc, id: TypeIdentifier) -> Self {
+    pub fn lit_type(loc: Loc, id: TypeId) -> Self {
         Self::new(loc, Expr::LitType(id))
     }
 
@@ -75,14 +75,14 @@ impl fmt::Debug for Expression {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
     LitInteger(Integer),
-    LitType(TypeIdentifier),
-    Id(Identifier),
+    LitType(TypeId),
+    Id(Id),
     Unary(UnaryOp, Expression),
     Binary(BinaryOp, Expression, Expression),
 }
 
 pub mod helper {
-    use super::{BinaryOp, Expression, Integer, Loc, TypeIdentifier, UnaryOp};
+    use super::{BinaryOp, Expression, Integer, Loc, TypeId, UnaryOp};
 
     pub fn lit_integer(value: Integer) -> Expression {
         Expression::lit_integer(Loc::none(), value)
@@ -92,12 +92,12 @@ pub mod helper {
         lit_integer(value.into())
     }
 
-    pub fn lit_type(id: TypeIdentifier) -> Expression {
+    pub fn lit_type(id: TypeId) -> Expression {
         Expression::lit_type(Loc::none(), id)
     }
 
     pub fn lit_type_str(id: &str) -> Expression {
-        lit_type(TypeIdentifier::new(id).unwrap())
+        lit_type(TypeId::new(id).unwrap())
     }
 
     pub fn unary(op: UnaryOp, expr: Expression) -> Expression {
