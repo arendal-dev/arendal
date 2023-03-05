@@ -242,11 +242,11 @@ impl Lexer {
     fn add_word(&mut self, loc: Loc, word: &Substr) {
         if let Some(k) = Keyword::parse(word) {
             self.add_lexeme(LexemeKind::Keyword(k), 1);
-        } else if let Ok(name) = TypeId::new(word) {
+        } else if let Ok(name) = TypeId::new(word.as_str().into()) {
             self.add_lexeme(LexemeKind::TypeId(name), 1);
         } else {
-            match Id::new(word) {
-                Ok(name) => self.add_lexeme(LexemeKind::Id(name), 1),
+            match Id::new(word.as_str().into()) {
+                Ok(name) => self.add_lexeme(LexemeKind::Id(name.into()), 1),
                 Err(error) => self.errors.add(loc, error),
             }
         }

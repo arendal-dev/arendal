@@ -97,7 +97,7 @@ pub mod helper {
     }
 
     pub fn lit_type_str(id: &str) -> Expression {
-        lit_type(TypeId::new(id).unwrap())
+        lit_type(TypeId::new(id.into()).unwrap())
     }
 
     pub fn unary(op: UnaryOp, expr: Expression) -> Expression {

@@ -55,11 +55,11 @@ impl TestCase {
     }
 
     fn id(self, name: &str) -> Self {
-        self.token(LexemeKind::Id(Id::new(name).unwrap()))
+        self.token(LexemeKind::Id(Id::new(name.into()).unwrap()))
     }
 
     fn type_id(self, name: &str) -> Self {
-        self.token(LexemeKind::TypeId(TypeId::new(name).unwrap()))
+        self.token(LexemeKind::TypeId(TypeId::new(name.into()).unwrap()))
     }
 
     fn keyword(self, keyword: Keyword) -> Self {

@@ -17,11 +17,11 @@ pub struct Id {
 }
 
 impl Id {
-    pub fn new(name: &str) -> Result<Id, IdError> {
+    pub fn new(name: ArcStr) -> Result<Id, IdError> {
         if name.is_empty() {
             return Err(IdError::Empty);
         }
-        if let Some(k) = Keyword::parse(name) {
+        if let Some(k) = Keyword::parse(name.as_str()) {
             return Err(IdError::Keyword(k));
         }
         for (i, c) in name.char_indices() {
@@ -72,7 +72,7 @@ pub struct TypeId {
 }
 
 impl TypeId {
-    pub fn new(name: &str) -> Result<TypeId, IdError> {
+    pub fn new(name: ArcStr) -> Result<TypeId, IdError> {
         if name.is_empty() {
             return Err(IdError::TypeEmpty);
         }
@@ -129,38 +129,23 @@ pub enum IdError {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-enum PathParent {
+enum InnerPath {
     Std,
-    ThisModule,
-    Other(Path),
-}
-
-impl fmt::Display for PathParent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Std => f.write_str("std::"),
-            Self::ThisModule => f.write_str("self::"),
-            Self::Other(p) => p.fmt(f),
-        }
-    }
-}
-
-impl fmt::Debug for PathParent {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self, f)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-struct InnerPath {
-    parent: PathParent,
-    segment: Id,
+    StdChild(Id),
+    Package(Id),
+    PackageChild(Id, Id),
+    Module(Rc<InnerPath>, Id),
 }
 
 impl fmt::Display for InnerPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.parent.fmt(f);
-        self.segment.fmt(f)
+        match self {
+            Self::Std => f.write_str("std"),
+            Self::StdChild(id) => write!(f, "std::{}", id),
+            Self::Package(id) => id.fmt(f),
+            Self::PackageChild(idp, idm) => write!(f, "{}::{}", idp, idm),
+            Self::Module(parent, id) => write!(f, "{}::{}", *parent, id),
+        }
     }
 }
 
@@ -172,7 +157,30 @@ impl fmt::Debug for InnerPath {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Path {
-    inner: Rc<InnerPath>,
+    inner: InnerPath,
+}
+
+impl Path {
+    #[inline]
+    fn new(inner: InnerPath) -> Self {
+        Path { inner }
+    }
+
+    pub fn std() -> Self {
+        Self::new(InnerPath::Std)
+    }
+
+    pub fn package(id: Id) -> Self {
+        Self::new(InnerPath::Package(id))
+    }
+
+    pub fn child(&self, id: Id) -> Self {
+        match &self.inner {
+            InnerPath::Std => Self::new(InnerPath::StdChild(id)),
+            InnerPath::Package(idp) => Self::new(InnerPath::PackageChild(idp.clone(), id)),
+            _ => Self::new(InnerPath::Module(Rc::new(self.inner.clone()), id)),
+        }
+    }
 }
 
 impl fmt::Display for Path {
@@ -197,8 +205,7 @@ pub struct FQId {
 
 impl fmt::Display for FQId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.path.fmt(f);
-        self.id.fmt(f)
+        write!(f, "{}::{}", self.path, self.id)
     }
 }
 
@@ -214,10 +221,19 @@ pub struct FQTypeId {
     id: TypeId,
 }
 
+impl FQTypeId {
+    pub fn new(path: Path, id: TypeId) -> Self {
+        FQTypeId { path, id }
+    }
+
+    pub fn std(id: TypeId) -> Self {
+        Self::new(Path::std(), id)
+    }
+}
+
 impl fmt::Display for FQTypeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.path.fmt(f);
-        self.id.fmt(f)
+        write!(f, "{}::{}", self.path, self.id)
     }
 }
 
