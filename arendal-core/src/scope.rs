@@ -1,15 +1,9 @@
-use std::collections::HashMap;
-use std::rc::Rc;
+use im::HashMap;
 
 use crate::id::{FQTypeId, TypeId};
 use crate::names::*;
 use crate::types::Type;
 use crate::ArcStr;
-
-#[derive(Debug, Clone)]
-pub struct Closed {
-    scope: Rc<Scope>,
-}
 
 #[derive(Debug, Clone)]
 enum Kind {
@@ -23,12 +17,6 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn close(self) -> Closed {
-        Closed {
-            scope: Rc::new(self),
-        }
-    }
-
     pub fn builtin() -> Self {
         let mut scope: Scope = Default::default();
         scope.add_builtin_types();

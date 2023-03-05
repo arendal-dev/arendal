@@ -1,8 +1,9 @@
 use super::{check, Expression, Type};
 use crate::ast::helper::*;
+use crate::scope::Scope;
 
 fn ok_type(expr: Expression, t: Type) {
-    assert_eq!(*check(expr).unwrap().borrow_type(), t);
+    assert_eq!(*check(Scope::builtin(), expr).unwrap().it.borrow_type(), t);
 }
 
 fn ok_int(expr: Expression) {

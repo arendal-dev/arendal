@@ -1,48 +1,69 @@
 use crate::ast::{BinaryOp, Expr, Expression};
 use crate::error::{Errors, Loc, Result};
+use crate::scope::Scope;
 use crate::typed::TypedExpr;
 use crate::types::Type;
 
-use super::TypeError;
+use super::{Checked, CheckedExpr, TypeError};
 
-pub(crate) fn check(input: Expression) -> Result<TypedExpr> {
-    Checker::new(input).check()
+pub(crate) fn check(scope: Scope, input: Expression) -> Result<CheckedExpr> {
+    Checker::new(scope, input).check()
 }
 
 struct Checker {
+    scope: Scope,
     input: Expression,
+    errors: Errors,
 }
 
 impl Checker {
-    fn new(input: Expression) -> Self {
-        Checker { input }
+    fn new(scope: Scope, input: Expression) -> Self {
+        Checker {
+            scope,
+            input,
+            errors: Default::default(),
+        }
     }
 
     fn loc(&self) -> Loc {
-        self.input.borrow_loc().clone()
+        self.input.clone_loc()
     }
 
-    // Creates and returns an error
-    fn error(self, kind: TypeError) -> Result<TypedExpr> {
-        let mut errors: Errors = Default::default();
-        errors.add(self.loc(), kind);
-        Err(errors)
+    // Adds and returns an error
+    fn error(mut self, kind: TypeError) -> Result<CheckedExpr> {
+        self.errors.add(self.loc(), kind);
+        Err(self.errors)
     }
 
-    fn check(self) -> Result<TypedExpr> {
-        match self.input.borrow_expr() {
-            Expr::LitInteger(value) => Ok(TypedExpr::lit_integer(self.loc(), value.clone())),
+    fn ok(self, e: TypedExpr) -> Result<CheckedExpr> {
+        self.errors.to_result(Checked::new(self.scope, e))
+    }
+
+    fn check_child(&mut self, e: Expression) -> Option<TypedExpr> {
+        match self
+            .errors
+            .append_result(Self::new(self.scope.clone(), e).check())
+        {
+            Some(checked) => {
+                self.scope = checked.scope;
+                Some(checked.it)
+            }
+            None => None,
+        }
+    }
+
+    fn check(mut self) -> Result<CheckedExpr> {
+        match self.input.clone_expr() {
+            Expr::LitInteger(value) => {
+                let loc = self.loc();
+                self.ok(TypedExpr::lit_integer(loc, value.clone()))
+            }
             Expr::Binary(op, e1, e2) => {
-                let c1 = Self::new(e1.clone()).check();
-                let c2 = Self::new(e2.clone()).check();
-                if c1.is_err() || c2.is_err() {
-                    let mut errors: Errors = Default::default();
-                    c1.map_err(|e| errors.append(e));
-                    c2.map_err(|e| errors.append(e));
-                    Err(errors)
-                } else {
-                    let e1 = c1.unwrap();
-                    let e2 = c2.unwrap();
+                let t1 = self.check_child(e1.clone());
+                let t2 = self.check_child(e2.clone());
+                if t1.is_some() && t2.is_some() {
+                    let e1 = t1.unwrap();
+                    let e2 = t2.unwrap();
                     match op {
                         BinaryOp::Add => self.check_add(e1, e2),
                         BinaryOp::Sub => self.check_sub(e1, e2),
@@ -50,6 +71,8 @@ impl Checker {
                         BinaryOp::Div => self.check_div(e1, e2),
                         _ => self.error(TypeError::InvalidType),
                     }
+                } else {
+                    Err(self.errors)
                 }
             }
             _ => self.error(TypeError::InvalidType),
@@ -57,16 +80,17 @@ impl Checker {
     }
 
     fn ok_binary(
-        &self,
+        self,
         tipo: Type,
         op: BinaryOp,
         e1: TypedExpr,
         e2: TypedExpr,
-    ) -> Result<TypedExpr> {
-        Ok(TypedExpr::binary(self.loc(), tipo, op, e1, e2))
+    ) -> Result<CheckedExpr> {
+        let loc = self.loc();
+        self.ok(TypedExpr::binary(loc, tipo, op, e1, e2))
     }
 
-    fn check_add(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_add(self, e1: TypedExpr, e2: TypedExpr) -> Result<CheckedExpr> {
         if e1.is_integer() && e2.is_integer() {
             self.ok_binary(Type::integer(), BinaryOp::Add, e1, e2)
         } else {
@@ -74,7 +98,7 @@ impl Checker {
         }
     }
 
-    fn check_sub(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_sub(self, e1: TypedExpr, e2: TypedExpr) -> Result<CheckedExpr> {
         if e1.is_integer() && e2.is_integer() {
             self.ok_binary(Type::integer(), BinaryOp::Sub, e1, e2)
         } else {
@@ -82,7 +106,7 @@ impl Checker {
         }
     }
 
-    fn check_mul(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_mul(self, e1: TypedExpr, e2: TypedExpr) -> Result<CheckedExpr> {
         if e1.is_integer() && e2.is_integer() {
             self.ok_binary(Type::integer(), BinaryOp::Mul, e1, e2)
         } else {
@@ -90,7 +114,7 @@ impl Checker {
         }
     }
 
-    fn check_div(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_div(self, e1: TypedExpr, e2: TypedExpr) -> Result<CheckedExpr> {
         if e1.is_integer() && e2.is_integer() {
             self.ok_binary(Type::integer(), BinaryOp::Div, e1, e2)
         } else {

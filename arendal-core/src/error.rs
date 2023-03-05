@@ -75,9 +75,13 @@ impl Errors {
         self.errors.append(&mut other.errors)
     }
 
-    pub fn append_result<T>(&mut self, result: Result<T>) {
-        if let Err(other) = result {
-            self.append(other);
+    pub fn append_result<T>(&mut self, result: Result<T>) -> Option<T> {
+        match result {
+            Ok(t) => Some(t),
+            Err(errors) => {
+                self.append(errors);
+                None
+            }
         }
     }
 

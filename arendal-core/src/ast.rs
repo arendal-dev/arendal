@@ -41,12 +41,16 @@ impl Expression {
         }
     }
 
-    pub fn borrow_loc(&self) -> &Loc {
-        &self.inner.loc
+    pub fn clone_loc(&self) -> Loc {
+        self.inner.loc.clone()
     }
 
     pub fn borrow_expr(&self) -> &Expr {
         &self.inner.expr
+    }
+
+    pub fn clone_expr(&self) -> Expr {
+        self.inner.expr.clone()
     }
 
     pub fn lit_integer(loc: Loc, value: Integer) -> Self {
@@ -72,7 +76,7 @@ impl fmt::Debug for Expression {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     LitInteger(Integer),
     LitType(TypeId),
