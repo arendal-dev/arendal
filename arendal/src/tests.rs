@@ -1,9 +1,7 @@
 use twi::value::Value;
 
-use super::eval;
-
 fn eval_ok(input: &str, result: Value) {
-    if let Ok(v) = eval(input) {
+    if let Ok(v) = super::REPL::new().eval(input) {
         assert_eq!(v, result);
     } else {
         panic!("Error evaluating expression");
