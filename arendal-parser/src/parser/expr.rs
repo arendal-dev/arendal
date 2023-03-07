@@ -1,150 +1,84 @@
 use core::ast::{BinaryOp, Expression};
-use core::error::{Errors, Loc, Result};
+use core::error::Loc;
 use core::id::TypeId;
 
-use crate::lexer::{Lexeme, LexemeKind, Lexemes};
+use crate::lexer::LexemeKind;
 use crate::Enclosure;
 
-use super::ParserError;
+use super::{Parser, ParserError};
 
-pub(crate) struct Parser {
-    input: Lexemes,
-    index: usize,
-    errors: Errors,
+// Parses a single expression, if any, consuming as many lexemes as needed.
+pub(super) fn parse(parser: &mut Parser) -> Option<Expression> {
+    rule_expression(parser)
 }
 
-impl Parser {
-    pub(crate) fn new(input: Lexemes, index: usize) -> Parser {
-        Parser {
-            input,
-            index,
-            errors: Default::default(),
-        }
-    }
+fn rule_expression(parser: &mut Parser) -> Option<Expression> {
+    rule_term(parser)
+}
 
-    // Returns true if we have reached the end of the input
-    fn is_done(&self) -> bool {
-        !self.input.contains(self.index)
-    }
-
-    // Consumes one lexer, advancing the index accordingly.
-    fn consume(&mut self) {
-        self.index += 1;
-    }
-
-    // Returns a clone of the lexer at the current index, if any
-    fn peek(&self) -> Option<Lexeme> {
-        self.input.get(self.index)
-    }
-
-    // Consumes one lexer a returns the next one, if any.
-    fn consume_and_peek(&mut self) -> Option<Lexeme> {
-        self.consume();
-        self.peek()
-    }
-
-    // Returns a clone of the lexer the requested positions after the current one, if any.
-    fn peek_ahead(&self, n: usize) -> Option<Lexeme> {
-        self.input.get(self.index + n)
-    }
-
-    // If the next lexeme maches the provided one, advances it and returns true
-    fn match1(&mut self, kind: LexemeKind) -> bool {
-        if let Some(lexeme) = self.peek() {
-            if kind == *lexeme.kind() {
-                self.consume();
-                return true;
-            }
-        }
-        false
-    }
-
-    // Parses a single expression, if any, consuming as many lexemes as needed.
-    pub(crate) fn parse(mut self) -> (Result<Expression>, usize) {
-        let result = match self.rule_expression() {
-            Some(expr) => self.errors.to_result(expr),
-            None => {
-                self.errors
-                    .add(Loc::none(), ParserError::ExpressionExpectedError);
-                Err(self.errors)
-            }
+fn rule_term(parser: &mut Parser) -> Option<Expression> {
+    let mut left = rule_factor(parser)?;
+    while let Some(lexeme) = parser.peek() {
+        let maybe = match lexeme.kind() {
+            LexemeKind::Plus => Some(BinaryOp::Add),
+            LexemeKind::Minus => Some(BinaryOp::Sub),
+            _ => None,
         };
-        (result, self.index)
-    }
-
-    fn rule_expression(&mut self) -> Option<Expression> {
-        self.rule_term()
-    }
-
-    fn rule_term(&mut self) -> Option<Expression> {
-        let mut left = self.rule_factor()?;
-        while let Some(lexeme) = self.peek() {
-            let maybe = match lexeme.kind() {
-                LexemeKind::Plus => Some(BinaryOp::Add),
-                LexemeKind::Minus => Some(BinaryOp::Sub),
-                _ => None,
-            };
-            if let Some(op) = maybe {
-                self.consume();
-                let right = self.rule_factor()?;
-                left = Expression::binary(lexeme.loc(), op, left, right);
-            } else {
-                break;
-            }
-        }
-        Some(left)
-    }
-
-    fn rule_factor(&mut self) -> Option<Expression> {
-        let mut left = self.rule_primary()?;
-        while let Some(lexeme) = self.peek() {
-            let maybe = match lexeme.kind() {
-                LexemeKind::Star => Some(BinaryOp::Mul),
-                LexemeKind::Slash => Some(BinaryOp::Div),
-                _ => None,
-            };
-            if let Some(op) = maybe {
-                self.consume();
-                let right = self.rule_primary()?;
-                left = Expression::binary(lexeme.loc(), op, left, right);
-            } else {
-                break;
-            }
-        }
-        Some(left)
-    }
-
-    fn rule_primary(&mut self) -> Option<Expression> {
-        if let Some(lexeme) = self.peek() {
-            match &lexeme.kind() {
-                LexemeKind::Integer(n) => {
-                    self.consume();
-                    Some(Expression::lit_integer(lexeme.loc(), n.clone()))
-                }
-                LexemeKind::TypeId(id) => self.lit_type(lexeme.loc(), id.clone()),
-                LexemeKind::Open(Enclosure::Parens) => {
-                    self.consume();
-                    let result = self.rule_expression();
-                    if !self.match1(LexemeKind::Close(Enclosure::Parens)) {
-                        self.add_error(&lexeme, ParserError::ParsingError);
-                    }
-                    result
-                }
-                _ => self.add_error(&lexeme, ParserError::ParsingError),
-            }
+        if let Some(op) = maybe {
+            parser.consume();
+            let right = rule_factor(parser)?;
+            left = Expression::binary(lexeme.loc(), op, left, right);
         } else {
-            None
+            break;
         }
     }
+    Some(left)
+}
 
-    fn lit_type(&mut self, loc: Loc, id: TypeId) -> Option<Expression> {
-        // Very simple for now
-        self.consume();
-        Some(Expression::lit_type(loc, id))
+fn rule_factor(parser: &mut Parser) -> Option<Expression> {
+    let mut left = rule_primary(parser)?;
+    while let Some(lexeme) = parser.peek() {
+        let maybe = match lexeme.kind() {
+            LexemeKind::Star => Some(BinaryOp::Mul),
+            LexemeKind::Slash => Some(BinaryOp::Div),
+            _ => None,
+        };
+        if let Some(op) = maybe {
+            parser.consume();
+            let right = rule_primary(parser)?;
+            left = Expression::binary(lexeme.loc(), op, left, right);
+        } else {
+            break;
+        }
     }
+    Some(left)
+}
 
-    fn add_error(&mut self, lexeme: &Lexeme, error: ParserError) -> Option<Expression> {
-        self.errors.add(lexeme.loc(), error);
+fn rule_primary(parser: &mut Parser) -> Option<Expression> {
+    if let Some(lexeme) = parser.peek() {
+        match &lexeme.kind() {
+            LexemeKind::Integer(n) => {
+                parser.consume();
+                Some(Expression::lit_integer(lexeme.loc(), n.clone()))
+            }
+            LexemeKind::TypeId(id) => lit_type(parser, lexeme.loc(), id.clone()),
+            LexemeKind::Open(Enclosure::Parens) => {
+                parser.consume();
+                let result = rule_expression(parser);
+                if !parser.match1(LexemeKind::Close(Enclosure::Parens)) {
+                    parser.add_error(&lexeme, ParserError::ParsingError);
+                }
+                result
+            }
+            _ => parser.add_error(&lexeme, ParserError::ParsingError),
+        }
+    } else {
         None
     }
+}
+
+fn lit_type(parser: &mut Parser, loc: Loc, id: TypeId) -> Option<Expression> {
+    // Very simple for now
+    parser.consume();
+    Some(Expression::lit_type(loc, id))
 }

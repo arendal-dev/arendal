@@ -92,14 +92,4 @@ impl Errors {
             Err(self)
         }
     }
-
-    pub fn result_to_result<T>(mut self, result: Result<T>) -> Result<T> {
-        match result {
-            Ok(value) => self.to_result(value),
-            Err(errors) => {
-                self.append(errors);
-                Err(self)
-            }
-        }
-    }
 }

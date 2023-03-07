@@ -1,7 +1,7 @@
 use core::ast::Expression;
 use core::error::{Error, Errors, Loc, Result};
 
-use crate::lexer::{lex, Lexeme, Lexemes};
+use crate::lexer::{lex, Lexeme, LexemeKind, Lexemes};
 
 // Parses the input as single expression
 pub fn parse_expression(input: &str) -> Result<Expression> {
@@ -11,7 +11,7 @@ pub fn parse_expression(input: &str) -> Result<Expression> {
 
 struct Parser {
     input: Lexemes,
-    index: usize, // Index of the current input lexer
+    index: usize, // Index of the current input lexeme
     errors: Errors,
 }
 
@@ -50,13 +50,15 @@ impl Parser {
         self.input.get(self.index + n)
     }
 
-    // Advances the index to point advances by the child parser
-    fn advance_child(
-        &mut self,
-        (result, index): (Result<Expression>, usize),
-    ) -> Result<Expression> {
-        self.index = index;
-        result
+    // If the next lexeme maches the provided one, advances it and returns true
+    fn match1(&mut self, kind: LexemeKind) -> bool {
+        if let Some(lexeme) = self.peek() {
+            if kind == *lexeme.kind() {
+                self.consume();
+                return true;
+            }
+        }
+        false
     }
 
     // Parses the input as a single expression.
@@ -64,14 +66,16 @@ impl Parser {
         let result = self.expression();
         if let Some(_) = self.peek() {
             self.expression_expected()
+        } else if let Some(e) = result {
+            Ok(e)
         } else {
-            self.errors.result_to_result(result)
+            Err(self.errors)
         }
     }
 
     // Parses an expression in the current position.
-    fn expression(&mut self) -> Result<Expression> {
-        self.advance_child(expr::Parser::new(self.input.clone(), self.index).parse())
+    fn expression(&mut self) -> Option<Expression> {
+        expr::parse(self)
     }
 
     fn add_error(&mut self, lexeme: &Lexeme, error: ParserError) -> Option<Expression> {
