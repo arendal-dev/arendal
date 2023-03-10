@@ -93,7 +93,7 @@ fn singles() {
         .token(TokenKind::Bang)
         .token(TokenKind::Open(Enclosure::Parens))
         .token(TokenKind::Close(Enclosure::Parens))
-        .token(TokenKind::Equal)
+        .token(TokenKind::Assignment)
         .token(TokenKind::Open(Enclosure::Curly))
         .token(TokenKind::Close(Enclosure::Curly))
         .token(TokenKind::Open(Enclosure::Square))

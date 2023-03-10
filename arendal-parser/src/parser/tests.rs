@@ -1,6 +1,7 @@
 use core::ast::helper::*;
 use core::ast::Expr::*;
 use core::ast::Expression;
+use core::id::Id;
 
 use super::parse_expression;
 
@@ -33,6 +34,25 @@ fn check_expression(input: &str, expected: Expression) {
         actual,
         expected
     );
+}
+
+fn str_id(id: &str) -> Id {
+    Id::new(id.into()).unwrap()
+}
+
+fn x() -> Id {
+    str_id("x")
+}
+
+fn y() -> Id {
+    str_id("y")
+}
+fn x_expr() -> Expression {
+    id(x())
+}
+
+fn y_expr() -> Expression {
+    id(y())
 }
 
 #[test]
@@ -76,4 +96,22 @@ fn sub1() {
 #[test]
 fn lit_type() {
     check_expression("  True ", lit_type_str("True"));
+}
+
+#[test]
+fn add_id() {
+    check_expression("1 +x", add(lit_i64(1), x_expr()));
+}
+
+#[test]
+fn assignment1() {
+    check_expression("val x = 1", assignment(str_id("x"), lit_i64(1)));
+}
+
+#[test]
+fn assignment2() {
+    check_expression(
+        "val x = y + 2",
+        assignment(str_id("x"), add(y_expr(), lit_i64(2))),
+    );
 }

@@ -1,6 +1,7 @@
 use core::ast::{BinaryOp, Expression};
 use core::error::{Errors, Loc, Result};
-use core::id::TypeId;
+use core::id::{Id, TypeId};
+use core::keyword::Keyword;
 
 use crate::lexer::LexemeKind;
 use crate::Enclosure;
@@ -9,7 +10,34 @@ use super::{Parser, ParserError};
 
 // Parses a single expression, if any, consuming as many lexemes as needed.
 pub(super) fn parse(parser: &mut Parser) -> Result<Expression> {
-    rule_expression(parser)
+    rule_toplevelexpr(parser)
+}
+
+fn rule_toplevelexpr(parser: &mut Parser) -> Result<Expression> {
+    if parser.match1(LexemeKind::Keyword(Keyword::Val)) {
+        rule_assignment(parser)
+    } else {
+        rule_expression(parser)
+    }
+}
+
+fn rule_assignment(parser: &mut Parser) -> Result<Expression> {
+    let lvalue = get_lvalue(parser)?;
+    if let Some(lexeme) = parser.consume_if_match(LexemeKind::Assignment) {
+        let expr = rule_expression(parser)?;
+        Ok(Expression::assignment(lexeme.loc(), lvalue, expr))
+    } else {
+        parser.err(ParserError::AssignmentExpended)
+    }
+}
+
+fn get_lvalue(parser: &mut Parser) -> Result<Id> {
+    if let Some(lexeme) = parser.peek() {
+        if let LexemeKind::Id(id) = lexeme.kind() {
+            return parser.ok(id.clone());
+        }
+    }
+    parser.err(ParserError::LValueExpectedError)
 }
 
 fn rule_expression(parser: &mut Parser) -> Result<Expression> {
@@ -57,11 +85,9 @@ fn rule_factor(parser: &mut Parser) -> Result<Expression> {
 fn rule_primary(parser: &mut Parser) -> Result<Expression> {
     if let Some(lexeme) = parser.peek() {
         match &lexeme.kind() {
-            LexemeKind::Integer(n) => {
-                parser.consume();
-                Ok(Expression::lit_integer(lexeme.loc(), n.clone()))
-            }
-            LexemeKind::TypeId(id) => lit_type(parser, lexeme.loc(), id.clone()),
+            LexemeKind::Integer(n) => parser.ok(Expression::lit_integer(lexeme.loc(), n.clone())),
+            LexemeKind::TypeId(id) => parser.ok(Expression::lit_type(lexeme.loc(), id.clone())),
+            LexemeKind::Id(id) => parser.ok(Expression::id(lexeme.loc(), id.clone())),
             LexemeKind::Open(Enclosure::Parens) => {
                 parser.consume();
                 let mut result = rule_expression(parser);
@@ -75,10 +101,4 @@ fn rule_primary(parser: &mut Parser) -> Result<Expression> {
     } else {
         parser.expression_expected()
     }
-}
-
-fn lit_type(parser: &mut Parser, loc: Loc, id: TypeId) -> Result<Expression> {
-    // Very simple for now
-    parser.consume();
-    Ok(Expression::lit_type(loc, id))
 }

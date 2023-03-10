@@ -6,6 +6,7 @@ use crate::lexer::{lex, Lexeme, LexemeKind, Lexemes};
 // Parses the input as single expression
 pub fn parse_expression(input: &str) -> Result<Expression> {
     let lexemes = lex(input)?;
+    // println!("{:?}", lexemes);
     Parser::new(lexemes).parse_expression()
 }
 
@@ -24,12 +25,19 @@ impl Parser {
         !self.input.contains(self.index)
     }
 
-    // Consumes one lexer, advancing the index accordingly.
-    fn consume(&mut self) {
-        self.index += 1;
+    // Consumes n lexemes, advancing the index accordingly.
+    #[inline]
+    fn consume_n(&mut self, n: usize) {
+        self.index += n;
     }
 
-    // Returns a clone of the line at the current index, if any
+    // Consumes one lexeme, advancing the index accordingly.
+    #[inline]
+    fn consume(&mut self) {
+        self.consume_n(1);
+    }
+
+    // Returns the lexeme at the current index, if any
     fn peek(&self) -> Option<Lexeme> {
         self.input.get(self.index)
     }
@@ -45,15 +53,29 @@ impl Parser {
         self.input.get(self.index + n)
     }
 
-    // If the next lexeme maches the provided one, advances it and returns true
-    fn match1(&mut self, kind: LexemeKind) -> bool {
+    // Returns the lexeme at the current index, if it matches the provided kind.
+    fn peek_if_match(&self, kind: LexemeKind) -> Option<Lexeme> {
         if let Some(lexeme) = self.peek() {
             if kind == *lexeme.kind() {
-                self.consume();
-                return true;
+                return Some(lexeme);
             }
         }
-        false
+        None
+    }
+
+    // Consumes and returns the lexeme at the current index, if it matches the provided kind.
+    fn consume_if_match(&mut self, kind: LexemeKind) -> Option<Lexeme> {
+        if let Some(lexeme) = self.peek_if_match(kind) {
+            self.consume();
+            Some(lexeme)
+        } else {
+            None
+        }
+    }
+
+    // If the next lexeme maches the provided one, advances it and returns true
+    fn match1(&mut self, kind: LexemeKind) -> bool {
+        self.consume_if_match(kind).is_some()
     }
 
     // Parses the input as a single expression.
@@ -69,6 +91,26 @@ impl Parser {
         }
     }
 
+    fn ok_n<T>(&mut self, n: usize, value: T) -> Result<T> {
+        self.consume_n(n);
+        Ok(value)
+    }
+
+    #[inline]
+    fn ok<T>(&mut self, value: T) -> Result<T> {
+        self.ok_n(1, value)
+    }
+
+    fn err<T>(&self, error: ParserError) -> Result<T> {
+        // TODO: try end of previous lexeme
+        let loc = if let Some(lexeme) = self.peek() {
+            lexeme.loc()
+        } else {
+            Loc::none()
+        };
+        Err(Errors::new(loc, error))
+    }
+
     fn err_no_lexeme(&self, error: ParserError) -> Result<Expression> {
         Err(Errors::new(Loc::none(), error))
     }
@@ -78,7 +120,7 @@ impl Parser {
     }
 
     fn expression_expected(&self) -> Result<Expression> {
-        self.err_no_lexeme(ParserError::ExpressionExpectedError)
+        self.err(ParserError::ExpressionExpectedError)
     }
 }
 
@@ -86,6 +128,8 @@ impl Parser {
 enum ParserError {
     EmptyInputError,
     ExpressionExpectedError,
+    LValueExpectedError,
+    AssignmentExpended,
     ParsingError, // placeholder, temporary error
 }
 

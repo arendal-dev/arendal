@@ -31,7 +31,7 @@ impl TestCase {
         self.lexemes.push(Lexeme::new(Inner {
             token: Token {
                 pos: Pos::new(self.input.clone()),
-                kind: TokenKind::Equal,
+                kind: TokenKind::Assignment,
             },
             kind,
         }));
@@ -203,7 +203,7 @@ fn assignment() {
     TestCase::new("val x = True")
         .keyword(Keyword::Val)
         .id("x")
-        .token(LexemeKind::Equal)
+        .token(LexemeKind::Assignment)
         .type_id("True")
         .ok_without_pos();
 }

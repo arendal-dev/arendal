@@ -4,9 +4,11 @@ This will be moved somewhere else at some point
 
 ```
 
+toplevelexpr -> assignment | expression
+assignment -> "val" identifier "=" expression
 expression -> term
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
-primary -> IntLiteral | TypeLiteral | "(" expression ")"
+primary -> IntLiteral | TypeLiteral | identified | "(" expression ")" | "{" toplevelexpr* "}"
 
 ```

@@ -61,12 +61,32 @@ impl Expression {
         Self::new(loc, Expr::LitType(id))
     }
 
+    pub fn id(loc: Loc, id: Id) -> Self {
+        Self::new(loc, Expr::Id(id))
+    }
+
     pub fn unary(loc: Loc, op: UnaryOp, expr: Expression) -> Self {
         Self::new(loc, Expr::Unary(op, expr))
     }
 
     pub fn binary(loc: Loc, op: BinaryOp, expr1: Expression, expr2: Expression) -> Self {
         Self::new(loc, Expr::Binary(op, expr1, expr2))
+    }
+
+    pub fn block(loc: Loc, mut exprs: Vec<Expression>) -> Self {
+        assert!(
+            !exprs.is_empty(),
+            "Blocks need to contain at least one expression"
+        );
+        if exprs.len() == 1 {
+            exprs.pop().unwrap()
+        } else {
+            Self::new(loc, Expr::Block(exprs))
+        }
+    }
+
+    pub fn assignment(loc: Loc, id: Id, expr: Expression) -> Self {
+        Self::new(loc, Expr::Assignment(id, expr))
     }
 }
 
@@ -83,10 +103,12 @@ pub enum Expr {
     Id(Id),
     Unary(UnaryOp, Expression),
     Binary(BinaryOp, Expression, Expression),
+    Block(Vec<Expression>),
+    Assignment(Id, Expression),
 }
 
 pub mod helper {
-    use super::{BinaryOp, Expression, Integer, Loc, TypeId, UnaryOp};
+    use super::{BinaryOp, Expression, Id, Integer, Loc, TypeId, UnaryOp};
 
     pub fn lit_integer(value: Integer) -> Expression {
         Expression::lit_integer(Loc::none(), value)
@@ -102,6 +124,10 @@ pub mod helper {
 
     pub fn lit_type_str(id: &str) -> Expression {
         lit_type(TypeId::new(id.into()).unwrap())
+    }
+
+    pub fn id(id: Id) -> Expression {
+        Expression::id(Loc::none(), id)
     }
 
     pub fn unary(op: UnaryOp, expr: Expression) -> Expression {
@@ -126,5 +152,13 @@ pub mod helper {
 
     pub fn sub_i64(value1: i64, value2: i64) -> Expression {
         sub(lit_i64(value1), lit_i64(value2))
+    }
+
+    pub fn block(loc: Loc, mut exprs: Vec<Expression>) -> Expression {
+        Expression::block(Loc::none(), exprs)
+    }
+
+    pub fn assignment(id: Id, expr: Expression) -> Expression {
+        Expression::assignment(Loc::none(), id, expr)
     }
 }
