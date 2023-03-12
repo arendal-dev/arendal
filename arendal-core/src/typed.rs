@@ -37,22 +37,6 @@ impl TypedExpr {
         &self.inner.expr
     }
 
-    pub fn lit_integer(loc: Loc, value: Integer) -> Self {
-        Self::new(loc, Type::integer(), TExpr::LitInteger(value))
-    }
-
-    pub fn val(loc: Loc, id: Id, tipo: Type) -> Self {
-        Self::new(loc, tipo, TExpr::Val(id))
-    }
-
-    pub fn unary(loc: Loc, tipo: Type, op: UnaryOp, expr: TypedExpr) -> Self {
-        Self::new(loc, tipo, TExpr::Unary(op, expr))
-    }
-
-    pub fn binary(loc: Loc, tipo: Type, op: BinaryOp, expr1: TypedExpr, expr2: TypedExpr) -> Self {
-        Self::new(loc, tipo, TExpr::Binary(op, expr1, expr2))
-    }
-
     pub fn is_integer(&self) -> bool {
         self.inner.tipo.is_integer()
     }
@@ -97,42 +81,54 @@ pub enum TExpr {
     Binary(BinaryOp, TypedExpr, TypedExpr),
 }
 
-pub mod helper {
-    use super::{BinaryOp, Id, Integer, Loc, Type, TypedExpr, UnaryOp};
+pub struct TExprBuilder {
+    loc: Loc,
+}
 
-    pub fn lit_integer(value: Integer) -> TypedExpr {
-        TypedExpr::lit_integer(Loc::none(), value)
+impl TExprBuilder {
+    pub const fn new(loc: Loc) -> Self {
+        TExprBuilder { loc }
     }
 
-    pub fn lit_i64(value: i64) -> TypedExpr {
-        lit_integer(value.into())
+    pub fn lit_integer(&self, value: Integer) -> TypedExpr {
+        TypedExpr::new(self.loc.clone(), Type::integer(), TExpr::LitInteger(value))
     }
 
-    pub fn val(id: Id, tipo: Type) -> TypedExpr {
-        TypedExpr::val(Loc::none(), id, tipo)
+    pub fn lit_i64(&self, value: i64) -> TypedExpr {
+        self.lit_integer(value.into())
     }
 
-    pub fn unary(tipo: Type, op: UnaryOp, expr: TypedExpr) -> TypedExpr {
-        TypedExpr::unary(Loc::none(), tipo, op, expr)
+    pub fn val(&self, id: Id, tipo: Type) -> TypedExpr {
+        TypedExpr::new(self.loc.clone(), tipo, TExpr::Val(id))
     }
 
-    pub fn binary(tipo: Type, op: BinaryOp, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
-        TypedExpr::binary(Loc::none(), tipo, op, expr1, expr2)
+    pub fn unary(&self, tipo: Type, op: UnaryOp, expr: TypedExpr) -> TypedExpr {
+        TypedExpr::new(self.loc.clone(), tipo, TExpr::Unary(op, expr))
     }
 
-    pub fn add(tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
-        binary(tipo, BinaryOp::Add, expr1, expr2)
+    pub fn binary(
+        &self,
+        tipo: Type,
+        op: BinaryOp,
+        expr1: TypedExpr,
+        expr2: TypedExpr,
+    ) -> TypedExpr {
+        TypedExpr::new(self.loc.clone(), tipo, TExpr::Binary(op, expr1, expr2))
     }
 
-    pub fn add_i64(value1: i64, value2: i64) -> TypedExpr {
-        add(Type::integer(), lit_i64(value1), lit_i64(value2))
+    pub fn add(&self, tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
+        self.binary(tipo, BinaryOp::Add, expr1, expr2)
     }
 
-    pub fn sub(tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
-        binary(tipo, BinaryOp::Sub, expr1, expr2)
+    pub fn add_i64(&self, value1: i64, value2: i64) -> TypedExpr {
+        self.add(Type::integer(), self.lit_i64(value1), self.lit_i64(value2))
     }
 
-    pub fn sub_i64(value1: i64, value2: i64) -> TypedExpr {
-        sub(Type::integer(), lit_i64(value1), lit_i64(value2))
+    pub fn sub(&self, tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
+        self.binary(tipo, BinaryOp::Sub, expr1, expr2)
+    }
+
+    pub fn sub_i64(&self, value1: i64, value2: i64) -> TypedExpr {
+        self.sub(Type::integer(), self.lit_i64(value1), self.lit_i64(value2))
     }
 }

@@ -1,21 +1,22 @@
 use crate::ast::{BinaryOp, Expr, Expression};
 use crate::error::{Errors, Result};
 use crate::names::Names;
-use crate::typed::TypedExpr;
+use crate::typed::{TExprBuilder, TypedExpr};
 use crate::types::Type;
 
 use super::TypeError;
 
+fn builder(input: &Expression) -> TExprBuilder {
+    TExprBuilder::new(input.clone_loc())
+}
+
 pub(super) fn check(names: &mut Names, input: &Expression) -> Result<TypedExpr> {
     match input.borrow_expr() {
-        Expr::LitInteger(value) => Ok(TypedExpr::lit_integer(input.clone_loc(), value.clone())),
-        Expr::Id(id) => {
-            match names.get_val(id) {
-                Some(tipo) => Ok(TypedExpr::val(input.clone_loc(), id.clone(), tipo.clone())),
-                None => error(input, TypeError::UnknownIdentifier(id.clone())),
-                
-            }
-        }
+        Expr::LitInteger(value) => Ok(builder(input).lit_integer(value.clone())),
+        Expr::Id(id) => match names.get_val(id) {
+            Some(tipo) => Ok(builder(input).val(id.clone(), tipo.clone())),
+            None => error(input, TypeError::UnknownIdentifier(id.clone())),
+        },
         Expr::Binary(op, e1, e2) => Errors::merge(check(names, e1), check(names, e2), |t1, t2| {
             check_binary(names, input, *op, t1, t2)
         }),
@@ -51,7 +52,7 @@ fn ok_binary(
     e1: TypedExpr,
     e2: TypedExpr,
 ) -> Result<TypedExpr> {
-    Ok(TypedExpr::binary(input.clone_loc(), tipo, op, e1, e2))
+    Ok(builder(input).binary(tipo, op, e1, e2))
 }
 
 fn check_add(names: &Names, input: &Expression, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {

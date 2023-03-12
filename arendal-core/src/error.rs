@@ -13,7 +13,7 @@ impl Loc {
         }
     }
 
-    pub fn none() -> Self {
+    pub const fn none() -> Self {
         Loc {
             _inner: Inner::None,
         }

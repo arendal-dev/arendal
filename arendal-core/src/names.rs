@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::id::{FQTypeId, TypeId, Id};
 use crate::error::{Error, Errors, Loc, Result};
+use crate::id::{FQTypeId, Id, TypeId};
 use crate::types::Type;
 use crate::{literal, ArcStr};
 
@@ -28,13 +28,12 @@ impl ValScope {
 
     fn add(&mut self, loc: Loc, id: Id, tipo: Type) -> Result<()> {
         if self.vals.contains_key(&id) {
-            return Errors::err(loc, NamesError::DuplicateVal(id))
+            return Errors::err(loc, NamesError::DuplicateVal(id));
         }
         self.vals.insert(id, tipo);
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Names {
@@ -48,7 +47,7 @@ impl Default for Names {
         Names {
             fq_kinds: Default::default(),
             local_kinds: Default::default(),
-            val_scopes: vec![ Default::default() ],
+            val_scopes: vec![Default::default()],
         }
     }
 }
@@ -99,7 +98,10 @@ impl Names {
     }
 
     pub fn pop_val_scope(&mut self, key: usize) {
-        assert!(key > 1 && key == self.val_scopes.len(), "Removing wrong val scope");
+        assert!(
+            key > 1 && key == self.val_scopes.len(),
+            "Removing wrong val scope"
+        );
         self.val_scopes.pop();
     }
 
@@ -118,14 +120,13 @@ impl Names {
         }
         None
     }
-
 }
 
 #[derive(Debug)]
 pub enum NamesError {
     DuplicateFQTypeId(FQTypeId),
     UnknownFQTypeId(FQTypeId),
-    DuplicateVal(Id)
+    DuplicateVal(Id),
 }
 
 impl Error for NamesError {}
