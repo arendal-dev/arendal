@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use super::Enclosure;
 use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
-use core::error::{Errors, Loc, Result};
+use core::error::{ErrorAcc, Loc, Result};
 use core::id::{Id, TypeId};
 use core::keyword::Keyword;
 use core::{Integer, Substr};
@@ -118,7 +118,7 @@ pub(crate) enum LexemeKind {
 struct Lexer {
     input: Tokens,
     lexemes: Vec<Lexeme>,
-    errors: Errors,
+    errors: ErrorAcc,
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
     enclosures: Vec<Enclosure>,

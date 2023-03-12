@@ -1,7 +1,7 @@
 use std::fmt;
 
 use super::{Enclosure, Pos};
-use core::error::{Errors, Loc, Result};
+use core::error::{ErrorAcc, Loc, Result};
 use core::{ArcStr, Substr};
 
 pub(crate) fn tokenize(input: &str) -> Result<Tokens> {
@@ -130,7 +130,6 @@ impl TokenKind {
 struct Tokenizer {
     chars: Vec<char>,
     tokens: Tokens,
-    errors: Errors,
     pos: Pos,          // Current position
     char_index: usize, // Current char index from the beginning of the input
 }
@@ -141,10 +140,13 @@ impl Tokenizer {
         Tokenizer {
             chars: input.chars().collect(),
             tokens: Default::default(),
-            errors: Default::default(),
             pos,
             char_index: 0,
         }
+    }
+
+    pub fn loc(&self) -> Loc {
+        self.pos.clone().into()
     }
 
     // Returns true if we have reached the end of the input
@@ -217,13 +219,14 @@ impl Tokenizer {
     }
 
     fn tokenize(mut self) -> Result<Tokens> {
+        let mut errors: ErrorAcc = Default::default();
         while let Some(c) = self.peek() {
             if !self.add_known_first_char(c) && !self.add_digits(c) && !self.add_word(c) {
-                self.add_error(Error::UnexpectedChar(c));
+                errors.add(self.pos.clone().into(), Error::UnexpectedChar(c));
                 self.consume();
             }
         }
-        self.errors.to_result(self.tokens)
+        errors.to_result(self.tokens)
     }
 
     fn add_known_first_char(&mut self, c: char) -> bool {
@@ -295,10 +298,6 @@ impl Tokenizer {
 
     fn add_token_if_next_or_else(&mut self, c: char, kind2: TokenKind, kind1: TokenKind) -> bool {
         self.add_token_if_next(c, kind2) || self.add_token(kind1)
-    }
-
-    fn add_error(&mut self, error: Error) {
-        self.errors.add(self.pos.clone().into(), error);
     }
 }
 

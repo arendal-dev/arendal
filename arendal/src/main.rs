@@ -37,8 +37,8 @@ impl REPL {
 
     fn eval(&mut self, input: &str) -> ValueResult {
         let parsed = parser::parser::parse_expression(input)?;
-        let checked = core::typecheck::expression(self.scope.clone(), parsed)?;
-        twi::expression(checked.it)
+        let checked = core::typecheck::expression(&mut self.scope.clone(), &parsed)?;
+        twi::expression(checked)
     }
 
     fn eval_and_print(&mut self, input: &str) {

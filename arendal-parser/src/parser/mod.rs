@@ -12,16 +12,11 @@ pub fn parse_expression(input: &str) -> Result<Expression> {
 struct Parser {
     input: Lexemes,
     index: usize, // Index of the current input lexeme
-    errors: Errors,
 }
 
 impl Parser {
     fn new(input: Lexemes) -> Parser {
-        Parser {
-            input,
-            index: 0,
-            errors: Default::default(),
-        }
+        Parser { input, index: 0 }
     }
 
     // Returns true if we have reached the end of the input
@@ -63,36 +58,26 @@ impl Parser {
 
     // Parses the input as a single expression.
     fn parse_expression(mut self) -> Result<Expression> {
-        let result = self.expression();
+        if (self.is_done()) {
+            return self.empty_input();
+        }
+        let expr = expr::parse(&mut self)?;
         if let Some(_) = self.peek() {
             self.expression_expected()
-        } else if let Some(e) = result {
-            Ok(e)
         } else {
-            Err(self.errors)
+            Ok(expr)
         }
     }
 
-    // Parses an expression in the current position.
-    fn expression(&mut self) -> Option<Expression> {
-        expr::parse(self)
+    fn err_no_lexeme(&self, error: ParserError) -> Result<Expression> {
+        Err(Errors::new(Loc::none(), error))
     }
 
-    fn add_error(&mut self, lexeme: &Lexeme, error: ParserError) -> Option<Expression> {
-        self.errors.add(lexeme.loc(), error);
-        None
-    }
-
-    fn err_no_lexeme(mut self, error: ParserError) -> Result<Expression> {
-        self.errors.add(Loc::none(), error);
-        Err(self.errors)
-    }
-
-    fn empty_input(mut self) -> Result<Expression> {
+    fn empty_input(&self) -> Result<Expression> {
         self.err_no_lexeme(ParserError::EmptyInputError)
     }
 
-    fn expression_expected(mut self) -> Result<Expression> {
+    fn expression_expected(&self) -> Result<Expression> {
         self.err_no_lexeme(ParserError::ExpressionExpectedError)
     }
 }

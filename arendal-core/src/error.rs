@@ -40,7 +40,7 @@ struct ErrorItem {
 
 type ErrorVec = Vec<ErrorItem>;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Errors {
     errors: ErrorVec,
 }
@@ -58,9 +58,36 @@ pub type Result<T> = std::result::Result<T, Errors>;
 
 impl Errors {
     pub fn new<T: Error + 'static>(loc: Loc, error: T) -> Self {
-        let mut errors: Errors = Default::default();
+        let mut errors: Errors = Errors {
+            errors: Default::default(),
+        };
         errors.add(loc, error);
         errors
+    }
+
+    pub fn merge<T1, T2, TO, O>(r1: Result<T1>, r2: Result<T2>, op: O) -> Result<TO>
+    where
+        O: FnOnce(T1, T2) -> Result<TO>,
+    {
+        match (r1, r2) {
+            (Err(mut e1), Err(e2)) => {
+                e1.append(e2);
+                Err(e1)
+            }
+            (Err(e1), Ok(_)) => Err(e1),
+            (Ok(_), Err(e2)) => Err(e2),
+            (Ok(t1), Ok(t2)) => op(t1, t2),
+        }
+    }
+
+    pub fn add_to<T, E: Error + 'static>(result: Result<T>, loc: Loc, error: E) -> Result<T> {
+        match result {
+            Ok(_) => Err(Self::new(loc, error)),
+            Err(mut e) => {
+                e.add(loc, error);
+                Err(e)
+            }
+        }
     }
 
     pub fn add<T: Error + 'static>(&mut self, loc: Loc, error: T) {
@@ -71,25 +98,42 @@ impl Errors {
         self.errors.push(item);
     }
 
-    pub fn append(&mut self, mut other: Errors) {
-        self.errors.append(&mut other.errors)
+    fn append(&mut self, mut other: Errors) {
+        self.errors.append(&mut other.errors);
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ErrorAcc {
+    errors: Option<Errors>,
+}
+
+impl ErrorAcc {
+    pub fn add<T: Error + 'static>(&mut self, loc: Loc, error: T) {
+        match &mut self.errors {
+            Some(e) => e.add(loc, error),
+            None => self.errors = Some(Errors::new(loc, error)),
+        }
     }
 
-    pub fn append_result<T>(&mut self, result: Result<T>) -> Option<T> {
-        match result {
-            Ok(t) => Some(t),
-            Err(errors) => {
-                self.append(errors);
-                None
+    // Ok value is lost
+    pub fn add_result<T>(&mut self, mut result: Result<T>) {
+        if let Err(others) = result {
+            match &mut self.errors {
+                Some(e) => e.append(others),
+                None => self.errors = Some(others),
             }
         }
     }
 
     pub fn to_result<T>(self, value: T) -> Result<T> {
-        if self.errors.is_empty() {
-            Ok(value)
-        } else {
-            Err(self)
+        match self.errors {
+            None => Ok(value),
+            Some(e) => Err(e),
         }
+    }
+
+    pub fn to_err<T>(self) -> Result<T> {
+        Err(self.errors.unwrap())
     }
 }
