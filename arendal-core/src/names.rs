@@ -1,6 +1,7 @@
-use im::HashMap;
+use std::collections::HashMap;
 
-use crate::id::{FQTypeId, TypeId};
+use crate::id::{FQTypeId, TypeId, Id};
+use crate::error::{Error, Errors, Loc, Result};
 use crate::types::Type;
 use crate::{literal, ArcStr};
 
@@ -16,9 +17,40 @@ enum Kind {
 }
 
 #[derive(Debug, Clone, Default)]
+struct ValScope {
+    vals: HashMap<Id, Type>,
+}
+
+impl ValScope {
+    fn get(&self, id: &Id) -> Option<Type> {
+        self.vals.get(id).cloned()
+    }
+
+    fn add(&mut self, loc: Loc, id: Id, tipo: Type) -> Result<()> {
+        if self.vals.contains_key(&id) {
+            return Errors::err(loc, NamesError::DuplicateVal(id))
+        }
+        self.vals.insert(id, tipo);
+        Ok(())
+    }
+}
+
+
+#[derive(Debug, Clone)]
 pub struct Names {
     fq_kinds: HashMap<FQTypeId, Kind>,
     local_kinds: HashMap<TypeId, FQTypeId>,
+    val_scopes: Vec<ValScope>,
+}
+
+impl Default for Names {
+    fn default() -> Self {
+        Names {
+            fq_kinds: Default::default(),
+            local_kinds: Default::default(),
+            val_scopes: vec![ Default::default() ],
+        }
+    }
 }
 
 impl Names {
@@ -28,18 +60,18 @@ impl Names {
         names
     }
 
-    fn add_fq_kind(&mut self, id: FQTypeId, kind: Kind) -> Result<(), NamesError> {
+    fn add_fq_kind(&mut self, id: FQTypeId, kind: Kind) -> Result<()> {
         if self.fq_kinds.contains_key(&id) {
-            Err(NamesError::DuplicateFQTypeId(id))
+            Errors::err(Loc::none(), NamesError::DuplicateFQTypeId(id))
         } else {
             self.fq_kinds.insert(id, kind);
             Ok(())
         }
     }
 
-    fn add_local_kind(&mut self, id: TypeId, fq: FQTypeId) -> Result<(), NamesError> {
+    fn add_local_kind(&mut self, id: TypeId, fq: FQTypeId) -> Result<()> {
         if !self.fq_kinds.contains_key(&fq) {
-            Err(NamesError::UnknownFQTypeId(fq))
+            Errors::err(Loc::none(), NamesError::UnknownFQTypeId(fq))
         } else {
             self.local_kinds.insert(id, fq);
             Ok(())
@@ -60,12 +92,40 @@ impl Names {
         self.add_std_type(&INTEGER, Type::integer());
         self.add_std_type(&NONE, Type::none());
     }
+
+    pub fn push_val_scope(&mut self) -> usize {
+        self.val_scopes.push(Default::default());
+        self.val_scopes.len()
+    }
+
+    pub fn pop_val_scope(&mut self, key: usize) {
+        assert!(key > 1 && key == self.val_scopes.len(), "Removing wrong val scope");
+        self.val_scopes.pop();
+    }
+
+    pub fn add_val(&mut self, loc: Loc, id: Id, tipo: Type) -> Result<()> {
+        self.val_scopes.last_mut().unwrap().add(loc, id, tipo)
+    }
+
+    pub fn get_val(&self, id: &Id) -> Option<Type> {
+        let mut i = self.val_scopes.len() - 1;
+        while i >= 0 {
+            let result = self.val_scopes[i].get(id);
+            if result.is_some() {
+                return result;
+            }
+            i = i - 1;
+        }
+        None
+    }
+
 }
 
 #[derive(Debug)]
 pub enum NamesError {
     DuplicateFQTypeId(FQTypeId),
     UnknownFQTypeId(FQTypeId),
+    DuplicateVal(Id)
 }
 
-impl crate::error::Error for NamesError {}
+impl Error for NamesError {}

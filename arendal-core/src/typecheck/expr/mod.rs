@@ -9,6 +9,13 @@ use super::TypeError;
 pub(super) fn check(names: &mut Names, input: &Expression) -> Result<TypedExpr> {
     match input.borrow_expr() {
         Expr::LitInteger(value) => Ok(TypedExpr::lit_integer(input.clone_loc(), value.clone())),
+        Expr::Id(id) => {
+            match names.get_val(id) {
+                Some(tipo) => Ok(TypedExpr::val(input.clone_loc(), id.clone(), tipo.clone())),
+                None => error(input, TypeError::UnknownIdentifier(id.clone())),
+                
+            }
+        }
         Expr::Binary(op, e1, e2) => Errors::merge(check(names, e1), check(names, e2), |t1, t2| {
             check_binary(names, input, *op, t1, t2)
         }),
@@ -18,7 +25,7 @@ pub(super) fn check(names: &mut Names, input: &Expression) -> Result<TypedExpr> 
 
 // Creates and returns an error
 fn error(input: &Expression, kind: TypeError) -> Result<TypedExpr> {
-    Err(Errors::new(input.clone_loc(), kind))
+    Errors::err(input.clone_loc(), kind)
 }
 
 fn check_binary(

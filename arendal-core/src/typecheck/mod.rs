@@ -1,5 +1,6 @@
 use crate::ast::Expression;
 use crate::error::{Error, Result};
+use crate::id::Id;
 use crate::names::Names;
 use crate::typed::TypedExpr;
 
@@ -11,6 +12,7 @@ pub fn expression(names: &mut Names, input: &Expression) -> Result<TypedExpr> {
 
 #[derive(Debug)]
 enum TypeError {
+    UnknownIdentifier(Id),
     InvalidType, // placeholder, temporary error
 }
 

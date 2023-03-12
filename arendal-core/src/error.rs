@@ -65,6 +65,11 @@ impl Errors {
         errors
     }
 
+    #[inline]
+    pub fn err<T, E: Error + 'static>(loc: Loc, error: E) -> Result<T> {
+        Err(Self::new(loc, error))
+    }
+
     pub fn merge<T1, T2, TO, O>(r1: Result<T1>, r2: Result<T2>, op: O) -> Result<TO>
     where
         O: FnOnce(T1, T2) -> Result<TO>,
