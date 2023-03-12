@@ -1,12 +1,12 @@
 use crate::ast::Expression;
 use crate::error::{Error, Result};
-use crate::scope::Scope;
+use crate::names::Names;
 use crate::typed::TypedExpr;
 
 mod expr;
 
-pub fn expression(scope: &mut Scope, input: &Expression) -> Result<TypedExpr> {
-    expr::check(scope, input)
+pub fn expression(names: &mut Names, input: &Expression) -> Result<TypedExpr> {
+    expr::check(names, input)
 }
 
 #[derive(Debug)]

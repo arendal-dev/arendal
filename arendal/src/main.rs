@@ -1,4 +1,4 @@
-use core::scope::Scope;
+use core::names::Names;
 use twi::ValueResult;
 
 use rustyline::error::ReadlineError;
@@ -10,13 +10,13 @@ fn main() -> rustyline::Result<()> {
 }
 
 struct REPL {
-    scope: Scope,
+    names: Names,
 }
 
 impl REPL {
     fn new() -> Self {
         REPL {
-            scope: Scope::builtin(),
+            names: Names::builtin(),
         }
     }
     fn run(&mut self) -> rustyline::Result<()> {
@@ -37,7 +37,7 @@ impl REPL {
 
     fn eval(&mut self, input: &str) -> ValueResult {
         let parsed = parser::parser::parse_expression(input)?;
-        let checked = core::typecheck::expression(&mut self.scope.clone(), &parsed)?;
+        let checked = core::typecheck::expression(&mut self.names.clone(), &parsed)?;
         twi::expression(checked)
     }
 

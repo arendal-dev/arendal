@@ -1,10 +1,10 @@
 use super::{check, Expression, Type};
 use crate::ast::helper::*;
-use crate::scope::Scope;
+use crate::names::Names;
 
 fn ok_type(expr: Expression, t: Type) {
     assert_eq!(
-        *check(&mut Scope::builtin(), &expr).unwrap().borrow_type(),
+        *check(&mut Names::builtin(), &expr).unwrap().borrow_type(),
         t
     );
 }

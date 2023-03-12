@@ -1,6 +1,7 @@
 use super::Integer;
 use crate::ast::{BinaryOp, UnaryOp};
 use crate::error::Loc;
+use crate::id::Id;
 use crate::types::Type;
 use std::fmt;
 use std::rc::Rc;
@@ -38,6 +39,10 @@ impl TypedExpr {
 
     pub fn lit_integer(loc: Loc, value: Integer) -> Self {
         Self::new(loc, Type::integer(), TExpr::LitInteger(value))
+    }
+
+    pub fn val(loc: Loc, id: Id, tipo: Type) -> Self {
+        Self::new(loc, tipo, TExpr::Val(id))
     }
 
     pub fn unary(loc: Loc, tipo: Type, op: UnaryOp, expr: TypedExpr) -> Self {
@@ -86,12 +91,14 @@ impl fmt::Debug for TypedExpr {
 #[derive(Debug)]
 pub enum TExpr {
     LitInteger(Integer),
+    Val(Id),
+    Assignment(Id, TypedExpr),
     Unary(UnaryOp, TypedExpr),
     Binary(BinaryOp, TypedExpr, TypedExpr),
 }
 
 pub mod helper {
-    use super::{BinaryOp, Integer, Loc, Type, TypedExpr, UnaryOp};
+    use super::{BinaryOp, Id, Integer, Loc, Type, TypedExpr, UnaryOp};
 
     pub fn lit_integer(value: Integer) -> TypedExpr {
         TypedExpr::lit_integer(Loc::none(), value)
@@ -99,6 +106,10 @@ pub mod helper {
 
     pub fn lit_i64(value: i64) -> TypedExpr {
         lit_integer(value.into())
+    }
+
+    pub fn val(id: Id, tipo: Type) -> TypedExpr {
+        TypedExpr::val(Loc::none(), id, tipo)
     }
 
     pub fn unary(tipo: Type, op: UnaryOp, expr: TypedExpr) -> TypedExpr {
