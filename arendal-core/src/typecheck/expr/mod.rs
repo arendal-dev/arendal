@@ -17,6 +17,11 @@ pub(super) fn check(names: &mut Names, input: &Expression) -> Result<TypedExpr> 
             Some(tipo) => Ok(builder(input).val(id.clone(), tipo.clone())),
             None => error(input, TypeError::UnknownIdentifier(id.clone())),
         },
+        Expr::Assignment(id, expr) => {
+            let typed = check(names, expr)?;
+            names.add_val(input.clone_loc(), id.clone(), typed.clone_type())?;
+            Ok(builder(input).assignment(id.clone(), typed))
+        }
         Expr::Binary(op, e1, e2) => Errors::merge(check(names, e1), check(names, e2), |t1, t2| {
             check_binary(names, input, *op, t1, t2)
         }),

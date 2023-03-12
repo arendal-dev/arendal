@@ -33,6 +33,10 @@ impl TypedExpr {
         &self.inner.tipo
     }
 
+    pub fn clone_type(&self) -> Type {
+        self.inner.tipo.clone()
+    }
+
     pub fn borrow_expr(&self) -> &TExpr {
         &self.inner.expr
     }
@@ -100,6 +104,14 @@ impl TExprBuilder {
 
     pub fn val(&self, id: Id, tipo: Type) -> TypedExpr {
         TypedExpr::new(self.loc.clone(), tipo, TExpr::Val(id))
+    }
+
+    pub fn assignment(&self, id: Id, expr: TypedExpr) -> TypedExpr {
+        TypedExpr::new(
+            self.loc.clone(),
+            expr.clone_type(),
+            TExpr::Assignment(id, expr),
+        )
     }
 
     pub fn unary(&self, tipo: Type, op: UnaryOp, expr: TypedExpr) -> TypedExpr {
