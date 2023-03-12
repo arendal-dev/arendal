@@ -1,9 +1,10 @@
-use core::ast::helper::*;
 use core::ast::Expr::*;
-use core::ast::Expression;
+use core::ast::{ExprBuilder, Expression};
 use core::id::Id;
 
 use super::parse_expression;
+
+const B: ExprBuilder = ExprBuilder::none();
 
 fn expr_eq(actual: &Expression, expected: &Expression) -> bool {
     let (e1, e2) = (actual.borrow_expr(), expected.borrow_expr());
@@ -47,71 +48,72 @@ fn x() -> Id {
 fn y() -> Id {
     str_id("y")
 }
+
 fn x_expr() -> Expression {
-    id(x())
+    B.id(x())
 }
 
 fn y_expr() -> Expression {
-    id(y())
+    B.id(y())
 }
 
 #[test]
 fn int_literal_expr() {
-    check_expression("1234", lit_i64(1234));
+    check_expression("1234", B.lit_i64(1234));
 }
 
 #[test]
 fn add1() {
-    check_expression("1+2", add_i64(1, 2));
+    check_expression("1+2", B.add_i64(1, 2));
 }
 
 #[test]
 fn add2() {
-    check_expression("1 + 2", add_i64(1, 2));
+    check_expression("1 + 2", B.add_i64(1, 2));
 }
 
 #[test]
 fn add3() {
-    check_expression("\t1 + 2", add_i64(1, 2));
+    check_expression("\t1 + 2", B.add_i64(1, 2));
 }
 
 #[test]
 fn add4() {
-    check_expression("1 + 2 + 3", add(add_i64(1, 2), lit_i64(3)));
+    check_expression("1 + 2 + 3", B.add(B.add_i64(1, 2), B.lit_i64(3)));
 }
 
 #[test]
 fn add5() {
     check_expression(
         "1 +\t2 + 3\n+ 4",
-        add(add(add_i64(1, 2), lit_i64(3)), lit_i64(4)),
+        B.add(B.add(B.add_i64(1, 2), B.lit_i64(3)), B.lit_i64(4)),
     );
 }
 
 #[test]
 fn sub1() {
-    check_expression("1 - 2 + 1", add(sub_i64(1, 2), lit_i64(1)));
+    check_expression("1 - 2 + 1", B.add(B.sub_i64(1, 2), B.lit_i64(1)));
 }
 
 #[test]
 fn lit_type() {
-    check_expression("  True ", lit_type_str("True"));
+    check_expression("  True ", B.lit_type_str("True"));
 }
 
 #[test]
 fn add_id() {
-    check_expression("1 +x", add(lit_i64(1), x_expr()));
+    check_expression("1 +x", B.add(B.lit_i64(1), x_expr()));
 }
 
 #[test]
 fn assignment1() {
-    check_expression("val x = 1", assignment(str_id("x"), lit_i64(1)));
+    check_expression("val x = 1", B.assignment(str_id("x"), B.lit_i64(1)));
 }
 
 #[test]
 fn assignment2() {
     check_expression(
         "val x = y + 2",
-        assignment(str_id("x"), add(y_expr(), lit_i64(2))),
+        B.assignment(str_id("x"), B.add(y_expr(), B.lit_i64(2))),
     );
 }

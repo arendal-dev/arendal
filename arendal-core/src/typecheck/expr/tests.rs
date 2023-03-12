@@ -1,6 +1,8 @@
 use super::{check, Expression, Type};
-use crate::ast::helper::*;
+use crate::ast::ExprBuilder;
 use crate::names::Names;
+
+const B: ExprBuilder = ExprBuilder::none();
 
 fn ok_type(expr: Expression, t: Type) {
     assert_eq!(
@@ -15,20 +17,20 @@ fn ok_int(expr: Expression) {
 
 #[test]
 fn integer() {
-    ok_int(lit_i64(1234));
+    ok_int(B.lit_i64(1234));
 }
 
 #[test]
 fn add1() {
-    ok_int(add_i64(1, 2));
+    ok_int(B.add_i64(1, 2));
 }
 
 #[test]
 fn add2() {
-    ok_int(add(add_i64(1, 2), lit_i64(3)));
+    ok_int(B.add(B.add_i64(1, 2), B.lit_i64(3)));
 }
 
 #[test]
 fn sub1() {
-    ok_int(sub_i64(1, 2));
+    ok_int(B.sub_i64(1, 2));
 }

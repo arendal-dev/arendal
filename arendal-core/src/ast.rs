@@ -52,42 +52,6 @@ impl Expression {
     pub fn clone_expr(&self) -> Expr {
         self.inner.expr.clone()
     }
-
-    pub fn lit_integer(loc: Loc, value: Integer) -> Self {
-        Self::new(loc, Expr::LitInteger(value))
-    }
-
-    pub fn lit_type(loc: Loc, id: TypeId) -> Self {
-        Self::new(loc, Expr::LitType(id))
-    }
-
-    pub fn id(loc: Loc, id: Id) -> Self {
-        Self::new(loc, Expr::Id(id))
-    }
-
-    pub fn unary(loc: Loc, op: UnaryOp, expr: Expression) -> Self {
-        Self::new(loc, Expr::Unary(op, expr))
-    }
-
-    pub fn binary(loc: Loc, op: BinaryOp, expr1: Expression, expr2: Expression) -> Self {
-        Self::new(loc, Expr::Binary(op, expr1, expr2))
-    }
-
-    pub fn block(loc: Loc, mut exprs: Vec<Expression>) -> Self {
-        assert!(
-            !exprs.is_empty(),
-            "Blocks need to contain at least one expression"
-        );
-        if exprs.len() == 1 {
-            exprs.pop().unwrap()
-        } else {
-            Self::new(loc, Expr::Block(exprs))
-        }
-    }
-
-    pub fn assignment(loc: Loc, id: Id, expr: Expression) -> Self {
-        Self::new(loc, Expr::Assignment(id, expr))
-    }
 }
 
 impl fmt::Debug for Expression {
@@ -107,58 +71,76 @@ pub enum Expr {
     Assignment(Id, Expression),
 }
 
-pub mod helper {
-    use super::{BinaryOp, Expression, Id, Integer, Loc, TypeId, UnaryOp};
+pub struct ExprBuilder {
+    loc: Loc,
+}
 
-    pub fn lit_integer(value: Integer) -> Expression {
-        Expression::lit_integer(Loc::none(), value)
+impl ExprBuilder {
+    pub const fn new(loc: Loc) -> Self {
+        ExprBuilder { loc }
     }
 
-    pub fn lit_i64(value: i64) -> Expression {
-        lit_integer(value.into())
+    pub const fn none() -> Self {
+        Self::new(Loc::none())
     }
 
-    pub fn lit_type(id: TypeId) -> Expression {
-        Expression::lit_type(Loc::none(), id)
+    pub fn lit_integer(&self, value: Integer) -> Expression {
+        Expression::new(self.loc.clone(), Expr::LitInteger(value))
     }
 
-    pub fn lit_type_str(id: &str) -> Expression {
-        lit_type(TypeId::new(id.into()).unwrap())
+    pub fn lit_i64(&self, value: i64) -> Expression {
+        self.lit_integer(value.into())
     }
 
-    pub fn id(id: Id) -> Expression {
-        Expression::id(Loc::none(), id)
+    pub fn lit_type(&self, id: TypeId) -> Expression {
+        Expression::new(self.loc.clone(), Expr::LitType(id))
     }
 
-    pub fn unary(op: UnaryOp, expr: Expression) -> Expression {
-        Expression::unary(Loc::none(), op, expr)
+    pub fn lit_type_str(&self, id: &str) -> Expression {
+        self.lit_type(TypeId::new(id.into()).unwrap())
     }
 
-    pub fn binary(op: BinaryOp, expr1: Expression, expr2: Expression) -> Expression {
-        Expression::binary(Loc::none(), op, expr1, expr2)
+    pub fn id(&self, id: Id) -> Expression {
+        Expression::new(self.loc.clone(), Expr::Id(id))
     }
 
-    pub fn add(expr1: Expression, expr2: Expression) -> Expression {
-        binary(BinaryOp::Add, expr1, expr2)
+    pub fn unary(&self, op: UnaryOp, expr: Expression) -> Expression {
+        Expression::new(self.loc.clone(), Expr::Unary(op, expr))
     }
 
-    pub fn add_i64(value1: i64, value2: i64) -> Expression {
-        add(lit_i64(value1), lit_i64(value2))
+    pub fn binary(&self, op: BinaryOp, expr1: Expression, expr2: Expression) -> Expression {
+        Expression::new(self.loc.clone(), Expr::Binary(op, expr1, expr2))
     }
 
-    pub fn sub(expr1: Expression, expr2: Expression) -> Expression {
-        binary(BinaryOp::Sub, expr1, expr2)
+    pub fn add(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.binary(BinaryOp::Add, expr1, expr2)
     }
 
-    pub fn sub_i64(value1: i64, value2: i64) -> Expression {
-        sub(lit_i64(value1), lit_i64(value2))
+    pub fn add_i64(&self, value1: i64, value2: i64) -> Expression {
+        self.add(self.lit_i64(value1), self.lit_i64(value2))
     }
 
-    pub fn block(loc: Loc, mut exprs: Vec<Expression>) -> Expression {
-        Expression::block(Loc::none(), exprs)
+    pub fn sub(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.binary(BinaryOp::Sub, expr1, expr2)
     }
 
-    pub fn assignment(id: Id, expr: Expression) -> Expression {
-        Expression::assignment(Loc::none(), id, expr)
+    pub fn sub_i64(&self, value1: i64, value2: i64) -> Expression {
+        self.sub(self.lit_i64(value1), self.lit_i64(value2))
+    }
+
+    pub fn block(&self, mut exprs: Vec<Expression>) -> Expression {
+        assert!(
+            !exprs.is_empty(),
+            "Blocks need to contain at least one expression"
+        );
+        if exprs.len() == 1 {
+            exprs.pop().unwrap()
+        } else {
+            Expression::new(self.loc.clone(), Expr::Block(exprs))
+        }
+    }
+
+    pub fn assignment(&self, id: Id, expr: Expression) -> Expression {
+        Expression::new(self.loc.clone(), Expr::Assignment(id, expr))
     }
 }
