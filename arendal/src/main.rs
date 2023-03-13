@@ -1,5 +1,5 @@
 use core::names::Names;
-use twi::ValueResult;
+use twi::{Interpreter, ValueResult};
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -11,12 +11,14 @@ fn main() -> rustyline::Result<()> {
 
 struct REPL {
     names: Names,
+    interpreter: Interpreter,
 }
 
 impl REPL {
     fn new() -> Self {
         REPL {
             names: Names::builtin(),
+            interpreter: Interpreter::new(),
         }
     }
     fn run(&mut self) -> rustyline::Result<()> {
@@ -37,8 +39,8 @@ impl REPL {
 
     fn eval(&mut self, input: &str) -> ValueResult {
         let parsed = parser::parser::parse_expression(input)?;
-        let checked = core::typecheck::expression(&mut self.names.clone(), &parsed)?;
-        twi::expression(checked)
+        let checked = core::typecheck::expression(&mut self.names, &parsed)?;
+        self.interpreter.expression(&checked)
     }
 
     fn eval_and_print(&mut self, input: &str) {

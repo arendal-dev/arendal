@@ -110,9 +110,9 @@ impl Names {
     }
 
     pub fn get_val(&self, id: &Id) -> Option<Type> {
-        let mut i = self.val_scopes.len() - 1;
-        while i >= 0 {
-            let result = self.val_scopes[i].get(id);
+        let mut i = self.val_scopes.len();
+        while i > 0 {
+            let result = self.val_scopes[i - 1].get(id);
             if result.is_some() {
                 return result;
             }

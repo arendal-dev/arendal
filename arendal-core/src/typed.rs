@@ -29,6 +29,10 @@ impl TypedExpr {
         &self.inner.loc
     }
 
+    pub fn clone_loc(&self) -> Loc {
+        self.inner.loc.clone()
+    }
+
     pub fn borrow_type(&self) -> &Type {
         &self.inner.tipo
     }

@@ -2,12 +2,12 @@ use core::error::Loc;
 use core::typed::{TExprBuilder, TypedExpr};
 use core::types::Type;
 
-use super::{eval, Value};
+use super::{Interpreter, Value};
 
 const B: TExprBuilder = TExprBuilder::new(Loc::none());
 
 fn eval_ok(input: TypedExpr, result: Value) {
-    if let Ok(v) = eval(input) {
+    if let Ok(v) = Interpreter::new().expression(&input) {
         assert_eq!(v, result);
     } else {
         panic!("Error evaluating expression");
