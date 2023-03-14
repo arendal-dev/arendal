@@ -11,6 +11,62 @@ trait Identifier:
     fn as_str(&self) -> &str;
 }
 
+// Package id will eventually be some kind of hash, but we start with the same restrictions as an id for now.
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct PackageId {
+    name: ArcStr,
+}
+
+impl PackageId {
+    pub fn new(name: ArcStr) -> Result<Id, IdError> {
+        if name.is_empty() {
+            return Err(IdError::Empty);
+        }
+        if let Some(k) = Keyword::parse(name.as_str()) {
+            return Err(IdError::Keyword(k));
+        }
+        for (i, c) in name.char_indices() {
+            if i == 0 {
+                if !c.is_ascii_alphabetic() || !c.is_ascii_lowercase() {
+                    return Err(IdError::InvalidInitial(c));
+                }
+            } else {
+                if !c.is_ascii_alphanumeric() {
+                    return Err(IdError::InvalidChar(i, c));
+                }
+            }
+        }
+        Ok(Id { name: name.into() })
+    }
+}
+
+impl Identifier for PackageId {
+    fn as_str(&self) -> &str {
+        self.name.as_str()
+    }
+}
+
+impl fmt::Debug for PackageId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "PackageId({})", self.as_str())
+    }
+}
+
+impl fmt::Display for PackageId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.as_str().fmt(f)
+    }
+}
+
+impl core::ops::Deref for PackageId {
+    type Target = str;
+
+    #[inline]
+    fn deref(&self) -> &str {
+        self.name.deref()
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Id {
     name: ArcStr,
@@ -132,8 +188,10 @@ pub enum IdError {
 enum InnerPath {
     Std,
     StdChild(Id),
-    Package(Id),
-    PackageChild(Id, Id),
+    ThisPackage,
+    ThisPackageChild(Id),
+    Package(PackageId),
+    PackageChild(PackageId, Id),
     Module(Rc<InnerPath>, Id),
 }
 
@@ -142,6 +200,8 @@ impl fmt::Display for InnerPath {
         match self {
             Self::Std => f.write_str("std"),
             Self::StdChild(id) => write!(f, "std::{}", id),
+            Self::ThisPackage => f.write_str("package"),
+            Self::ThisPackageChild(id) => write!(f, "package::{}", id),
             Self::Package(id) => id.fmt(f),
             Self::PackageChild(idp, idm) => write!(f, "{}::{}", idp, idm),
             Self::Module(parent, id) => write!(f, "{}::{}", *parent, id),
@@ -170,13 +230,18 @@ impl Path {
         Self::new(InnerPath::Std)
     }
 
-    pub fn package(id: Id) -> Self {
+    pub fn this_package() -> Self {
+        Self::new(InnerPath::ThisPackage)
+    }
+
+    pub fn package(id: PackageId) -> Self {
         Self::new(InnerPath::Package(id))
     }
 
     pub fn child(&self, id: Id) -> Self {
         match &self.inner {
             InnerPath::Std => Self::new(InnerPath::StdChild(id)),
+            InnerPath::ThisPackage => Self::new(InnerPath::ThisPackageChild(id)),
             InnerPath::Package(idp) => Self::new(InnerPath::PackageChild(idp.clone(), id)),
             _ => Self::new(InnerPath::Module(Rc::new(self.inner.clone()), id)),
         }
