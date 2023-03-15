@@ -5,11 +5,12 @@ use crate::id::{FQTypeId, Id, TypeId};
 use crate::types::Type;
 use crate::{literal, ArcStr};
 
-pub(crate) static BOOLEAN: ArcStr = literal!("Boolean");
-pub(crate) static TRUE: ArcStr = literal!("True");
-pub(crate) static FALSE: ArcStr = literal!("False");
-pub(crate) static INTEGER: ArcStr = literal!("Integer");
-pub(crate) static NONE: ArcStr = literal!("None");
+// TODO: remove once manifests are available
+static BOOLEAN: ArcStr = literal!("Boolean");
+static TRUE: ArcStr = literal!("True");
+static FALSE: ArcStr = literal!("False");
+static INTEGER: ArcStr = literal!("Integer");
+static NONE: ArcStr = literal!("None");
 
 #[derive(Debug, Clone)]
 enum Kind {

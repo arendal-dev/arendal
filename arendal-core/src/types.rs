@@ -1,8 +1,13 @@
 use std::fmt;
 use std::rc::Rc;
 
-use crate::names::*;
-use crate::ArcStr;
+use crate::{literal, ArcStr};
+
+pub(crate) static BOOLEAN: ArcStr = literal!("Boolean");
+pub(crate) static TRUE: ArcStr = literal!("True");
+pub(crate) static FALSE: ArcStr = literal!("False");
+pub(crate) static INTEGER: ArcStr = literal!("Integer");
+pub(crate) static NONE: ArcStr = literal!("None");
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Inner {
