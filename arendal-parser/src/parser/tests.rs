@@ -1,6 +1,6 @@
 use core::ast::Expr::*;
 use core::ast::{ExprBuilder, Expression};
-use core::id::Id;
+use core::identifier::Id;
 
 use super::parse_expression;
 

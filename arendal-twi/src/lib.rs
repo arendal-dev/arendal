@@ -3,7 +3,7 @@ pub mod value;
 mod expr;
 
 use core::error::{Error, Result};
-use core::id::Id;
+use core::identifier::Id;
 use core::typed::TypedExpr;
 use std::collections::HashMap;
 

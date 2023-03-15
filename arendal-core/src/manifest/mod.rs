@@ -9,12 +9,12 @@ pub(crate) enum Visibility {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TypeIdKind {
-    Type(Type)
+    Type(Type),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum IdKind {
-    Val(Type)
+    Val(Type),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

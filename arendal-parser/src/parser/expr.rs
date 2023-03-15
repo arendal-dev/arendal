@@ -1,6 +1,6 @@
 use core::ast::{BinaryOp, ExprBuilder, Expression};
 use core::error::{Errors, Result};
-use core::id::Id;
+use core::identifier::Id;
 use core::keyword::Keyword;
 
 use crate::lexer::{Lexeme, LexemeKind};

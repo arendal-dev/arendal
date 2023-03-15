@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::error::{Error, Errors, Loc, Result};
-use crate::id::{FQTypeId, Id, TypeId};
+use crate::identifier::{FQTypeId, Id, TypeId};
 use crate::types::Type;
 use crate::{literal, ArcStr};
 

@@ -1,7 +1,7 @@
 use super::Integer;
 use crate::ast::{BinaryOp, UnaryOp};
 use crate::error::Loc;
-use crate::id::Id;
+use crate::identifier::Id;
 use crate::types::Type;
 use std::fmt;
 use std::rc::Rc;

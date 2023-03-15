@@ -1,6 +1,6 @@
 use crate::ast::Expression;
 use crate::error::{Error, Result};
-use crate::id::Id;
+use crate::identifier::Id;
 use crate::names::Names;
 use crate::typed::TypedExpr;
 

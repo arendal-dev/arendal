@@ -4,7 +4,7 @@ use std::rc::Rc;
 use super::Enclosure;
 use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
 use core::error::{ErrorAcc, Loc, Result};
-use core::id::{Id, TypeId};
+use core::identifier::{Id, TypeId};
 use core::keyword::Keyword;
 use core::{Integer, Substr};
 

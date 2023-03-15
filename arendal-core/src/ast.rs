@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use super::Integer;
 use crate::error::Loc;
-use crate::id::{Id, TypeId};
+use crate::identifier::{Id, TypeId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
