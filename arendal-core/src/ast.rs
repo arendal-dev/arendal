@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use super::Integer;
 use crate::error::Loc;
-use crate::identifier::{Id, TypeId};
+use crate::identifier::{Identifier, TypeIdentifier};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -63,12 +63,12 @@ impl fmt::Debug for Expression {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     LitInteger(Integer),
-    LitType(TypeId),
-    Id(Id),
+    LitType(TypeIdentifier),
+    Id(Identifier),
     Unary(UnaryOp, Expression),
     Binary(BinaryOp, Expression, Expression),
     Block(Vec<Expression>),
-    Assignment(Id, Expression),
+    Assignment(Identifier, Expression),
 }
 
 pub struct ExprBuilder {
@@ -92,15 +92,15 @@ impl ExprBuilder {
         self.lit_integer(value.into())
     }
 
-    pub fn lit_type(&self, id: TypeId) -> Expression {
+    pub fn lit_type(&self, id: TypeIdentifier) -> Expression {
         Expression::new(self.loc.clone(), Expr::LitType(id))
     }
 
     pub fn lit_type_str(&self, id: &str) -> Expression {
-        self.lit_type(TypeId::new(id.into()).unwrap())
+        self.lit_type(TypeIdentifier::new(id.into()).unwrap())
     }
 
-    pub fn id(&self, id: Id) -> Expression {
+    pub fn id(&self, id: Identifier) -> Expression {
         Expression::new(self.loc.clone(), Expr::Id(id))
     }
 
@@ -140,7 +140,7 @@ impl ExprBuilder {
         }
     }
 
-    pub fn assignment(&self, id: Id, expr: Expression) -> Expression {
+    pub fn assignment(&self, id: Identifier, expr: Expression) -> Expression {
         Expression::new(self.loc.clone(), Expr::Assignment(id, expr))
     }
 }

@@ -1,6 +1,6 @@
 use core::ast::{BinaryOp, ExprBuilder, Expression};
 use core::error::{Errors, Result};
-use core::identifier::Id;
+use core::identifier::Identifier;
 use core::keyword::Keyword;
 
 use crate::lexer::{Lexeme, LexemeKind};
@@ -35,7 +35,7 @@ fn rule_assignment(parser: &mut Parser) -> Result<Expression> {
     }
 }
 
-fn get_lvalue(parser: &mut Parser) -> Result<Id> {
+fn get_lvalue(parser: &mut Parser) -> Result<Identifier> {
     if let Some(lexeme) = parser.peek() {
         if let LexemeKind::Id(id) = lexeme.kind() {
             return parser.ok(id.clone());

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::error::{Error, Errors, Loc, Result};
-use crate::identifier::{FQTypeId, Id, TypeId};
+use crate::identifier::{FQTypeId, Identifier, TypeIdentifier};
 use crate::types::Type;
 use crate::{literal, ArcStr};
 
@@ -19,15 +19,15 @@ enum Kind {
 
 #[derive(Debug, Clone, Default)]
 struct ValScope {
-    vals: HashMap<Id, Type>,
+    vals: HashMap<Identifier, Type>,
 }
 
 impl ValScope {
-    fn get(&self, id: &Id) -> Option<Type> {
+    fn get(&self, id: &Identifier) -> Option<Type> {
         self.vals.get(id).cloned()
     }
 
-    fn add(&mut self, loc: Loc, id: Id, tipo: Type) -> Result<()> {
+    fn add(&mut self, loc: Loc, id: Identifier, tipo: Type) -> Result<()> {
         if self.vals.contains_key(&id) {
             return Errors::err(loc, NamesError::DuplicateVal(id));
         }
@@ -39,7 +39,7 @@ impl ValScope {
 #[derive(Debug, Clone)]
 pub struct Names {
     fq_kinds: HashMap<FQTypeId, Kind>,
-    local_kinds: HashMap<TypeId, FQTypeId>,
+    local_kinds: HashMap<TypeIdentifier, FQTypeId>,
     val_scopes: Vec<ValScope>,
 }
 
@@ -69,7 +69,7 @@ impl Names {
         }
     }
 
-    fn add_local_kind(&mut self, id: TypeId, fq: FQTypeId) -> Result<()> {
+    fn add_local_kind(&mut self, id: TypeIdentifier, fq: FQTypeId) -> Result<()> {
         if !self.fq_kinds.contains_key(&fq) {
             Errors::err(Loc::none(), NamesError::UnknownFQTypeId(fq))
         } else {
@@ -79,7 +79,7 @@ impl Names {
     }
 
     fn add_std_type(&mut self, name: &ArcStr, tipo: Type) {
-        let id = TypeId::new(name.clone()).unwrap();
+        let id = TypeIdentifier::new(name.clone()).unwrap();
         let fq = FQTypeId::std(id.clone());
         self.add_fq_kind(fq.clone(), Kind::Type(tipo)).unwrap();
         self.add_local_kind(id, fq).unwrap();
@@ -106,11 +106,11 @@ impl Names {
         self.val_scopes.pop();
     }
 
-    pub fn add_val(&mut self, loc: Loc, id: Id, tipo: Type) -> Result<()> {
+    pub fn add_val(&mut self, loc: Loc, id: Identifier, tipo: Type) -> Result<()> {
         self.val_scopes.last_mut().unwrap().add(loc, id, tipo)
     }
 
-    pub fn get_val(&self, id: &Id) -> Option<Type> {
+    pub fn get_val(&self, id: &Identifier) -> Option<Type> {
         let mut i = self.val_scopes.len();
         while i > 0 {
             let result = self.val_scopes[i - 1].get(id);
@@ -127,7 +127,7 @@ impl Names {
 pub enum NamesError {
     DuplicateFQTypeId(FQTypeId),
     UnknownFQTypeId(FQTypeId),
-    DuplicateVal(Id),
+    DuplicateVal(Identifier),
 }
 
 impl Error for NamesError {}

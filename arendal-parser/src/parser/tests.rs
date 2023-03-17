@@ -1,6 +1,6 @@
 use core::ast::Expr::*;
 use core::ast::{ExprBuilder, Expression};
-use core::identifier::Id;
+use core::identifier::Identifier;
 
 use super::parse_expression;
 
@@ -37,15 +37,15 @@ fn check_expression(input: &str, expected: Expression) {
     );
 }
 
-fn str_id(id: &str) -> Id {
-    Id::new(id.into()).unwrap()
+fn str_id(id: &str) -> Identifier {
+    Identifier::new(id.into()).unwrap()
 }
 
-fn x() -> Id {
+fn x() -> Identifier {
     str_id("x")
 }
 
-fn y() -> Id {
+fn y() -> Identifier {
     str_id("y")
 }
 

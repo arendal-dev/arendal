@@ -1,3 +1,4 @@
+//use crate::id::Id;
 use crate::keyword::Keyword;
 use crate::ArcStr;
 
@@ -5,20 +6,15 @@ use std::cmp;
 use std::fmt;
 use std::rc::Rc;
 
-trait Identifier:
-    Clone + fmt::Debug + fmt::Display + cmp::PartialEq + cmp::Eq + std::hash::Hash
-{
-    fn as_str(&self) -> &str;
-}
-
-// Package id will eventually be some kind of hash, but we start with the same restrictions as an id for now.
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct PackageId {
-    name: ArcStr,
+pub enum PackageId {
+    Std,
+    Current,
+    Package(Identifier),
 }
 
 impl PackageId {
-    pub fn new(name: ArcStr) -> Result<Id, IdError> {
+    pub fn new(name: ArcStr) -> Result<Identifier, IdError> {
         if name.is_empty() {
             return Err(IdError::Empty);
         }
@@ -36,44 +32,29 @@ impl PackageId {
                 }
             }
         }
-        Ok(Id { name: name.into() })
-    }
-}
-
-impl Identifier for PackageId {
-    fn as_str(&self) -> &str {
-        self.name.as_str()
+        Ok(Identifier { name: name.into() })
     }
 }
 
 impl fmt::Debug for PackageId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "PackageId({})", self.as_str())
+        write!(f, "PackageId({})", "self.as_str()")
     }
 }
 
 impl fmt::Display for PackageId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_str().fmt(f)
-    }
-}
-
-impl core::ops::Deref for PackageId {
-    type Target = str;
-
-    #[inline]
-    fn deref(&self) -> &str {
-        self.name.deref()
+        f.write_str("TODO")
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Id {
+pub struct Identifier {
     name: ArcStr,
 }
 
-impl Id {
-    pub fn new(name: ArcStr) -> Result<Id, IdError> {
+impl Identifier {
+    pub fn new(name: ArcStr) -> Result<Identifier, IdError> {
         if name.is_empty() {
             return Err(IdError::Empty);
         }
@@ -91,29 +72,27 @@ impl Id {
                 }
             }
         }
-        Ok(Id { name: name.into() })
+        Ok(Identifier { name: name.into() })
     }
-}
 
-impl Identifier for Id {
     fn as_str(&self) -> &str {
         self.name.as_str()
     }
 }
 
-impl fmt::Debug for Id {
+impl fmt::Debug for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Id({})", self.as_str())
     }
 }
 
-impl fmt::Display for Id {
+impl fmt::Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
     }
 }
 
-impl core::ops::Deref for Id {
+impl core::ops::Deref for Identifier {
     type Target = str;
 
     #[inline]
@@ -123,12 +102,12 @@ impl core::ops::Deref for Id {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct TypeId {
+pub struct TypeIdentifier {
     name: ArcStr,
 }
 
-impl TypeId {
-    pub fn new(name: ArcStr) -> Result<TypeId, IdError> {
+impl TypeIdentifier {
+    pub fn new(name: ArcStr) -> Result<TypeIdentifier, IdError> {
         if name.is_empty() {
             return Err(IdError::TypeEmpty);
         }
@@ -143,29 +122,27 @@ impl TypeId {
                 }
             }
         }
-        Ok(TypeId { name: name.into() })
+        Ok(TypeIdentifier { name: name.into() })
     }
-}
 
-impl Identifier for TypeId {
     fn as_str(&self) -> &str {
         self.name.as_str()
     }
 }
 
-impl fmt::Debug for TypeId {
+impl fmt::Debug for TypeIdentifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "TypeId({})", self.as_str())
     }
 }
 
-impl fmt::Display for TypeId {
+impl fmt::Display for TypeIdentifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_str().fmt(f)
     }
 }
 
-impl core::ops::Deref for TypeId {
+impl core::ops::Deref for TypeIdentifier {
     type Target = str;
 
     #[inline]
@@ -187,12 +164,12 @@ pub enum IdError {
 #[derive(Clone, PartialEq, Eq, Hash)]
 enum InnerPath {
     Std,
-    StdChild(Id),
+    StdChild(Identifier),
     ThisPackage,
-    ThisPackageChild(Id),
+    ThisPackageChild(Identifier),
     Package(PackageId),
-    PackageChild(PackageId, Id),
-    Module(Rc<InnerPath>, Id),
+    PackageChild(PackageId, Identifier),
+    Module(Rc<InnerPath>, Identifier),
 }
 
 impl fmt::Display for InnerPath {
@@ -238,7 +215,7 @@ impl Path {
         Self::new(InnerPath::Package(id))
     }
 
-    pub fn child(&self, id: Id) -> Self {
+    pub fn child(&self, id: Identifier) -> Self {
         match &self.inner {
             InnerPath::Std => Self::new(InnerPath::StdChild(id)),
             InnerPath::ThisPackage => Self::new(InnerPath::ThisPackageChild(id)),
@@ -265,7 +242,7 @@ impl crate::error::Error for IdError {}
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct FQId {
     path: Path,
-    id: Id,
+    id: Identifier,
 }
 
 impl fmt::Display for FQId {
@@ -283,15 +260,15 @@ impl fmt::Debug for FQId {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct FQTypeId {
     path: Path,
-    id: TypeId,
+    id: TypeIdentifier,
 }
 
 impl FQTypeId {
-    pub fn new(path: Path, id: TypeId) -> Self {
+    pub fn new(path: Path, id: TypeIdentifier) -> Self {
         FQTypeId { path, id }
     }
 
-    pub fn std(id: TypeId) -> Self {
+    pub fn std(id: TypeIdentifier) -> Self {
         Self::new(Path::std(), id)
     }
 }
