@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod error;
+pub mod id;
 pub mod identifier;
 pub mod keyword;
 pub mod names;
