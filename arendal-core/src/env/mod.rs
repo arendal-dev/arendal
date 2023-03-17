@@ -1,4 +1,4 @@
-use crate::types::Type;
+use crate::{types::Type, Environment};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Visibility {
@@ -21,4 +21,9 @@ pub(crate) enum IdKind {
 pub(crate) struct Target<K> {
     visiblity: Visibility,
     kind: K,
+}
+
+#[derive(Debug)]
+pub struct Package<'a> {
+    environment: &'a mut Environment,
 }
