@@ -4,8 +4,8 @@ use std::rc::Rc;
 use super::Enclosure;
 use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
 use core::error::{ErrorAcc, Loc, Result};
-use core::identifier::{Identifier, TypeIdentifier};
 use core::keyword::Keyword;
+use core::symbol::{Symbol, TSymbol};
 use core::{Integer, Substr};
 
 pub(crate) fn lex(input: &str) -> Result<Lexemes> {
@@ -111,8 +111,8 @@ pub(crate) enum LexemeKind {
     Open(Enclosure),
     Close(Enclosure),
     Underscore,
-    Id(Identifier),
-    TypeId(TypeIdentifier),
+    Id(Symbol),
+    TypeId(TSymbol),
     Keyword(Keyword),
 }
 
@@ -187,7 +187,9 @@ impl Lexer {
                 _ => self.add_error(loc, Error::UnexpectedToken, 1),
             }
         }
-        self.errors.to_result(Lexemes::new(&mut self.lexemes))
+        self.errors
+            .to_result()
+            .map(|()| Lexemes::new(&mut self.lexemes))
     }
 
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
@@ -244,12 +246,14 @@ impl Lexer {
     fn add_word(&mut self, loc: Loc, word: &Substr) {
         if let Some(k) = Keyword::parse(word) {
             self.add_lexeme(LexemeKind::Keyword(k), 1);
-        } else if let Ok(name) = TypeIdentifier::new(word.as_str().into()) {
+        } else if let Ok(name) = TSymbol::new(loc.clone(), word.as_str().into()) {
             self.add_lexeme(LexemeKind::TypeId(name), 1);
         } else {
-            match Identifier::new(word.as_str().into()) {
-                Ok(name) => self.add_lexeme(LexemeKind::Id(name.into()), 1),
-                Err(error) => self.errors.add(loc, error),
+            if let Some(symbol) = self
+                .errors
+                .add_result(Symbol::new(loc, word.as_str().into()))
+            {
+                self.add_lexeme(LexemeKind::Id(symbol), 1);
             }
         }
     }

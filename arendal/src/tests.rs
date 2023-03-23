@@ -1,4 +1,4 @@
-use twi::value::Value;
+use core::value::Value;
 
 fn eval_ok(input: &str, result: Value) {
     if let Ok(v) = super::REPL::new().eval(input) {

@@ -3,10 +3,12 @@ use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Keyword {
+    Pkg,
     Val,
 }
 
 static KEYWORDS: phf::Map<&'static str, Keyword> = phf_map! {
+    "pkg" => Keyword::Pkg,
     "val" => Keyword::Val,
 };
 
@@ -17,6 +19,7 @@ impl Keyword {
 
     pub fn as_str(&self) -> &str {
         match self {
+            Self::Pkg => "pkg",
             Self::Val => "val",
         }
     }

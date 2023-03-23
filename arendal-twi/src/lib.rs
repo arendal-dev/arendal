@@ -1,27 +1,24 @@
-pub mod value;
-
 mod expr;
 
 use core::error::{Error, Result};
-use core::identifier::Identifier;
+use core::symbol::Symbol;
 use core::typed::TypedExpr;
+use core::value::Value;
 use std::collections::HashMap;
-
-use value::Value;
 
 pub type ValueResult = Result<Value>;
 
 #[derive(Debug, Clone, Default)]
 struct ValScope {
-    vals: HashMap<Identifier, Value>,
+    vals: HashMap<Symbol, Value>,
 }
 
 impl ValScope {
-    fn get(&self, id: &Identifier) -> Option<Value> {
+    fn get(&self, id: &Symbol) -> Option<Value> {
         self.vals.get(id).cloned()
     }
 
-    fn set(&mut self, id: Identifier, value: Value) {
+    fn set(&mut self, id: Symbol, value: Value) {
         self.vals.insert(id, value);
     }
 }
@@ -50,11 +47,11 @@ impl Interpreter {
         self.val_scopes.pop();
     }
 
-    pub fn set_val(&mut self, id: Identifier, value: Value) {
+    pub fn set_val(&mut self, id: Symbol, value: Value) {
         self.val_scopes.last_mut().unwrap().set(id, value)
     }
 
-    pub fn get_val(&self, id: &Identifier) -> Option<Value> {
+    pub fn get_val(&self, id: &Symbol) -> Option<Value> {
         let mut i = self.val_scopes.len();
         while i > 0 {
             let result = self.val_scopes[i - 1].get(id);
@@ -73,7 +70,7 @@ impl Interpreter {
 
 #[derive(Debug)]
 pub enum RuntimeError {
-    UknownVal(Identifier),
+    UknownVal(Symbol),
     DivisionByZero,
     NotImplemented,
 }

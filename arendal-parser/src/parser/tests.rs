@@ -1,6 +1,7 @@
 use core::ast::Expr::*;
 use core::ast::{ExprBuilder, Expression};
-use core::identifier::Identifier;
+use core::error::Loc;
+use core::symbol::{Symbol, TSymbol};
 
 use super::parse_expression;
 
@@ -37,24 +38,28 @@ fn check_expression(input: &str, expected: Expression) {
     );
 }
 
-fn str_id(id: &str) -> Identifier {
-    Identifier::new(id.into()).unwrap()
+fn str_symbol(symbol: &str) -> Symbol {
+    Symbol::new(Loc::none(), symbol.into()).unwrap()
 }
 
-fn x() -> Identifier {
-    str_id("x")
+fn str_tsymbol(symbol: &str) -> TSymbol {
+    TSymbol::new(Loc::none(), symbol.into()).unwrap()
 }
 
-fn y() -> Identifier {
-    str_id("y")
+fn x() -> Symbol {
+    str_symbol("x")
+}
+
+fn y() -> Symbol {
+    str_symbol("y")
 }
 
 fn x_expr() -> Expression {
-    B.id(x())
+    B.symbol(x())
 }
 
 fn y_expr() -> Expression {
-    B.id(y())
+    B.symbol(y())
 }
 
 #[test]
@@ -97,7 +102,7 @@ fn sub1() {
 
 #[test]
 fn lit_type() {
-    check_expression("  True ", B.lit_type_str("True"));
+    check_expression("  True ", B.tsymbol(str_tsymbol("True")));
 }
 
 #[test]
@@ -107,13 +112,13 @@ fn add_id() {
 
 #[test]
 fn assignment1() {
-    check_expression("val x = 1", B.assignment(str_id("x"), B.lit_i64(1)));
+    check_expression("val x = 1", B.assignment(str_symbol("x"), B.lit_i64(1)));
 }
 
 #[test]
 fn assignment2() {
     check_expression(
         "val x = y + 2",
-        B.assignment(str_id("x"), B.add(y_expr(), B.lit_i64(2))),
+        B.assignment(str_symbol("x"), B.add(y_expr(), B.lit_i64(2))),
     );
 }

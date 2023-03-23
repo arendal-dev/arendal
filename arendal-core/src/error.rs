@@ -121,24 +121,23 @@ impl ErrorAcc {
         }
     }
 
-    // Ok value is lost
-    pub fn add_result<T>(&mut self, mut result: Result<T>) {
-        if let Err(others) = result {
-            match &mut self.errors {
-                Some(e) => e.append(others),
-                None => self.errors = Some(others),
+    pub fn add_result<T>(&mut self, mut result: Result<T>) -> Option<T> {
+        match result {
+            Ok(value) => Some(value),
+            Err(others) => {
+                match &mut self.errors {
+                    Some(e) => e.append(others),
+                    None => self.errors = Some(others),
+                };
+                None
             }
         }
     }
 
-    pub fn to_result<T>(self, value: T) -> Result<T> {
+    pub fn to_result(self) -> Result<()> {
         match self.errors {
-            None => Ok(value),
+            None => Ok(()),
             Some(e) => Err(e),
         }
-    }
-
-    pub fn to_err<T>(self) -> Result<T> {
-        Err(self.errors.unwrap())
     }
 }

@@ -1,11 +1,10 @@
 use core::ast::BinaryOp;
-use core::error::{Errors, Loc};
+use core::error::Errors;
 use core::typed::TExpr::*;
 use core::typed::TypedExpr;
-use core::types::Type;
+use core::value::Value;
 use core::Integer;
 
-use crate::value::Value;
 use crate::{RuntimeError, ValueResult};
 
 use super::Interpreter;

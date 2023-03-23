@@ -1,4 +1,4 @@
-use core::names::Names;
+use core::env::{EnvRef, Module};
 use twi::{Interpreter, ValueResult};
 
 use rustyline::error::ReadlineError;
@@ -10,14 +10,14 @@ fn main() -> rustyline::Result<()> {
 }
 
 struct REPL {
-    names: Names,
+    module: Module,
     interpreter: Interpreter,
 }
 
 impl REPL {
     fn new() -> Self {
         REPL {
-            names: Names::builtin(),
+            module: EnvRef::new_with_prelude().empty_local_module().unwrap(),
             interpreter: Interpreter::new(),
         }
     }
@@ -39,7 +39,7 @@ impl REPL {
 
     fn eval(&mut self, input: &str) -> ValueResult {
         let parsed = parser::parser::parse_expression(input)?;
-        let checked = core::typecheck::expression(&mut self.names, &parsed)?;
+        let checked = self.module.expression(&parsed)?;
         self.interpreter.expression(&checked)
     }
 

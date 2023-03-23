@@ -1,6 +1,8 @@
+use core::error::Loc;
+
 use super::{
-    Enclosure, Identifier, Inner, Keyword, Lexeme, LexemeKind, Lexemes, Result, Token, TokenKind,
-    TypeIdentifier,
+    Enclosure, Inner, Keyword, Lexeme, LexemeKind, Lexemes, Result, Symbol, TSymbol, Token,
+    TokenKind,
 };
 use crate::{ArcStr, Pos};
 
@@ -56,12 +58,14 @@ impl TestCase {
     }
 
     fn id(self, name: &str) -> Self {
-        self.token(LexemeKind::Id(Identifier::new(name.into()).unwrap()))
+        self.token(LexemeKind::Id(
+            Symbol::new(Loc::none(), name.into()).unwrap(),
+        ))
     }
 
     fn type_id(self, name: &str) -> Self {
         self.token(LexemeKind::TypeId(
-            TypeIdentifier::new(name.into()).unwrap(),
+            TSymbol::new(Loc::none(), name.into()).unwrap(),
         ))
     }
 

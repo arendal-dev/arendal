@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use super::Integer;
 use crate::error::Loc;
-use crate::identifier::{Identifier, TypeIdentifier};
+use crate::symbol::{Symbol, TSymbol};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -63,12 +63,12 @@ impl fmt::Debug for Expression {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     LitInteger(Integer),
-    LitType(TypeIdentifier),
-    Id(Identifier),
+    Symbol(Symbol),
+    TSymbol(TSymbol),
     Unary(UnaryOp, Expression),
     Binary(BinaryOp, Expression, Expression),
     Block(Vec<Expression>),
-    Assignment(Identifier, Expression),
+    Assignment(Symbol, Expression),
 }
 
 pub struct ExprBuilder {
@@ -92,16 +92,12 @@ impl ExprBuilder {
         self.lit_integer(value.into())
     }
 
-    pub fn lit_type(&self, id: TypeIdentifier) -> Expression {
-        Expression::new(self.loc.clone(), Expr::LitType(id))
+    pub fn symbol(&self, symbol: Symbol) -> Expression {
+        Expression::new(self.loc.clone(), Expr::Symbol(symbol))
     }
 
-    pub fn lit_type_str(&self, id: &str) -> Expression {
-        self.lit_type(TypeIdentifier::new(id.into()).unwrap())
-    }
-
-    pub fn id(&self, id: Identifier) -> Expression {
-        Expression::new(self.loc.clone(), Expr::Id(id))
+    pub fn tsymbol(&self, symbol: TSymbol) -> Expression {
+        Expression::new(self.loc.clone(), Expr::TSymbol(symbol))
     }
 
     pub fn unary(&self, op: UnaryOp, expr: Expression) -> Expression {
@@ -140,7 +136,7 @@ impl ExprBuilder {
         }
     }
 
-    pub fn assignment(&self, id: Identifier, expr: Expression) -> Expression {
+    pub fn assignment(&self, id: Symbol, expr: Expression) -> Expression {
         Expression::new(self.loc.clone(), Expr::Assignment(id, expr))
     }
 }

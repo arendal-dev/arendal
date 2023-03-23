@@ -1,7 +1,7 @@
 use core::ast::{BinaryOp, ExprBuilder, Expression};
 use core::error::{Errors, Result};
-use core::identifier::Identifier;
 use core::keyword::Keyword;
+use core::symbol::Symbol;
 
 use crate::lexer::{Lexeme, LexemeKind};
 use crate::Enclosure;
@@ -35,7 +35,7 @@ fn rule_assignment(parser: &mut Parser) -> Result<Expression> {
     }
 }
 
-fn get_lvalue(parser: &mut Parser) -> Result<Identifier> {
+fn get_lvalue(parser: &mut Parser) -> Result<Symbol> {
     if let Some(lexeme) = parser.peek() {
         if let LexemeKind::Id(id) = lexeme.kind() {
             return parser.ok(id.clone());
@@ -90,8 +90,8 @@ fn rule_primary(parser: &mut Parser) -> Result<Expression> {
     if let Some(lexeme) = parser.peek() {
         match &lexeme.kind() {
             LexemeKind::Integer(n) => parser.ok(builder(&lexeme).lit_integer(n.clone())),
-            LexemeKind::TypeId(id) => parser.ok(builder(&lexeme).lit_type(id.clone())),
-            LexemeKind::Id(id) => parser.ok(builder(&lexeme).id(id.clone())),
+            LexemeKind::TypeId(id) => parser.ok(builder(&lexeme).tsymbol(id.clone())),
+            LexemeKind::Id(id) => parser.ok(builder(&lexeme).symbol(id.clone())),
             LexemeKind::Open(Enclosure::Parens) => {
                 parser.consume();
                 let mut result = rule_expression(parser);

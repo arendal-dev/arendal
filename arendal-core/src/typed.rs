@@ -1,7 +1,7 @@
 use super::Integer;
 use crate::ast::{BinaryOp, UnaryOp};
 use crate::error::Loc;
-use crate::identifier::Identifier;
+use crate::symbol::Symbol;
 use crate::types::Type;
 use std::fmt;
 use std::rc::Rc;
@@ -83,8 +83,8 @@ impl fmt::Debug for TypedExpr {
 #[derive(Debug)]
 pub enum TExpr {
     LitInteger(Integer),
-    Val(Identifier),
-    Assignment(Identifier, TypedExpr),
+    Val(Symbol),
+    Assignment(Symbol, TypedExpr),
     Unary(UnaryOp, TypedExpr),
     Binary(BinaryOp, TypedExpr, TypedExpr),
 }
@@ -106,11 +106,11 @@ impl TExprBuilder {
         self.lit_integer(value.into())
     }
 
-    pub fn val(&self, id: Identifier, tipo: Type) -> TypedExpr {
+    pub fn val(&self, id: Symbol, tipo: Type) -> TypedExpr {
         TypedExpr::new(self.loc.clone(), tipo, TExpr::Val(id))
     }
 
-    pub fn assignment(&self, id: Identifier, expr: TypedExpr) -> TypedExpr {
+    pub fn assignment(&self, id: Symbol, expr: TypedExpr) -> TypedExpr {
         TypedExpr::new(
             self.loc.clone(),
             expr.clone_type(),

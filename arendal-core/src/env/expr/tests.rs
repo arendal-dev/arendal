@@ -1,14 +1,12 @@
 use super::{check, Expression, Type};
 use crate::ast::ExprBuilder;
-use crate::names::Names;
+use crate::env::EnvRef;
 
 const B: ExprBuilder = ExprBuilder::none();
 
 fn ok_type(expr: Expression, t: Type) {
-    assert_eq!(
-        *check(&mut Names::builtin(), &expr).unwrap().borrow_type(),
-        t
-    );
+    let mut module = EnvRef::new_with_prelude().empty_local_module().unwrap();
+    assert_eq!(*check(&mut module, &expr).unwrap().borrow_type(), t);
 }
 
 fn ok_int(expr: Expression) {
