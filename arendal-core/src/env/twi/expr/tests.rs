@@ -1,6 +1,6 @@
-use core::error::Loc;
-use core::typed::{TExprBuilder, TypedExpr};
-use core::types::Type;
+use crate::error::Loc;
+use crate::typed::{TExprBuilder, TypedExpr};
+use crate::types::Type;
 
 use super::{Interpreter, Value};
 

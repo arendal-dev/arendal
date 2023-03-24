@@ -1,9 +1,9 @@
 mod expr;
 
-use core::error::{Error, Result};
-use core::symbol::Symbol;
-use core::typed::TypedExpr;
-use core::value::Value;
+use crate::error::{Error, Result};
+use crate::symbol::Symbol;
+use crate::typed::TypedExpr;
+use crate::value::Value;
 use std::collections::HashMap;
 
 pub type ValueResult = Result<Value>;

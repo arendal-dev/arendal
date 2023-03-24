@@ -1,11 +1,11 @@
-use core::ast::BinaryOp;
-use core::error::Errors;
-use core::typed::TExpr::*;
-use core::typed::TypedExpr;
-use core::value::Value;
-use core::Integer;
+use crate::ast::BinaryOp;
+use crate::error::Errors;
+use crate::typed::TExpr::*;
+use crate::typed::TypedExpr;
+use crate::value::Value;
+use crate::Integer;
 
-use crate::{RuntimeError, ValueResult};
+use super::{RuntimeError, ValueResult};
 
 use super::Interpreter;
 

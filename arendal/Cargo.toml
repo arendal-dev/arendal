@@ -8,5 +8,4 @@ edition = "2021"
 [dependencies]
 core = { path = "../arendal-core", package = "arendal-core" }
 parser = { path = "../arendal-parser", package = "arendal-parser" }
-twi = { path = "../arendal-twi", package = "arendal-twi" }
 rustyline = "10.1.1"

@@ -1,5 +1,5 @@
+use core::env::twi::{Interpreter, ValueResult};
 use core::env::{EnvRef, Module};
-use twi::{Interpreter, ValueResult};
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;

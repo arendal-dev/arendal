@@ -1,6 +1,8 @@
 mod expr;
 mod prelude;
 
+pub mod twi;
+
 use crate::{
     ast::Expression,
     error::{Error, ErrorAcc, Errors, Loc, Result},
