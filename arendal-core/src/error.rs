@@ -134,9 +134,23 @@ impl ErrorAcc {
         }
     }
 
-    pub fn to_result(self) -> Result<()> {
+    pub fn to_result<T>(self, value: T) -> Result<T> {
         match self.errors {
-            None => Ok(()),
+            None => Ok(value),
+            Some(e) => Err(e),
+        }
+    }
+
+    pub fn to_unit_result(self) -> Result<()> {
+        self.to_result(())
+    }
+
+    pub fn to_lazy_result<T, F>(self, supplier: F) -> Result<T>
+    where
+        F: FnOnce(()) -> T,
+    {
+        match self.errors {
+            None => Ok(supplier(())),
             Some(e) => Err(e),
         }
     }

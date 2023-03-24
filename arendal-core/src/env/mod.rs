@@ -99,7 +99,7 @@ impl Symbols {
                 errors.add(Loc::none(), EnvError::DuplicateTSymbol(symbol.clone()));
             }
         }
-        errors.to_result()?;
+        errors.to_unit_result()?;
         self.symbols.extend(other.symbols.drain());
         self.tsymbols.extend(other.tsymbols.drain());
         Ok(())

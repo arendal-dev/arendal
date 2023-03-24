@@ -188,8 +188,7 @@ impl Lexer {
             }
         }
         self.errors
-            .to_result()
-            .map(|()| Lexemes::new(&mut self.lexemes))
+            .to_lazy_result(|()| Lexemes::new(&mut self.lexemes))
     }
 
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {

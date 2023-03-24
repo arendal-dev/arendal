@@ -227,7 +227,7 @@ impl Tokenizer {
                 self.consume();
             }
         }
-        errors.to_result().map(|()| self.tokens)
+        errors.to_result(self.tokens)
     }
 
     fn add_known_first_char(&mut self, c: char) -> bool {
