@@ -1,7 +1,6 @@
 mod expr;
 mod prelude;
-
-pub mod twi;
+mod twi;
 
 use crate::{
     ast::Expression,
@@ -233,8 +232,8 @@ impl Module {
         }
     }
 
-    pub fn expression(&mut self, input: &Expression) -> Result<TypedExpr> {
-        expr::check(self, input)
+    pub fn interactive(self) -> Interactive {
+        Interactive::new(self)
     }
 
     fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Target) -> Result<()> {
@@ -290,6 +289,25 @@ impl Module {
             i = i - 1;
         }
         None
+    }
+}
+
+pub struct Interactive {
+    module: Box<Module>,
+    interpreter: twi::Interpreter,
+}
+
+impl Interactive {
+    fn new(module: Module) -> Self {
+        Interactive {
+            module: Box::new(module),
+            interpreter: Default::default(),
+        }
+    }
+
+    pub fn expression(&mut self, input: &Expression) -> Result<Value> {
+        let typed = expr::check(self.module.as_mut(), input)?;
+        self.interpreter.expression(&typed)
     }
 }
 

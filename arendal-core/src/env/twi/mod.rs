@@ -6,8 +6,6 @@ use crate::typed::TypedExpr;
 use crate::value::Value;
 use std::collections::HashMap;
 
-pub type ValueResult = Result<Value>;
-
 #[derive(Debug, Clone, Default)]
 struct ValScope {
     vals: HashMap<Symbol, Value>,
@@ -23,17 +21,12 @@ impl ValScope {
     }
 }
 
-pub struct Interpreter {
+#[derive(Default)]
+pub(super) struct Interpreter {
     val_scopes: Vec<ValScope>,
 }
 
 impl Interpreter {
-    pub fn new() -> Self {
-        Interpreter {
-            val_scopes: vec![Default::default()],
-        }
-    }
-
     pub fn push_val_scope(&mut self) -> usize {
         self.val_scopes.push(Default::default());
         self.val_scopes.len()
@@ -63,7 +56,7 @@ impl Interpreter {
         None
     }
 
-    pub fn expression(&mut self, expr: &TypedExpr) -> ValueResult {
+    pub fn expression(&mut self, expr: &TypedExpr) -> Result<Value> {
         expr::eval(self, &expr)
     }
 }

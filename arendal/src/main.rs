@@ -1,5 +1,6 @@
-use core::env::twi::{Interpreter, ValueResult};
-use core::env::{EnvRef, Module};
+use core::env::{EnvRef, Interactive};
+use core::error::Result;
+use core::value::Value;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -10,17 +11,17 @@ fn main() -> rustyline::Result<()> {
 }
 
 struct REPL {
-    module: Module,
-    interpreter: Interpreter,
+    interactive: Interactive,
 }
 
 impl REPL {
     fn new() -> Self {
+        let module = EnvRef::new_with_prelude().empty_local_module().unwrap();
         REPL {
-            module: EnvRef::new_with_prelude().empty_local_module().unwrap(),
-            interpreter: Interpreter::new(),
+            interactive: module.interactive(),
         }
     }
+
     fn run(&mut self) -> rustyline::Result<()> {
         let mut rl = Editor::<()>::new()?;
         loop {
@@ -37,10 +38,9 @@ impl REPL {
         Ok(())
     }
 
-    fn eval(&mut self, input: &str) -> ValueResult {
+    fn eval(&mut self, input: &str) -> Result<Value> {
         let parsed = parser::parser::parse_expression(input)?;
-        let checked = self.module.expression(&parsed)?;
-        self.interpreter.expression(&checked)
+        self.interactive.expression(&parsed)
     }
 
     fn eval_and_print(&mut self, input: &str) {

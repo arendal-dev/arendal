@@ -1,23 +1,23 @@
 use crate::ast::BinaryOp;
-use crate::error::Errors;
+use crate::error::{Errors, Result};
 use crate::typed::TExpr::*;
 use crate::typed::TypedExpr;
 use crate::value::Value;
 use crate::Integer;
 
-use super::{RuntimeError, ValueResult};
+use super::RuntimeError;
 
 use super::Interpreter;
 
-fn integer(value: Integer) -> ValueResult {
+fn integer(value: Integer) -> Result<Value> {
     Ok(Value::Int(value))
 }
 
-fn err(expr: &TypedExpr, error: RuntimeError) -> ValueResult {
+fn err(expr: &TypedExpr, error: RuntimeError) -> Result<Value> {
     Errors::err(expr.clone_loc(), error)
 }
 
-pub(crate) fn eval(interpreter: &mut Interpreter, expr: &TypedExpr) -> ValueResult {
+pub(super) fn eval(interpreter: &mut Interpreter, expr: &TypedExpr) -> Result<Value> {
     match expr.borrow_expr() {
         LitInteger(i) => integer(i.clone()),
         Val(id) => match interpreter.get_val(id) {
@@ -39,7 +39,7 @@ fn binary(
     op: BinaryOp,
     e1: &TypedExpr,
     e2: &TypedExpr,
-) -> ValueResult {
+) -> Result<Value> {
     let v1 = eval(interpreter, e1)?;
     match op {
         BinaryOp::Add => add(interpreter, v1, e2),
@@ -50,25 +50,25 @@ fn binary(
     }
 }
 
-fn add(interpreter: &mut Interpreter, v1: Value, e2: &TypedExpr) -> ValueResult {
+fn add(interpreter: &mut Interpreter, v1: Value, e2: &TypedExpr) -> Result<Value> {
     let v2 = eval(interpreter, e2)?;
     // We only have integers for now
     integer(v1.as_integer().unwrap() + v2.as_integer().unwrap())
 }
 
-fn sub(interpreter: &mut Interpreter, v1: Value, e2: &TypedExpr) -> ValueResult {
+fn sub(interpreter: &mut Interpreter, v1: Value, e2: &TypedExpr) -> Result<Value> {
     let v2 = eval(interpreter, e2)?;
     // We only have integers for now
     integer(v1.as_integer().unwrap() - v2.as_integer().unwrap())
 }
 
-fn mul(interpreter: &mut Interpreter, v1: Value, e2: &TypedExpr) -> ValueResult {
+fn mul(interpreter: &mut Interpreter, v1: Value, e2: &TypedExpr) -> Result<Value> {
     let v2 = eval(interpreter, e2)?;
     // We only have integers for now
     integer(v1.as_integer().unwrap() * v2.as_integer().unwrap())
 }
 
-fn div(interpreter: &mut Interpreter, v1: Value, e2: &TypedExpr) -> ValueResult {
+fn div(interpreter: &mut Interpreter, v1: Value, e2: &TypedExpr) -> Result<Value> {
     let v2 = eval(interpreter, e2)?;
     // We only have integers for now
     let i2 = v2.as_integer().unwrap();

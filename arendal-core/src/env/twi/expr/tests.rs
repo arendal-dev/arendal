@@ -7,7 +7,8 @@ use super::{Interpreter, Value};
 const B: TExprBuilder = TExprBuilder::new(Loc::none());
 
 fn eval_ok(input: TypedExpr, result: Value) {
-    if let Ok(v) = Interpreter::new().expression(&input) {
+    let mut interpreter: Interpreter = Default::default();
+    if let Ok(v) = interpreter.expression(&input) {
         assert_eq!(v, result);
     } else {
         panic!("Error evaluating expression");
