@@ -1,11 +1,12 @@
+use std::fmt::{self, Write};
+use std::sync::Arc;
+
+use phf::phf_map;
+
 use crate::error::{Error, Errors, Loc, Result};
 use crate::id::Id;
 use crate::keyword::Keyword;
 use crate::{literal, ArcStr};
-
-use std::fmt::{self, Write};
-use std::rc::Rc;
-use std::sync::Arc;
 
 static STD: ArcStr = literal!("std");
 static PKG: ArcStr = literal!("pkg");
@@ -92,14 +93,35 @@ impl fmt::Debug for Symbol {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+enum InnerTSym {
+    None,
+    True,
+    False,
+    Boolean,
+    Integer,
+    Other(ArcStr),
+}
+
+static WELL_KNOWN: phf::Map<&'static str, InnerTSym> = phf_map! {
+    "None" => InnerTSym::None,
+    "True" => InnerTSym::True,
+    "False" => InnerTSym::False,
+    "Boolean" => InnerTSym::Boolean,
+    "Integer" => InnerTSym::Integer,
+};
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TSymbol {
-    name: ArcStr,
+    inner: InnerTSym,
 }
 
 impl TSymbol {
     pub fn new(loc: Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
             return Errors::err(loc, SymbolError::Empty);
+        }
+        if let Some(s) = WELL_KNOWN.get(&name) {
+            return Ok(Self { inner: s.clone() });
         }
         for (i, c) in name.char_indices() {
             if i == 0 {
@@ -112,11 +134,20 @@ impl TSymbol {
                 }
             }
         }
-        Ok(Self { name: name.into() })
+        Ok(Self {
+            inner: InnerTSym::Other(name),
+        })
     }
 
     fn as_str(&self) -> &str {
-        self.name.as_str()
+        match &self.inner {
+            InnerTSym::None => "None",
+            InnerTSym::True => "True",
+            InnerTSym::False => "False",
+            InnerTSym::Boolean => "Boolean",
+            InnerTSym::Integer => "Integer",
+            InnerTSym::Other(s) => s.as_str(),
+        }
     }
 }
 
