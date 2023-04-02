@@ -5,6 +5,7 @@ use crate::{literal, ArcStr};
 
 use std::fmt::{self, Write};
 use std::rc::Rc;
+use std::sync::Arc;
 
 static STD: ArcStr = literal!("std");
 static PKG: ArcStr = literal!("pkg");
@@ -132,35 +133,66 @@ impl fmt::Debug for TSymbol {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+enum InnerPath {
+    Empty,
+    Single(Symbol),
+    Multi(Arc<Vec<Symbol>>),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ModulePath {
-    path: Rc<Vec<Symbol>>,
+    path: InnerPath,
 }
 
 impl ModulePath {
-    pub(crate) fn new(path: Vec<Symbol>) -> Self {
+    pub(crate) const fn empty() -> Self {
         ModulePath {
-            path: Rc::new(path),
+            path: InnerPath::Empty,
         }
     }
 
-    pub(crate) fn empty() -> Self {
-        Self::new(Default::default())
+    pub(crate) const fn single(symbol: Symbol) -> Self {
+        ModulePath {
+            path: InnerPath::Single(symbol),
+        }
+    }
+
+    pub(crate) fn new(mut path: Vec<Symbol>) -> Self {
+        if path.is_empty() {
+            Self::empty()
+        } else if path.len() == 1 {
+            Self::single(path.pop().unwrap())
+        } else {
+            ModulePath {
+                path: InnerPath::Multi(Arc::new(path)),
+            }
+        }
     }
 
     pub(crate) fn is_empty(&self) -> bool {
-        self.path.is_empty()
+        if let InnerPath::Empty = self.path {
+            true
+        } else {
+            false
+        }
     }
 }
 
 impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (i, id) in self.path.iter().enumerate() {
-            if i > 0 {
-                f.write_str("::")?
+        match &self.path {
+            InnerPath::Empty => Ok(()),
+            InnerPath::Single(s) => s.fmt(f),
+            InnerPath::Multi(path) => {
+                for (i, id) in path.iter().enumerate() {
+                    if i > 0 {
+                        f.write_str("::")?
+                    }
+                    id.fmt(f)?
+                }
+                Ok(())
             }
-            id.fmt(f)?
         }
-        Ok(())
     }
 }
 

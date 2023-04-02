@@ -1,6 +1,8 @@
 use std::fmt;
 use std::rc::Rc;
 
+use crate::error::Loc;
+use crate::symbol::{FQTSymbol, ModulePath, PkgId, TSymbol};
 use crate::{literal, ArcStr};
 
 pub(crate) static BOOLEAN: ArcStr = literal!("Boolean");
@@ -8,6 +10,18 @@ pub(crate) static TRUE: ArcStr = literal!("True");
 pub(crate) static FALSE: ArcStr = literal!("False");
 pub(crate) static INTEGER: ArcStr = literal!("Integer");
 pub(crate) static NONE: ArcStr = literal!("None");
+
+fn tsymbol(name: ArcStr) -> TSymbol {
+    TSymbol::new(Loc::none(), name).unwrap()
+}
+
+fn fq_tsymbol(name: ArcStr) -> FQTSymbol {
+    FQTSymbol::top_level(PkgId::Std, ModulePath::empty(), tsymbol(name))
+}
+
+pub fn fq_true() -> FQTSymbol {
+    fq_tsymbol(TRUE.clone())
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Inner {
