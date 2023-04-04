@@ -10,7 +10,7 @@ use super::RuntimeError;
 use super::Interpreter;
 
 fn integer(value: Integer) -> Result<Value> {
-    Ok(Value::Int(value))
+    Ok(Value::Integer(value))
 }
 
 fn err(expr: &TypedExpr, error: RuntimeError) -> Result<Value> {

@@ -1,20 +1,20 @@
 use std::fmt;
 
-use crate::types::Type;
+use crate::types::{OtherType, Type};
 use crate::Integer;
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Value {
-    Int(Integer),
+    None,
     True,
     False,
+    Integer(Integer),
+    Singleton(OtherType),
 }
-
-use Value::*;
 
 impl Value {
     pub fn integer(value: Integer) -> Self {
-        Int(value)
+        Self::Integer(value)
     }
 
     pub fn int64(value: i64) -> Self {
@@ -23,31 +23,33 @@ impl Value {
 
     pub fn boolean(value: bool) -> Self {
         if value {
-            True
+            Self::True
         } else {
-            False
+            Self::False
         }
     }
 
     pub fn get_type(&self) -> Type {
         match self {
-            Int(_) => Type::Integer,
-            True => Type::True,
-            False => Type::False,
+            Self::None => Type::None,
+            Self::True => Type::True,
+            Self::False => Type::False,
+            Self::Integer(_) => Type::Integer,
+            Self::Singleton(t) => Type::Singleton(t.clone()),
         }
     }
 
     pub fn as_integer(self) -> Option<Integer> {
         match self {
-            Int(v) => Some(v),
+            Self::Integer(v) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_boolean(self) -> Option<bool> {
         match self {
-            True => Some(true),
-            False => Some(false),
+            Self::True => Some(true),
+            Self::False => Some(false),
             _ => None,
         }
     }
@@ -56,9 +58,11 @@ impl Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Int(value) => value.fmt(f),
-            True => f.write_str("True"),
-            False => f.write_str("False"),
+            Self::None => f.write_str("None"),
+            Self::True => f.write_str("True"),
+            Self::False => f.write_str("False"),
+            Self::Integer(value) => value.fmt(f),
+            Self::Singleton(t) => t.fmt(f),
         }
     }
 }

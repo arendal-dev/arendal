@@ -3,9 +3,21 @@ use std::fmt;
 use crate::error::{Error, Errors, Loc, Result};
 use crate::symbol::{TSymbol, FQ};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct OtherType {
     symbol: FQ<TSymbol>,
+}
+
+impl fmt::Display for OtherType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.symbol.fmt(f)
+    }
+}
+
+impl fmt::Debug for OtherType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self, f)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
