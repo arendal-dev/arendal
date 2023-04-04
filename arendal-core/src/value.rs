@@ -31,9 +31,9 @@ impl Value {
 
     pub fn get_type(&self) -> Type {
         match self {
-            Int(_) => Type::integer(),
-            True => Type::boolean_true(),
-            False => Type::boolean_false(),
+            Int(_) => Type::Integer,
+            True => Type::True,
+            False => Type::False,
         }
     }
 

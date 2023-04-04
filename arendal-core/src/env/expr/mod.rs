@@ -68,7 +68,7 @@ fn check_add(
     e2: TypedExpr,
 ) -> Result<TypedExpr> {
     if e1.is_integer() && e2.is_integer() {
-        ok_binary(input, Type::integer(), BinaryOp::Add, e1, e2)
+        ok_binary(input, Type::Integer, BinaryOp::Add, e1, e2)
     } else {
         error(input, TypeError::InvalidType)
     }
@@ -81,7 +81,7 @@ fn check_sub(
     e2: TypedExpr,
 ) -> Result<TypedExpr> {
     if e1.is_integer() && e2.is_integer() {
-        ok_binary(input, Type::integer(), BinaryOp::Sub, e1, e2)
+        ok_binary(input, Type::Integer, BinaryOp::Sub, e1, e2)
     } else {
         error(input, TypeError::InvalidType)
     }
@@ -94,7 +94,7 @@ fn check_mul(
     e2: TypedExpr,
 ) -> Result<TypedExpr> {
     if e1.is_integer() && e2.is_integer() {
-        ok_binary(input, Type::integer(), BinaryOp::Mul, e1, e2)
+        ok_binary(input, Type::Integer, BinaryOp::Mul, e1, e2)
     } else {
         error(input, TypeError::InvalidType)
     }
@@ -107,7 +107,7 @@ fn check_div(
     e2: TypedExpr,
 ) -> Result<TypedExpr> {
     if e1.is_integer() && e2.is_integer() {
-        ok_binary(input, Type::integer(), BinaryOp::Div, e1, e2)
+        ok_binary(input, Type::Integer, BinaryOp::Div, e1, e2)
     } else {
         error(input, TypeError::InvalidType)
     }

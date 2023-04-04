@@ -5,7 +5,7 @@ mod twi;
 use crate::{
     ast::Expression,
     error::{Error, ErrorAcc, Errors, Loc, Result},
-    symbol::{FQSymbol, FQTSymbol, ModulePath, PkgId, Symbol, TSymbol},
+    symbol::{ModulePath, PkgId, Symbol, TSymbol, FQ},
     typed::TypedExpr,
     types::Type,
     value::Value,
@@ -65,12 +65,12 @@ impl TTarget {
 
 #[derive(Debug, Default)]
 struct Symbols {
-    symbols: HashMap<FQSymbol, Target>,
-    tsymbols: HashMap<FQTSymbol, TTarget>,
+    symbols: HashMap<FQ<Symbol>, Target>,
+    tsymbols: HashMap<FQ<TSymbol>, TTarget>,
 }
 
 impl Symbols {
-    fn add(&mut self, loc: Loc, symbol: FQSymbol, target: Target) -> Result<()> {
+    fn add(&mut self, loc: Loc, symbol: FQ<Symbol>, target: Target) -> Result<()> {
         if self.symbols.contains_key(&symbol) {
             Errors::err(loc, EnvError::DuplicateSymbol(symbol))
         } else {
@@ -79,7 +79,7 @@ impl Symbols {
         }
     }
 
-    fn add_t(&mut self, loc: Loc, symbol: FQTSymbol, target: TTarget) -> Result<()> {
+    fn add_t(&mut self, loc: Loc, symbol: FQ<TSymbol>, target: TTarget) -> Result<()> {
         if self.tsymbols.contains_key(&symbol) {
             Errors::err(loc, EnvError::DuplicateTSymbol(symbol))
         } else {
@@ -128,7 +128,7 @@ impl EnvRef {
 
     pub fn new_with_prelude() -> Self {
         let env = Self::new();
-        let pkg = env.create_package(PkgId::Std);
+        let pkg = env.create_package(PkgId::std());
         prelude::load_prelude(&pkg).unwrap();
         env
     }
@@ -138,7 +138,7 @@ impl EnvRef {
     }
 
     pub fn empty_local_module(&self) -> Result<Module> {
-        self.create_package(PkgId::Local)
+        self.create_package(PkgId::local())
             .create_module(Loc::none(), ModulePath::empty())
     }
 }
@@ -237,12 +237,12 @@ impl Module {
     }
 
     fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Target) -> Result<()> {
-        let fq = FQSymbol::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
+        let fq = FQ::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
         self.symbols.add(loc, fq, target)
     }
 
     fn add_tsymbol(&mut self, loc: Loc, symbol: TSymbol, target: TTarget) -> Result<()> {
-        let fq = FQTSymbol::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
+        let fq = FQ::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
         self.symbols.add_t(loc, fq, target)
     }
 
@@ -314,8 +314,8 @@ impl Interactive {
 #[derive(Debug)]
 pub enum EnvError {
     DuplicateModule(PkgId, ModulePath),
-    DuplicateSymbol(FQSymbol),
-    DuplicateTSymbol(FQTSymbol),
+    DuplicateSymbol(FQ<Symbol>),
+    DuplicateTSymbol(FQ<TSymbol>),
     DuplicateVal(Symbol),
 }
 

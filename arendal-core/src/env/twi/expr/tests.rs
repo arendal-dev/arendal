@@ -28,7 +28,7 @@ fn add1() {
 #[test]
 fn add2() {
     eval_ok(
-        B.add(Type::integer(), B.lit_i64(3), B.add_i64(1, 2)),
+        B.add(Type::Integer, B.lit_i64(3), B.add_i64(1, 2)),
         Value::int64(6),
     );
 }
@@ -36,7 +36,7 @@ fn add2() {
 #[test]
 fn add_sub() {
     eval_ok(
-        B.sub(Type::integer(), B.lit_i64(3), B.add_i64(1, 2)),
+        B.sub(Type::Integer, B.lit_i64(3), B.add_i64(1, 2)),
         Value::int64(0),
     );
 }

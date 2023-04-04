@@ -46,31 +46,23 @@ impl TypedExpr {
     }
 
     pub fn is_integer(&self) -> bool {
-        self.inner.tipo.is_integer()
+        self.inner.tipo == Type::Integer
     }
 
     pub fn is_boolean(&self) -> bool {
-        self.inner.tipo.is_boolean()
+        self.inner.tipo == Type::Boolean
     }
 
     pub fn is_boolean_true(&self) -> bool {
-        self.inner.tipo.is_boolean_true()
+        self.inner.tipo == Type::True
     }
 
     pub fn is_boolean_false(&self) -> bool {
-        self.inner.tipo.is_boolean_false()
+        self.inner.tipo == Type::False
     }
 
     pub fn is_none(&self) -> bool {
-        self.inner.tipo.is_none()
-    }
-
-    pub fn is_some(&self) -> bool {
-        self.inner.tipo.is_some()
-    }
-
-    pub fn is_option(&self) -> bool {
-        self.inner.tipo.is_option()
+        self.inner.tipo == Type::None
     }
 }
 
@@ -99,7 +91,7 @@ impl TExprBuilder {
     }
 
     pub fn lit_integer(&self, value: Integer) -> TypedExpr {
-        TypedExpr::new(self.loc.clone(), Type::integer(), TExpr::LitInteger(value))
+        TypedExpr::new(self.loc.clone(), Type::Integer, TExpr::LitInteger(value))
     }
 
     pub fn lit_i64(&self, value: i64) -> TypedExpr {
@@ -137,7 +129,7 @@ impl TExprBuilder {
     }
 
     pub fn add_i64(&self, value1: i64, value2: i64) -> TypedExpr {
-        self.add(Type::integer(), self.lit_i64(value1), self.lit_i64(value2))
+        self.add(Type::Integer, self.lit_i64(value1), self.lit_i64(value2))
     }
 
     pub fn sub(&self, tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
@@ -145,6 +137,6 @@ impl TExprBuilder {
     }
 
     pub fn sub_i64(&self, value1: i64, value2: i64) -> TypedExpr {
-        self.sub(Type::integer(), self.lit_i64(value1), self.lit_i64(value2))
+        self.sub(Type::Integer, self.lit_i64(value1), self.lit_i64(value2))
     }
 }

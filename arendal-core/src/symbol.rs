@@ -1,16 +1,26 @@
-use std::fmt::{self, Write};
+use std::fmt::{self, Display, Write};
 use std::sync::Arc;
 
-use phf::phf_map;
-
 use crate::error::{Error, Errors, Loc, Result};
-use crate::id::Id;
 use crate::keyword::Keyword;
 use crate::{literal, ArcStr};
 
 static STD: ArcStr = literal!("std");
 static PKG: ArcStr = literal!("pkg");
-static EMPTY: ArcStr = literal!("");
+pub(crate) static NONE: ArcStr = literal!("None");
+pub(crate) static TRUE: ArcStr = literal!("True");
+pub(crate) static FALSE: ArcStr = literal!("False");
+pub(crate) static BOOLEAN: ArcStr = literal!("Boolean");
+pub(crate) static INTEGER: ArcStr = literal!("Integer");
+
+fn separator(f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.write_str("::")
+}
+
+fn add_segment(f: &mut fmt::Formatter<'_>, it: &dyn Display) -> fmt::Result {
+    separator(f)?;
+    it.fmt(f)
+}
 
 fn debug(f: &mut fmt::Formatter<'_>, name: &str, it: &dyn fmt::Display) -> fmt::Result {
     f.write_str(name)?;
@@ -19,26 +29,32 @@ fn debug(f: &mut fmt::Formatter<'_>, name: &str, it: &dyn fmt::Display) -> fmt::
     f.write_char(')')
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum PkgId {
-    Std,
-    Local,
-    Imported(Id),
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PkgId {
+    id: u32,
 }
 
 impl PkgId {
-    fn as_arcstr(&self) -> ArcStr {
-        match self {
-            PkgId::Std => STD.clone(),
-            PkgId::Local => PKG.clone(),
-            PkgId::Imported(id) => id.as_arcstr(),
-        }
+    pub fn new(id: u32) -> Self {
+        PkgId { id }
+    }
+
+    pub fn std() -> Self {
+        Self::new(0)
+    }
+
+    pub fn local() -> Self {
+        Self::new(1)
     }
 }
 
 impl fmt::Display for PkgId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.as_arcstr())
+        match self.id {
+            0 => f.write_str(&STD),
+            1 => f.write_str(&PKG),
+            n => write!(f, "pkg({})", n),
+        }
     }
 }
 
@@ -47,6 +63,8 @@ impl fmt::Debug for PkgId {
         debug(f, "PkgId", self)
     }
 }
+
+pub trait Sym: fmt::Display + fmt::Debug {}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Symbol {
@@ -74,15 +92,11 @@ impl Symbol {
         }
         Ok(Self { name: name.into() })
     }
-
-    fn as_str(&self) -> &str {
-        self.name.as_str()
-    }
 }
 
 impl fmt::Display for Symbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_str().fmt(f)
+        f.write_str(&self.name)
     }
 }
 
@@ -92,68 +106,80 @@ impl fmt::Debug for Symbol {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-enum InnerTSym {
-    None,
-    True,
-    False,
-    Boolean,
-    Integer,
-    Other(ArcStr),
-}
-
-static WELL_KNOWN: phf::Map<&'static str, InnerTSym> = phf_map! {
-    "None" => InnerTSym::None,
-    "True" => InnerTSym::True,
-    "False" => InnerTSym::False,
-    "Boolean" => InnerTSym::Boolean,
-    "Integer" => InnerTSym::Integer,
-};
+impl Sym for Symbol {}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TSymbol {
-    inner: InnerTSym,
+    name: ArcStr,
 }
 
 impl TSymbol {
+    fn known(name: &ArcStr) -> Result<Self> {
+        Ok(TSymbol { name: name.clone() })
+    }
+
     pub fn new(loc: Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
             return Errors::err(loc, SymbolError::Empty);
         }
-        if let Some(s) = WELL_KNOWN.get(&name) {
-            return Ok(Self { inner: s.clone() });
-        }
-        for (i, c) in name.char_indices() {
-            if i == 0 {
-                if !c.is_ascii_alphabetic() || !c.is_ascii_uppercase() {
-                    return Errors::err(loc, SymbolError::InvalidTypeInitial(c));
-                }
-            } else {
-                if !c.is_ascii_alphanumeric() {
-                    return Errors::err(loc, SymbolError::InvalidChar(i, c));
+        if NONE == name {
+            Self::known(&NONE)
+        } else if TRUE == name {
+            Self::known(&TRUE)
+        } else if FALSE == name {
+            Self::known(&FALSE)
+        } else if BOOLEAN == name {
+            Self::known(&BOOLEAN)
+        } else if INTEGER == name {
+            Self::known(&INTEGER)
+        } else {
+            for (i, c) in name.char_indices() {
+                if i == 0 {
+                    if !c.is_ascii_alphabetic() || !c.is_ascii_uppercase() {
+                        return Errors::err(loc, SymbolError::InvalidTypeInitial(c));
+                    }
+                } else {
+                    if !c.is_ascii_alphanumeric() {
+                        return Errors::err(loc, SymbolError::InvalidChar(i, c));
+                    }
                 }
             }
+            Ok(TSymbol { name })
         }
-        Ok(Self {
-            inner: InnerTSym::Other(name),
-        })
     }
 
-    fn as_str(&self) -> &str {
-        match &self.inner {
-            InnerTSym::None => "None",
-            InnerTSym::True => "True",
-            InnerTSym::False => "False",
-            InnerTSym::Boolean => "Boolean",
-            InnerTSym::Integer => "Integer",
-            InnerTSym::Other(s) => s.as_str(),
-        }
+    pub(crate) fn is_none(&self) -> bool {
+        NONE == self.name
+    }
+
+    pub(crate) fn is_true(&self) -> bool {
+        TRUE == self.name
+    }
+
+    pub(crate) fn is_false(&self) -> bool {
+        FALSE == self.name
+    }
+
+    pub(crate) fn is_boolean(&self) -> bool {
+        BOOLEAN == self.name
+    }
+
+    pub(crate) fn is_integer(&self) -> bool {
+        INTEGER == self.name
+    }
+
+    pub(crate) fn is_well_known(&self) -> bool {
+        self.is_none()
+            || self.is_true()
+            || self.is_false()
+            || self.is_boolean()
+            || self.is_integer()
     }
 }
 
 impl fmt::Display for TSymbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.as_str().fmt(f)
+        f.write_str(&self.name)
     }
 }
 
@@ -163,67 +189,42 @@ impl fmt::Debug for TSymbol {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-enum InnerPath {
-    Empty,
-    Single(Symbol),
-    Multi(Arc<Vec<Symbol>>),
-}
+impl Sym for TSymbol {}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ModulePath {
-    path: InnerPath,
+    path: Arc<Vec<Symbol>>,
 }
 
 impl ModulePath {
-    pub(crate) const fn empty() -> Self {
+    pub(crate) fn new(path: Vec<Symbol>) -> Self {
         ModulePath {
-            path: InnerPath::Empty,
+            path: Arc::new(path),
         }
     }
 
-    pub(crate) const fn single(symbol: Symbol) -> Self {
-        ModulePath {
-            path: InnerPath::Single(symbol),
-        }
+    pub(crate) fn empty() -> Self {
+        Self::new(Default::default())
     }
 
-    pub(crate) fn new(mut path: Vec<Symbol>) -> Self {
-        if path.is_empty() {
-            Self::empty()
-        } else if path.len() == 1 {
-            Self::single(path.pop().unwrap())
-        } else {
-            ModulePath {
-                path: InnerPath::Multi(Arc::new(path)),
-            }
-        }
+    pub(crate) fn single(symbol: Symbol) -> Self {
+        Self::new(vec![symbol])
     }
 
     pub(crate) fn is_empty(&self) -> bool {
-        if let InnerPath::Empty = self.path {
-            true
-        } else {
-            false
-        }
+        self.path.is_empty()
     }
 }
 
 impl fmt::Display for ModulePath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.path {
-            InnerPath::Empty => Ok(()),
-            InnerPath::Single(s) => s.fmt(f),
-            InnerPath::Multi(path) => {
-                for (i, id) in path.iter().enumerate() {
-                    if i > 0 {
-                        f.write_str("::")?
-                    }
-                    id.fmt(f)?
-                }
-                Ok(())
+        for (i, id) in self.path.iter().enumerate() {
+            if i > 0 {
+                separator(f)?
             }
+            id.fmt(f)?
         }
+        Ok(())
     }
 }
 
@@ -234,166 +235,90 @@ impl fmt::Debug for ModulePath {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-struct TL<T> {
+pub struct FQ<T: Sym> {
     pkg: PkgId,
     path: ModulePath,
+    memberOf: Option<TSymbol>,
     symbol: T,
 }
 
-impl<T: Clone> TL<T> {
-    fn with_pkg(&self, pkg: PkgId) -> Self {
-        TL {
+impl<T: Sym> FQ<T> {
+    pub(crate) fn is_std(&self) -> bool {
+        0 == self.pkg.id && self.path.is_empty()
+    }
+
+    pub(crate) fn top_level(pkg: PkgId, path: ModulePath, symbol: T) -> Self {
+        FQ {
             pkg,
-            path: self.path.clone(),
-            symbol: self.symbol.clone(),
+            path,
+            memberOf: None,
+            symbol,
         }
     }
-}
 
-impl<T: fmt::Display> fmt::Display for TL<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.pkg.fmt(f)?;
-        if !self.path.is_empty() {
-            self.path.fmt(f)?;
-            f.write_str("::")?;
-        }
-        self.symbol.fmt(f)
-    }
-}
-
-impl<T: fmt::Display> fmt::Debug for TL<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-enum InnerFQ<T> {
-    TopLevel(TL<T>),
-    Member(TL<TSymbol>, T),
-}
-
-impl<T: Clone> InnerFQ<T> {
-    fn with_pkg(&self, pkg: PkgId) -> Self {
-        match self {
-            Self::TopLevel(t) => Self::TopLevel(t.with_pkg(pkg)),
-            Self::Member(t, s) => Self::Member(t.with_pkg(pkg), s.clone()),
+    pub(crate) fn member(pkg: PkgId, path: ModulePath, memberOf: TSymbol, symbol: T) -> Self {
+        FQ {
+            pkg,
+            path,
+            memberOf: Some(memberOf),
+            symbol,
         }
     }
-}
 
-impl<T: fmt::Display> fmt::Display for InnerFQ<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            InnerFQ::TopLevel(t) => t.fmt(f),
-            InnerFQ::Member(t, s) => {
-                t.fmt(f)?;
-                f.write_str("::")?;
-                s.fmt(f)
+    fn with_pkg(self, pkg: PkgId) -> Self {
+        if pkg == self.pkg {
+            self
+        } else {
+            FQ {
+                pkg,
+                path: self.path,
+                memberOf: self.memberOf,
+                symbol: self.symbol,
             }
         }
     }
 }
 
-impl<T: fmt::Display> fmt::Debug for InnerFQ<T> {
+impl<T: Sym> fmt::Display for FQ<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.pkg.fmt(f)?;
+        add_segment(f, &self.path)?;
+        if let Some(m) = &self.memberOf {
+            add_segment(f, m)?;
+        }
+        add_segment(f, &self.symbol)
+    }
+}
+
+impl<T: Sym> fmt::Debug for FQ<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct FQSymbol {
-    inner: InnerFQ<Symbol>,
-}
-
-impl FQSymbol {
-    pub fn top_level(pkg: PkgId, path: ModulePath, symbol: Symbol) -> Self {
-        Self {
-            inner: InnerFQ::TopLevel(TL { pkg, path, symbol }),
-        }
+impl FQ<TSymbol> {
+    pub(crate) fn is_none(&self) -> bool {
+        self.symbol.is_none()
     }
 
-    pub fn std(symbol: Symbol) -> Self {
-        Self::top_level(PkgId::Std, ModulePath::empty(), symbol)
+    pub(crate) fn is_true(&self) -> bool {
+        self.symbol.is_true()
     }
 
-    pub fn member(pkg: PkgId, path: ModulePath, parent: TSymbol, symbol: Symbol) -> Self {
-        Self {
-            inner: InnerFQ::Member(
-                TL {
-                    pkg,
-                    path,
-                    symbol: parent,
-                },
-                symbol,
-            ),
-        }
+    pub(crate) fn is_false(&self) -> bool {
+        self.symbol.is_false()
     }
 
-    pub(crate) fn with_pkg(&self, pkg: PkgId) -> Self {
-        FQSymbol {
-            inner: self.inner.with_pkg(pkg),
-        }
-    }
-}
-
-impl fmt::Display for FQSymbol {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner.fmt(f)
-    }
-}
-
-impl fmt::Debug for FQSymbol {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        debug(f, "FQSymbol", &self.inner)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct FQTSymbol {
-    inner: InnerFQ<TSymbol>,
-}
-
-impl FQTSymbol {
-    pub fn top_level(pkg: PkgId, path: ModulePath, symbol: TSymbol) -> Self {
-        FQTSymbol {
-            inner: InnerFQ::TopLevel(TL { pkg, path, symbol }),
-        }
+    pub(crate) fn is_boolean(&self) -> bool {
+        self.symbol.is_boolean()
     }
 
-    pub fn std(symbol: TSymbol) -> Self {
-        Self::top_level(PkgId::Std, ModulePath::empty(), symbol)
+    pub(crate) fn is_integer(&self) -> bool {
+        self.symbol.is_integer()
     }
 
-    pub fn member(pkg: PkgId, path: ModulePath, parent: TSymbol, symbol: TSymbol) -> Self {
-        Self {
-            inner: InnerFQ::Member(
-                TL {
-                    pkg,
-                    path,
-                    symbol: parent,
-                },
-                symbol,
-            ),
-        }
-    }
-
-    pub(crate) fn with_pkg(&self, pkg: PkgId) -> Self {
-        FQTSymbol {
-            inner: self.inner.with_pkg(pkg),
-        }
-    }
-}
-
-impl fmt::Display for FQTSymbol {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner.fmt(f)
-    }
-}
-
-impl fmt::Debug for FQTSymbol {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        debug(f, "FQTSymbol", &self.inner)
+    pub(crate) fn is_well_known(&self) -> bool {
+        self.symbol.is_well_known()
     }
 }
 
