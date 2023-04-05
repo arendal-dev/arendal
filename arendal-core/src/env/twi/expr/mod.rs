@@ -19,7 +19,7 @@ fn err(expr: &TypedExpr, error: RuntimeError) -> Result<Value> {
 
 pub(super) fn eval(interpreter: &mut Interpreter, expr: &TypedExpr) -> Result<Value> {
     match expr.borrow_expr() {
-        LitInteger(i) => integer(i.clone()),
+        Value(v) => Ok(v.clone()),
         Val(id) => match interpreter.get_val(id) {
             Some(value) => Ok(value),
             None => err(expr, RuntimeError::UknownVal(id.clone())),

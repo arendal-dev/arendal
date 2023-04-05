@@ -11,7 +11,7 @@ fn builder(input: &Expression) -> TExprBuilder {
 
 pub(super) fn check(module: &mut Module, input: &Expression) -> Result<TypedExpr> {
     match input.borrow_expr() {
-        Expr::LitInteger(value) => Ok(builder(input).lit_integer(value.clone())),
+        Expr::LitInteger(value) => Ok(builder(input).val_integer(value.clone())),
         Expr::Symbol(id) => match module.get_val(id) {
             Some(tipo) => Ok(builder(input).val(id.clone(), tipo.clone())),
             None => error(input, TypeError::UnknownIdentifier(id.clone())),

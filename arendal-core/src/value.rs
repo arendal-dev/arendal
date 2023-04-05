@@ -29,7 +29,7 @@ impl Value {
         }
     }
 
-    pub fn get_type(&self) -> Type {
+    pub fn clone_type(&self) -> Type {
         match self {
             Self::None => Type::None,
             Self::True => Type::True,

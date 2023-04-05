@@ -17,7 +17,7 @@ fn eval_ok(input: TypedExpr, result: Value) {
 
 #[test]
 fn integer() {
-    eval_ok(B.lit_i64(1234), Value::int64(1234));
+    eval_ok(B.val_i64(1234), Value::int64(1234));
 }
 
 #[test]
@@ -28,7 +28,7 @@ fn add1() {
 #[test]
 fn add2() {
     eval_ok(
-        B.add(Type::Integer, B.lit_i64(3), B.add_i64(1, 2)),
+        B.add(Type::Integer, B.val_i64(3), B.add_i64(1, 2)),
         Value::int64(6),
     );
 }
@@ -36,7 +36,7 @@ fn add2() {
 #[test]
 fn add_sub() {
     eval_ok(
-        B.sub(Type::Integer, B.lit_i64(3), B.add_i64(1, 2)),
+        B.sub(Type::Integer, B.val_i64(3), B.add_i64(1, 2)),
         Value::int64(0),
     );
 }

@@ -3,6 +3,7 @@ use crate::ast::{BinaryOp, UnaryOp};
 use crate::error::Loc;
 use crate::symbol::Symbol;
 use crate::types::Type;
+use crate::value::Value;
 use std::fmt;
 use std::rc::Rc;
 
@@ -74,7 +75,7 @@ impl fmt::Debug for TypedExpr {
 
 #[derive(Debug)]
 pub enum TExpr {
-    LitInteger(Integer),
+    Value(Value),
     Val(Symbol),
     Assignment(Symbol, TypedExpr),
     Unary(UnaryOp, TypedExpr),
@@ -90,12 +91,16 @@ impl TExprBuilder {
         TExprBuilder { loc }
     }
 
-    pub fn lit_integer(&self, value: Integer) -> TypedExpr {
-        TypedExpr::new(self.loc.clone(), Type::Integer, TExpr::LitInteger(value))
+    pub fn value(&self, value: Value) -> TypedExpr {
+        TypedExpr::new(self.loc.clone(), value.clone_type(), TExpr::Value(value))
     }
 
-    pub fn lit_i64(&self, value: i64) -> TypedExpr {
-        self.lit_integer(value.into())
+    pub fn val_integer(&self, value: Integer) -> TypedExpr {
+        self.value(Value::Integer(value))
+    }
+
+    pub fn val_i64(&self, value: i64) -> TypedExpr {
+        self.val_integer(value.into())
     }
 
     pub fn val(&self, id: Symbol, tipo: Type) -> TypedExpr {
@@ -129,7 +134,7 @@ impl TExprBuilder {
     }
 
     pub fn add_i64(&self, value1: i64, value2: i64) -> TypedExpr {
-        self.add(Type::Integer, self.lit_i64(value1), self.lit_i64(value2))
+        self.add(Type::Integer, self.val_i64(value1), self.val_i64(value2))
     }
 
     pub fn sub(&self, tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
@@ -137,6 +142,6 @@ impl TExprBuilder {
     }
 
     pub fn sub_i64(&self, value1: i64, value2: i64) -> TypedExpr {
-        self.sub(Type::Integer, self.lit_i64(value1), self.lit_i64(value2))
+        self.sub(Type::Integer, self.val_i64(value1), self.val_i64(value2))
     }
 }
