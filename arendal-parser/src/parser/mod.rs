@@ -6,7 +6,6 @@ use crate::lexer::{lex, Lexeme, LexemeKind, Lexemes};
 // Parses the input as single expression
 pub fn parse_expression(input: &str) -> Result<Expression> {
     let lexemes = lex(input)?;
-    // println!("{:?}", lexemes);
     Parser::new(lexemes).parse_expression()
 }
 
@@ -80,7 +79,7 @@ impl Parser {
 
     // Parses the input as a single expression.
     fn parse_expression(mut self) -> Result<Expression> {
-        if (self.is_done()) {
+        if self.is_done() {
             return self.empty_input();
         }
         let expr = expr::parse(&mut self)?;

@@ -4,7 +4,7 @@ use super::{
     Enclosure, Inner, Keyword, Lexeme, LexemeKind, Lexemes, Result, Symbol, TSymbol, Token,
     TokenKind,
 };
-use crate::ArcStr;
+use core::ArcStr;
 
 fn assert_eq_kinds(actual: &Lexemes, expected: &Lexemes) {
     assert_eq!(actual.lexemes.len(), expected.lexemes.len());

@@ -57,14 +57,6 @@ impl Lexemes {
     pub(crate) fn get(&self, index: usize) -> Option<Lexeme> {
         self.lexemes.get(index).cloned()
     }
-
-    pub(crate) fn merge<'a, I: IntoIterator<Item = Lexemes>>(values: I) -> Self {
-        let mut lexemes: Vec<Lexeme> = Default::default();
-        values
-            .into_iter()
-            .for_each(|v| v.lexemes.iter().for_each(|l| lexemes.push(l.clone())));
-        Self::new(&mut lexemes)
-    }
 }
 
 impl fmt::Debug for Lexemes {
@@ -135,11 +127,6 @@ impl Lexer {
             lexeme_start: 0,
             enclosures: Default::default(),
         }
-    }
-
-    // Returns true if we have reached the end of the input
-    fn is_done(&self) -> bool {
-        !self.input.contains(self.index)
     }
 
     // Advances the index the provided number of tokens.

@@ -15,11 +15,6 @@ pub(crate) struct Tokens {
 
 impl Tokens {
     #[inline]
-    pub fn contains(&self, index: usize) -> bool {
-        index < self.tokens.len()
-    }
-
-    #[inline]
     pub fn get(&self, index: usize) -> Option<Token> {
         self.tokens.get(index).cloned()
     }
@@ -115,6 +110,7 @@ impl TokenKind {
         }
     }
 
+    #[cfg(test)]
     fn bytes(&self) -> usize {
         match self {
             TokenKind::Spaces(n) => *n,
@@ -202,7 +198,7 @@ impl Tokenizer {
 
     // Creates a substring of the input that starts at the current position, includes the initial
     // char and any subsequent char until the predicate is false.
-    fn substr_while<P>(&self, initial: char, predicate: P) -> Substr
+    fn substr_while<P>(&self, predicate: P) -> Substr
     where
         P: Fn(char) -> bool,
     {
@@ -259,9 +255,7 @@ impl Tokenizer {
 
     fn add_digits(&mut self, c: char) -> bool {
         if c.is_ascii_digit() {
-            self.add_token(TokenKind::Digits(
-                self.substr_while(c, |n| n.is_ascii_digit()),
-            ))
+            self.add_token(TokenKind::Digits(self.substr_while(|n| n.is_ascii_digit())))
         } else {
             false
         }
@@ -269,7 +263,7 @@ impl Tokenizer {
 
     fn add_word(&mut self, c: char) -> bool {
         if c.is_ascii_alphabetic() {
-            let word = self.substr_while(c, |n| n.is_ascii_alphanumeric());
+            let word = self.substr_while(|n| n.is_ascii_alphanumeric());
             self.add_token(TokenKind::Word(word))
         } else {
             false

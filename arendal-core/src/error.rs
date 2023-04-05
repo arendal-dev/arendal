@@ -121,7 +121,7 @@ impl ErrorAcc {
         }
     }
 
-    pub fn add_result<T>(&mut self, mut result: Result<T>) -> Option<T> {
+    pub fn add_result<T>(&mut self, result: Result<T>) -> Option<T> {
         match result {
             Ok(value) => Some(value),
             Err(others) => {
