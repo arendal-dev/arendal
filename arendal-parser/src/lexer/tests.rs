@@ -33,7 +33,7 @@ impl TestCase {
     fn token(mut self, kind: LexemeKind) -> Self {
         self.lexemes.push(Lexeme::new(Inner {
             token: Token {
-                pos: Pos::new(self.input.clone()),
+                loc: Loc::input(self.input.clone(), 0),
                 kind: TokenKind::Assignment,
             },
             kind,

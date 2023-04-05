@@ -33,7 +33,7 @@ impl fmt::Debug for Tokens {
 
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct Token {
-    pub(crate) pos: Pos, // Starting position of the token
+    pub(crate) loc: Loc, // Starting position of the token
     pub(crate) kind: TokenKind,
 }
 
@@ -43,13 +43,13 @@ impl Token {
     }
 
     pub fn loc(&self) -> Loc {
-        self.pos.clone().into()
+        self.loc.clone().into()
     }
 }
 
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}@{:?}", self.kind, self.pos)
+        write!(f, "{:?}@{:?}", self.kind, self.loc)
     }
 }
 
@@ -281,7 +281,7 @@ impl Tokenizer {
     fn add_token(&mut self, kind: TokenKind) -> bool {
         let chars = kind.chars();
         self.tokens.tokens.push(Token {
-            pos: self.pos.clone(),
+            loc: self.pos.clone().into(),
             kind,
         });
         self.consume_chars(chars);

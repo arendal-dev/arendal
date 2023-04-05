@@ -1,9 +1,9 @@
-use super::{ArcStr, Enclosure, NewLine, Pos, Token, TokenKind, Tokens};
+use super::{ArcStr, Enclosure, Loc, NewLine, Token, TokenKind, Tokens};
 use NewLine::*;
 
 struct TestCase {
     input: ArcStr,
-    pos: Pos,
+    index: usize,
     tokens: Tokens,
 }
 
@@ -12,7 +12,7 @@ impl TestCase {
         let arcstr = ArcStr::from(input);
         TestCase {
             input: arcstr.clone(),
-            pos: Pos::new(arcstr),
+            index: 0,
             tokens: Default::default(),
         }
     }
@@ -20,10 +20,10 @@ impl TestCase {
     fn token(mut self, kind: TokenKind) -> Self {
         let bytes = kind.bytes();
         self.tokens.tokens.push(Token {
-            pos: self.pos.clone(),
+            loc: Loc::input(self.input.clone(), self.index),
             kind,
         });
-        self.pos.advance(bytes);
+        self.index += bytes;
         self
     }
 
