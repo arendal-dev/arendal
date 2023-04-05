@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{Enclosure, Pos};
+use super::Enclosure;
 use core::error::{ErrorAcc, Loc, Result};
 use core::{ArcStr, Substr};
 
@@ -131,23 +131,24 @@ impl TokenKind {
 struct Tokenizer {
     chars: Vec<char>,
     tokens: Tokens,
-    pos: Pos,          // Current position
+    input: ArcStr,
+    byte_index: usize, // Current byte index from the beginning of the input
     char_index: usize, // Current char index from the beginning of the input
 }
 
 impl Tokenizer {
     fn new(input: ArcStr) -> Tokenizer {
-        let pos = Pos::new(input.clone());
         Tokenizer {
             chars: input.chars().collect(),
             tokens: Default::default(),
-            pos,
+            input,
+            byte_index: 0,
             char_index: 0,
         }
     }
 
-    pub fn loc(&self) -> Loc {
-        self.pos.clone().into()
+    fn loc(&self) -> Loc {
+        Loc::input(self.input.clone(), self.byte_index)
     }
 
     // Returns true if we have reached the end of the input
@@ -157,7 +158,7 @@ impl Tokenizer {
 
     // Consumes one char, advancing the indices accordingly.
     fn consume(&mut self) {
-        self.pos.advance_char(self.chars[self.char_index]);
+        self.byte_index += self.chars[self.char_index].len_utf8();
         self.char_index += 1;
     }
 
@@ -205,25 +206,25 @@ impl Tokenizer {
     where
         P: Fn(char) -> bool,
     {
-        let mut n = 1;
-        let mut pos = self.pos.clone();
-        pos.advance_char(initial);
-        while let Some(c) = self.peek_ahead(n) {
+        let mut char_index = self.char_index;
+        let mut to_index = self.byte_index + self.chars[char_index].len_utf8();
+        char_index += 1;
+        while let Some(c) = self.peek_ahead(char_index - self.char_index) {
             if predicate(c) {
-                n += 1;
-                pos.advance_char(c);
+                to_index += self.chars[char_index].len_utf8();
+                char_index += 1;
             } else {
                 break;
             }
         }
-        self.pos.str_to(&pos)
+        self.input.substr(self.byte_index..to_index)
     }
 
     fn tokenize(mut self) -> Result<Tokens> {
         let mut errors: ErrorAcc = Default::default();
         while let Some(c) = self.peek() {
             if !self.add_known_first_char(c) && !self.add_digits(c) && !self.add_word(c) {
-                errors.add(self.pos.clone().into(), Error::UnexpectedChar(c));
+                errors.add(self.loc(), Error::UnexpectedChar(c));
                 self.consume();
             }
         }
@@ -268,9 +269,8 @@ impl Tokenizer {
 
     fn add_word(&mut self, c: char) -> bool {
         if c.is_ascii_alphabetic() {
-            self.add_token(TokenKind::Word(
-                self.substr_while(c, |n| n.is_ascii_alphanumeric()),
-            ))
+            let word = self.substr_while(c, |n| n.is_ascii_alphanumeric());
+            self.add_token(TokenKind::Word(word))
         } else {
             false
         }
@@ -281,7 +281,7 @@ impl Tokenizer {
     fn add_token(&mut self, kind: TokenKind) -> bool {
         let chars = kind.chars();
         self.tokens.tokens.push(Token {
-            loc: self.pos.clone().into(),
+            loc: self.loc(),
             kind,
         });
         self.consume_chars(chars);
