@@ -76,7 +76,7 @@ impl fmt::Debug for TypedExpr {
 #[derive(Debug)]
 pub enum TExpr {
     Value(Value),
-    Val(Symbol),
+    LocalSymbol(Symbol),
     Assignment(Symbol, TypedExpr),
     Unary(UnaryOp, TypedExpr),
     Binary(BinaryOp, TypedExpr, TypedExpr),
@@ -104,7 +104,7 @@ impl TExprBuilder {
     }
 
     pub fn val(&self, id: Symbol, tipo: Type) -> TypedExpr {
-        TypedExpr::new(self.loc.clone(), tipo, TExpr::Val(id))
+        TypedExpr::new(self.loc.clone(), tipo, TExpr::LocalSymbol(id))
     }
 
     pub fn assignment(&self, id: Symbol, expr: TypedExpr) -> TypedExpr {

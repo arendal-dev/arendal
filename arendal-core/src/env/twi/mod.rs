@@ -59,7 +59,7 @@ impl Interpreter {
     pub fn expression(&mut self, expr: &TypedExpr) -> Result<Value> {
         match expr.borrow_expr() {
             TExpr::Value(v) => Ok(v.clone()),
-            TExpr::Val(id) => match self.get_val(id) {
+            TExpr::LocalSymbol(id) => match self.get_val(id) {
                 Some(value) => Ok(value),
                 None => err(expr, RuntimeError::UknownVal(id.clone())),
             },
