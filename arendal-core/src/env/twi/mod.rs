@@ -1,9 +1,9 @@
-mod expr;
-
-use crate::error::{Error, Result};
+use crate::ast::BinaryOp;
+use crate::error::{Error, Errors, Result};
 use crate::symbol::Symbol;
-use crate::typed::TypedExpr;
+use crate::typed::{TExpr, TypedExpr};
 use crate::value::Value;
+use crate::Integer;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Default)]
@@ -57,8 +57,69 @@ impl Interpreter {
     }
 
     pub fn expression(&mut self, expr: &TypedExpr) -> Result<Value> {
-        expr::eval(self, &expr)
+        match expr.borrow_expr() {
+            TExpr::Value(v) => Ok(v.clone()),
+            TExpr::Val(id) => match self.get_val(id) {
+                Some(value) => Ok(value),
+                None => err(expr, RuntimeError::UknownVal(id.clone())),
+            },
+            TExpr::Assignment(id, expr) => {
+                let value = self.expression(expr)?;
+                self.set_val(id.clone(), value.clone());
+                Ok(value)
+            }
+            TExpr::Binary(op, e1, e2) => self.binary(*op, e1, e2),
+            _ => err(expr, RuntimeError::NotImplemented),
+        }
     }
+
+    fn binary(&mut self, op: BinaryOp, e1: &TypedExpr, e2: &TypedExpr) -> Result<Value> {
+        let v1 = self.expression(e1)?;
+        match op {
+            BinaryOp::Add => self.add(v1, e2),
+            BinaryOp::Sub => self.sub(v1, e2),
+            BinaryOp::Mul => self.mul(v1, e2),
+            BinaryOp::Div => self.div(v1, e2),
+            _ => err(e1, RuntimeError::NotImplemented),
+        }
+    }
+
+    fn add(&mut self, v1: Value, e2: &TypedExpr) -> Result<Value> {
+        let v2 = self.expression(e2)?;
+        // We only have integers for now
+        integer(v1.as_integer().unwrap() + v2.as_integer().unwrap())
+    }
+
+    fn sub(&mut self, v1: Value, e2: &TypedExpr) -> Result<Value> {
+        let v2 = self.expression(e2)?;
+        // We only have integers for now
+        integer(v1.as_integer().unwrap() - v2.as_integer().unwrap())
+    }
+
+    fn mul(&mut self, v1: Value, e2: &TypedExpr) -> Result<Value> {
+        let v2 = self.expression(e2)?;
+        // We only have integers for now
+        integer(v1.as_integer().unwrap() * v2.as_integer().unwrap())
+    }
+
+    fn div(&mut self, v1: Value, e2: &TypedExpr) -> Result<Value> {
+        let v2 = self.expression(e2)?;
+        // We only have integers for now
+        let i2 = v2.as_integer().unwrap();
+        if i2.is_zero() {
+            err(e2, RuntimeError::DivisionByZero)
+        } else {
+            integer(v1.as_integer().unwrap() / i2)
+        }
+    }
+}
+
+fn integer(value: Integer) -> Result<Value> {
+    Ok(Value::Integer(value))
+}
+
+fn err(expr: &TypedExpr, error: RuntimeError) -> Result<Value> {
+    Errors::err(expr.clone_loc(), error)
 }
 
 #[derive(Debug)]
@@ -69,3 +130,6 @@ pub enum RuntimeError {
 }
 
 impl Error for RuntimeError {}
+
+#[cfg(test)]
+mod tests;
