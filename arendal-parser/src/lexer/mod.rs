@@ -2,7 +2,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::Enclosure;
-use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
+use crate::tokenizer::{tokenize, NewLine, Token, TokenKind, Tokens};
 use core::error::{ErrorAcc, Loc, Result};
 use core::keyword::Keyword;
 use core::symbol::{Symbol, TSymbol};
@@ -13,15 +13,43 @@ pub(crate) fn lex(input: &str) -> Result<Lexemes> {
     Lexer::new(tokens).lex()
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub(crate) enum Separator {
+    Nothing,
+    Whitespace,
+    NewLine,
+}
+
+impl Separator {
+    fn add(self, other: Separator) -> Self {
+        match self {
+            Self::Nothing => other,
+            Self::Whitespace => {
+                if other == Self::NewLine {
+                    Self::NewLine
+                } else {
+                    self
+                }
+            }
+            Self::NewLine => self,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Lexeme {
     inner: Rc<Inner>,
 }
 
 impl Lexeme {
-    fn new(lexeme: Inner) -> Self {
+    fn new(separator: Separator, token: Token, kind: LexemeKind) -> Self {
+        let inner = Inner {
+            separator,
+            token: token,
+            kind,
+        };
         Lexeme {
-            inner: Rc::new(lexeme),
+            inner: Rc::new(inner),
         }
     }
 
@@ -31,6 +59,10 @@ impl Lexeme {
 
     pub fn loc(&self) -> Loc {
         self.inner.token.loc()
+    }
+
+    pub(crate) fn separator(&self) -> Separator {
+        self.inner.separator
     }
 }
 
@@ -67,13 +99,15 @@ impl fmt::Debug for Lexemes {
 
 #[derive(Clone, PartialEq, Eq)]
 struct Inner {
+    separator: Separator,
     token: Token, // Starting token of the lexeme
     kind: LexemeKind,
 }
 
 impl Inner {
-    fn new(token: &Token, kind: LexemeKind) -> Self {
+    fn new(separator: Separator, token: &Token, kind: LexemeKind) -> Self {
         Inner {
+            separator,
             token: token.clone(),
             kind,
         }
@@ -82,7 +116,7 @@ impl Inner {
 
 impl fmt::Debug for Inner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}[{:?}]", self.kind, self.token)
+        write!(f, "[{:?}]{:?}[{:?}]", self.separator, self.kind, self.token)
     }
 }
 
@@ -109,6 +143,7 @@ pub(crate) enum LexemeKind {
 }
 
 struct Lexer {
+    separator: Separator,
     input: Tokens,
     lexemes: Vec<Lexeme>,
     errors: ErrorAcc,
@@ -120,6 +155,7 @@ struct Lexer {
 impl Lexer {
     fn new(input: Tokens) -> Lexer {
         Lexer {
+            separator: Separator::NewLine,
             input,
             lexemes: Default::default(),
             errors: Default::default(),
@@ -145,12 +181,18 @@ impl Lexer {
     }
 
     fn lex(mut self) -> Result<Lexemes> {
+        self.separator = Separator::NewLine;
         while let Some(t) = self.peek() {
             self.lexeme_start = self.index;
             let loc = t.loc();
             match t.kind {
-                TokenKind::Tabs(_) | TokenKind::Spaces(_) | TokenKind::EndOfLine(_) => {
-                    self.advance_whitespace()
+                TokenKind::Tabs(_) | TokenKind::Spaces(_) => {
+                    self.advance_whitespace();
+                    self.separator = self.separator.add(Separator::Whitespace)
+                }
+                TokenKind::EndOfLine(_) => {
+                    self.advance_whitespace();
+                    self.separator = self.separator.add(Separator::NewLine)
                 }
                 TokenKind::Plus => self.add_lexeme(LexemeKind::Plus, 1),
                 TokenKind::Minus => self.add_lexeme(LexemeKind::Minus, 1),
@@ -179,11 +221,13 @@ impl Lexer {
     }
 
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
-        self.lexemes.push(Lexeme::new(Inner::new(
-            &self.input.get(self.lexeme_start).unwrap(),
+        self.lexemes.push(Lexeme::new(
+            self.separator,
+            self.input.get(self.lexeme_start).unwrap(),
             kind,
-        )));
+        ));
         self.advance(tokens);
+        self.separator = Separator::Nothing;
     }
 
     fn advance_whitespace(&mut self) {
