@@ -3,15 +3,11 @@ use std::sync::Arc;
 
 use crate::error::{Error, Errors, Loc, Result};
 use crate::keyword::Keyword;
+use crate::symbols::TSymbols;
 use crate::{literal, ArcStr};
 
 static STD: ArcStr = literal!("std");
 static PKG: ArcStr = literal!("pkg");
-pub(crate) static NONE: ArcStr = literal!("None");
-pub(crate) static TRUE: ArcStr = literal!("True");
-pub(crate) static FALSE: ArcStr = literal!("False");
-pub(crate) static BOOLEAN: ArcStr = literal!("Boolean");
-pub(crate) static INTEGER: ArcStr = literal!("Integer");
 
 fn separator(f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.write_str("::")
@@ -64,7 +60,11 @@ impl fmt::Debug for PkgId {
     }
 }
 
-pub trait Sym: fmt::Display + fmt::Debug {}
+#[derive(Clone, PartialEq, Eq, Hash)]
+enum Sym<T> {
+    Known(T),
+    Other(ArcStr),
+}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Symbol {
@@ -106,32 +106,22 @@ impl fmt::Debug for Symbol {
     }
 }
 
-impl Sym for Symbol {}
-
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TSymbol {
-    name: ArcStr,
+    sym: Sym<TSymbols>,
 }
 
 impl TSymbol {
-    fn known(name: &ArcStr) -> Result<Self> {
-        Ok(TSymbol { name: name.clone() })
+    pub(crate) fn known(s: TSymbols) -> Self {
+        TSymbol { sym: Sym::Known(s) }
     }
 
     pub fn new(loc: Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
             return Errors::err(loc, SymbolError::Empty);
         }
-        if NONE == name {
-            Self::known(&NONE)
-        } else if TRUE == name {
-            Self::known(&TRUE)
-        } else if FALSE == name {
-            Self::known(&FALSE)
-        } else if BOOLEAN == name {
-            Self::known(&BOOLEAN)
-        } else if INTEGER == name {
-            Self::known(&INTEGER)
+        if let Some(s) = TSymbols::parse(&name) {
+            Ok(Self::known(s))
         } else {
             for (i, c) in name.char_indices() {
                 if i == 0 {
@@ -144,42 +134,43 @@ impl TSymbol {
                     }
                 }
             }
-            Ok(TSymbol { name })
+            Ok(TSymbol {
+                sym: Sym::Other(name),
+            })
         }
     }
 
     pub(crate) fn is_none(&self) -> bool {
-        NONE == self.name
+        matches!(self.sym, Sym::Known(TSymbols::None))
     }
 
     pub(crate) fn is_true(&self) -> bool {
-        TRUE == self.name
+        matches!(self.sym, Sym::Known(TSymbols::True))
     }
 
     pub(crate) fn is_false(&self) -> bool {
-        FALSE == self.name
+        matches!(self.sym, Sym::Known(TSymbols::False))
     }
 
     pub(crate) fn is_boolean(&self) -> bool {
-        BOOLEAN == self.name
+        matches!(self.sym, Sym::Known(TSymbols::Boolean))
     }
 
     pub(crate) fn is_integer(&self) -> bool {
-        INTEGER == self.name
+        matches!(self.sym, Sym::Known(TSymbols::Integer))
     }
 
     pub(crate) fn is_well_known(&self) -> bool {
-        self.is_none()
-            || self.is_true()
-            || self.is_false()
-            || self.is_boolean()
-            || self.is_integer()
+        matches!(self.sym, Sym::Known(_))
     }
 }
 
 impl fmt::Display for TSymbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.name)
+        match &self.sym {
+            Sym::Known(s) => s.fmt(f),
+            Sym::Other(name) => f.write_str(name),
+        }
     }
 }
 
@@ -188,8 +179,6 @@ impl fmt::Debug for TSymbol {
         debug(f, "TSymbol", self)
     }
 }
-
-impl Sym for TSymbol {}
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ModulePath {
@@ -235,14 +224,14 @@ impl fmt::Debug for ModulePath {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct FQ<T: Sym> {
+pub struct FQ<T> {
     pkg: PkgId,
     path: ModulePath,
     memberOf: Option<TSymbol>,
     symbol: T,
 }
 
-impl<T: Sym> FQ<T> {
+impl<T> FQ<T> {
     pub(crate) fn is_std(&self) -> bool {
         0 == self.pkg.id && self.path.is_empty()
     }
@@ -279,7 +268,7 @@ impl<T: Sym> FQ<T> {
     }
 }
 
-impl<T: Sym> fmt::Display for FQ<T> {
+impl<T: Display> fmt::Display for FQ<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.pkg.fmt(f)?;
         add_segment(f, &self.path)?;
@@ -290,7 +279,7 @@ impl<T: Sym> fmt::Display for FQ<T> {
     }
 }
 
-impl<T: Sym> fmt::Debug for FQ<T> {
+impl<T: Display> fmt::Debug for FQ<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
