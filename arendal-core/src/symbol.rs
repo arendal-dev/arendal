@@ -1,9 +1,9 @@
+use phf::phf_map;
 use std::fmt::{self, Display, Write};
 use std::sync::Arc;
 
 use crate::error::{Error, Errors, Loc, Result};
 use crate::keyword::Keyword;
-use crate::symbols::TSymbols;
 use crate::{literal, ArcStr};
 
 static STD: ArcStr = literal!("std");
@@ -67,6 +67,11 @@ enum Sym<T> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Other {
+    name: ArcStr,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Symbol {
     name: ArcStr,
 }
@@ -107,21 +112,30 @@ impl fmt::Debug for Symbol {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct TSymbol {
-    sym: Sym<TSymbols>,
+pub enum TSymbol {
+    None,
+    True,
+    False,
+    Boolean,
+    Integer,
+    Other(Other),
 }
 
-impl TSymbol {
-    pub(crate) fn known(s: TSymbols) -> Self {
-        TSymbol { sym: Sym::Known(s) }
-    }
+static T_SYMBOLS: phf::Map<&'static str, TSymbol> = phf_map! {
+    "None" => TSymbol::None,
+    "True" => TSymbol::True,
+    "False" => TSymbol::False,
+    "Boolean" => TSymbol::Boolean,
+    "Integer" => TSymbol::Integer,
+};
 
+impl TSymbol {
     pub fn new(loc: Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
             return Errors::err(loc, SymbolError::Empty);
         }
-        if let Some(s) = TSymbols::parse(&name) {
-            Ok(Self::known(s))
+        if let Some(s) = T_SYMBOLS.get(&name) {
+            Ok(s.clone())
         } else {
             for (i, c) in name.char_indices() {
                 if i == 0 {
@@ -134,42 +148,24 @@ impl TSymbol {
                     }
                 }
             }
-            Ok(TSymbol {
-                sym: Sym::Other(name),
-            })
+            Ok(Self::Other(Other { name }))
         }
     }
 
-    pub(crate) fn is_none(&self) -> bool {
-        matches!(self.sym, Sym::Known(TSymbols::None))
-    }
-
-    pub(crate) fn is_true(&self) -> bool {
-        matches!(self.sym, Sym::Known(TSymbols::True))
-    }
-
-    pub(crate) fn is_false(&self) -> bool {
-        matches!(self.sym, Sym::Known(TSymbols::False))
-    }
-
-    pub(crate) fn is_boolean(&self) -> bool {
-        matches!(self.sym, Sym::Known(TSymbols::Boolean))
-    }
-
-    pub(crate) fn is_integer(&self) -> bool {
-        matches!(self.sym, Sym::Known(TSymbols::Integer))
-    }
-
-    pub(crate) fn is_well_known(&self) -> bool {
-        matches!(self.sym, Sym::Known(_))
+    pub(crate) fn is_known(&self) -> bool {
+        !matches!(self, Self::Other(_))
     }
 }
 
 impl fmt::Display for TSymbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.sym {
-            Sym::Known(s) => s.fmt(f),
-            Sym::Other(name) => f.write_str(name),
+        match self {
+            Self::None => f.write_str("None"),
+            Self::True => f.write_str("True"),
+            Self::False => f.write_str("False"),
+            Self::Boolean => f.write_str("Boolean"),
+            Self::Integer => f.write_str("Integer"),
+            Self::Other(o) => f.write_str(&o.name),
         }
     }
 }
@@ -287,27 +283,27 @@ impl<T: Display> fmt::Debug for FQ<T> {
 
 impl FQ<TSymbol> {
     pub(crate) fn is_none(&self) -> bool {
-        self.symbol.is_none()
+        matches!(self.symbol, TSymbol::None)
     }
 
     pub(crate) fn is_true(&self) -> bool {
-        self.symbol.is_true()
+        matches!(self.symbol, TSymbol::True)
     }
 
     pub(crate) fn is_false(&self) -> bool {
-        self.symbol.is_false()
+        matches!(self.symbol, TSymbol::False)
     }
 
     pub(crate) fn is_boolean(&self) -> bool {
-        self.symbol.is_boolean()
+        matches!(self.symbol, TSymbol::Boolean)
     }
 
     pub(crate) fn is_integer(&self) -> bool {
-        self.symbol.is_integer()
+        matches!(self.symbol, TSymbol::Integer)
     }
 
     pub(crate) fn is_well_known(&self) -> bool {
-        self.symbol.is_well_known()
+        !matches!(self.symbol, TSymbol::Other(_))
     }
 }
 
