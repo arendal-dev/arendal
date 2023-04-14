@@ -227,7 +227,7 @@ pub struct FQ<T> {
     symbol: T,
 }
 
-impl<T> FQ<T> {
+impl<T: Clone> FQ<T> {
     pub(crate) fn is_std(&self) -> bool {
         0 == self.pkg.id && self.path.is_empty()
     }
@@ -261,6 +261,10 @@ impl<T> FQ<T> {
                 symbol: self.symbol,
             }
         }
+    }
+
+    pub fn symbol(&self) -> T {
+        self.symbol.clone()
     }
 }
 

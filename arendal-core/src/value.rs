@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::types::{OtherType, Type};
+use crate::types::{Singleton, Type};
 use crate::Integer;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -9,7 +9,7 @@ pub enum Value {
     True,
     False,
     Integer(Integer),
-    Singleton(OtherType),
+    Singleton(Singleton),
 }
 
 impl Value {
