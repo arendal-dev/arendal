@@ -42,7 +42,6 @@ impl<T> Target<T> {
 #[derive(Debug, Default)]
 struct Symbols {
     symbols: HashMap<FQ<Symbol>, Target<SymbolKind>>,
-    tsymbols: HashMap<FQ<TSymbol>, Target<Type>>,
 }
 
 impl Symbols {
@@ -55,15 +54,6 @@ impl Symbols {
         }
     }
 
-    fn add_t(&mut self, loc: Loc, symbol: FQ<TSymbol>, target: Target<Type>) -> Result<()> {
-        if self.tsymbols.contains_key(&symbol) {
-            Errors::err(loc, EnvError::DuplicateTSymbol(symbol))
-        } else {
-            self.tsymbols.insert(symbol, target);
-            Ok(())
-        }
-    }
-
     fn append(&mut self, mut other: Symbols) -> Result<()> {
         let mut errors: ErrorAcc = Default::default();
         for symbol in other.symbols.keys() {
@@ -71,14 +61,40 @@ impl Symbols {
                 errors.add(Loc::none(), EnvError::DuplicateSymbol(symbol.clone()));
             }
         }
-        for symbol in other.tsymbols.keys() {
-            if self.tsymbols.contains_key(&symbol) {
-                errors.add(Loc::none(), EnvError::DuplicateTSymbol(symbol.clone()));
+        errors.to_unit_result()?;
+        self.symbols.extend(other.symbols.drain());
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+struct Types {
+    types: HashMap<FQ<TSymbol>, Target<Type>>,
+}
+
+impl Types {
+    fn add(&mut self, loc: Loc, visibility: Visibility, tipo: Type) -> Result<()> {
+        let fq = tipo.fq();
+        if self.types.contains_key(&fq) {
+            Errors::err(loc, EnvError::DuplicateType(tipo))
+        } else {
+            self.types.insert(fq, Target::new(visibility, tipo));
+            Ok(())
+        }
+    }
+
+    fn append(&mut self, mut other: Types) -> Result<()> {
+        let mut errors: ErrorAcc = Default::default();
+        for fq in other.types.keys() {
+            if self.types.contains_key(&fq) {
+                errors.add(
+                    Loc::none(),
+                    EnvError::DuplicateType(other.types[fq].target.clone()),
+                );
             }
         }
         errors.to_unit_result()?;
-        self.symbols.extend(other.symbols.drain());
-        self.tsymbols.extend(other.tsymbols.drain());
+        self.types.extend(other.types.drain());
         Ok(())
     }
 }
@@ -87,6 +103,7 @@ impl Symbols {
 struct Env {
     packages: HashMap<PkgId, HashSet<PkgId>>,
     symbols: Symbols,
+    types: Types,
 }
 
 #[derive(Debug, Clone)]
@@ -104,8 +121,7 @@ impl EnvRef {
 
     pub fn new_with_prelude() -> Self {
         let env = Self::new();
-        let pkg = env.create_package(PkgId::std());
-        prelude::load_prelude(&pkg).unwrap();
+        prelude::add_prelude_types(&mut env.env.borrow_mut().types).unwrap();
         env
     }
 
@@ -194,6 +210,7 @@ pub struct Module {
     path: ModulePath,
     dependencies: HashSet<ModulePath>,
     symbols: Symbols,
+    types: Types,
     val_scopes: Vec<ValScope>,
 }
 
@@ -204,6 +221,7 @@ impl Module {
             path,
             dependencies: Default::default(),
             symbols: Default::default(),
+            types: Default::default(),
             val_scopes: Default::default(),
         }
     }
@@ -215,11 +233,6 @@ impl Module {
     fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Target<SymbolKind>) -> Result<()> {
         let fq = FQ::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
         self.symbols.add(loc, fq, target)
-    }
-
-    fn add_tsymbol(&mut self, loc: Loc, symbol: TSymbol, target: Target<Type>) -> Result<()> {
-        let fq = FQ::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
-        self.symbols.add_t(loc, fq, target)
     }
 
     fn close(mut self) -> Result<PkgRef> {
@@ -291,7 +304,7 @@ impl Interactive {
 pub enum EnvError {
     DuplicateModule(PkgId, ModulePath),
     DuplicateSymbol(FQ<Symbol>),
-    DuplicateTSymbol(FQ<TSymbol>),
+    DuplicateType(Type),
     DuplicateVal(Symbol),
 }
 

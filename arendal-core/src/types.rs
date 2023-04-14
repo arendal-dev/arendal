@@ -56,10 +56,10 @@ impl Type {
     pub fn fq(&self) -> FQ<TSymbol> {
         match self {
             Self::None => Self::fq_std(TSymbol::None),
-            Self::True => Self::fq_std(TSymbol::None),
-            Self::False => Self::fq_std(TSymbol::None),
-            Self::Boolean => Self::fq_std(TSymbol::None),
-            Self::Integer => Self::fq_std(TSymbol::None),
+            Self::True => Self::fq_std(TSymbol::True),
+            Self::False => Self::fq_std(TSymbol::False),
+            Self::Boolean => Self::fq_std(TSymbol::Boolean),
+            Self::Integer => Self::fq_std(TSymbol::Integer),
             Self::Singleton(s) => s.symbol.clone(),
         }
     }
