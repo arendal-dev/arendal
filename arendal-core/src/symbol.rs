@@ -220,94 +220,74 @@ impl fmt::Debug for ModulePath {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct FQ<T> {
+struct FQInner<T> {
     pkg: PkgId,
     path: ModulePath,
     memberOf: Option<TSymbol>,
     symbol: T,
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct FQ<T> {
+    inner: Arc<FQInner<T>>,
+}
+
 impl<T: Clone> FQ<T> {
+    fn new(pkg: PkgId, path: ModulePath, memberOf: Option<TSymbol>, symbol: T) -> Self {
+        FQ {
+            inner: Arc::new(FQInner {
+                pkg,
+                path,
+                memberOf,
+                symbol,
+            }),
+        }
+    }
+
     pub(crate) fn is_std(&self) -> bool {
-        0 == self.pkg.id && self.path.is_empty()
+        0 == self.inner.pkg.id && self.inner.path.is_empty()
     }
 
     pub(crate) fn top_level(pkg: PkgId, path: ModulePath, symbol: T) -> Self {
-        FQ {
-            pkg,
-            path,
-            memberOf: None,
-            symbol,
-        }
+        Self::new(pkg, path, None, symbol)
     }
 
     pub(crate) fn member(pkg: PkgId, path: ModulePath, memberOf: TSymbol, symbol: T) -> Self {
-        FQ {
-            pkg,
-            path,
-            memberOf: Some(memberOf),
-            symbol,
-        }
+        Self::new(pkg, path, Some(memberOf), symbol)
     }
 
     fn with_pkg(self, pkg: PkgId) -> Self {
-        if pkg == self.pkg {
+        if pkg == self.inner.pkg {
             self
         } else {
-            FQ {
+            Self::new(
                 pkg,
-                path: self.path,
-                memberOf: self.memberOf,
-                symbol: self.symbol,
-            }
+                self.inner.path.clone(),
+                self.inner.memberOf.clone(),
+                self.inner.symbol.clone(),
+            )
         }
     }
 
     pub fn symbol(&self) -> T {
-        self.symbol.clone()
+        self.inner.symbol.clone()
     }
 }
 
 impl<T: Display> fmt::Display for FQ<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.pkg.fmt(f)?;
-        add_segment(f, &self.path)?;
-        if let Some(m) = &self.memberOf {
+        self.inner.pkg.fmt(f)?;
+        add_segment(f, &self.inner.path)?;
+        if let Some(m) = &self.inner.memberOf {
             add_segment(f, m)?;
         }
-        add_segment(f, &self.symbol)
+        add_segment(f, &self.inner.symbol)
     }
 }
 
 impl<T: Display> fmt::Debug for FQ<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
-    }
-}
-
-impl FQ<TSymbol> {
-    pub(crate) fn is_none(&self) -> bool {
-        matches!(self.symbol, TSymbol::None)
-    }
-
-    pub(crate) fn is_true(&self) -> bool {
-        matches!(self.symbol, TSymbol::True)
-    }
-
-    pub(crate) fn is_false(&self) -> bool {
-        matches!(self.symbol, TSymbol::False)
-    }
-
-    pub(crate) fn is_boolean(&self) -> bool {
-        matches!(self.symbol, TSymbol::Boolean)
-    }
-
-    pub(crate) fn is_integer(&self) -> bool {
-        matches!(self.symbol, TSymbol::Integer)
-    }
-
-    pub(crate) fn is_well_known(&self) -> bool {
-        !matches!(self.symbol, TSymbol::Other(_))
     }
 }
 
