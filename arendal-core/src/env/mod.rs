@@ -34,43 +34,25 @@ enum TSymbolKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Target {
+struct Target<T> {
     visibility: Visibility,
-    kind: SymbolKind,
+    target: T,
 }
 
-impl Target {
-    pub(crate) fn value(visibility: Visibility, value: Value) -> Self {
-        Target {
-            visibility,
-            kind: SymbolKind::Value(value),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct TTarget {
-    visibility: Visibility,
-    kind: TSymbolKind,
-}
-
-impl TTarget {
-    pub(crate) fn tipo(visibility: Visibility, tipo: Type) -> Self {
-        TTarget {
-            visibility,
-            kind: TSymbolKind::Type(tipo),
-        }
+impl<T> Target<T> {
+    fn new(visibility: Visibility, target: T) -> Self {
+        Target { visibility, target }
     }
 }
 
 #[derive(Debug, Default)]
 struct Symbols {
-    symbols: HashMap<FQ<Symbol>, Target>,
-    tsymbols: HashMap<FQ<TSymbol>, TTarget>,
+    symbols: HashMap<FQ<Symbol>, Target<SymbolKind>>,
+    tsymbols: HashMap<FQ<TSymbol>, Target<TSymbolKind>>,
 }
 
 impl Symbols {
-    fn add(&mut self, loc: Loc, symbol: FQ<Symbol>, target: Target) -> Result<()> {
+    fn add(&mut self, loc: Loc, symbol: FQ<Symbol>, target: Target<SymbolKind>) -> Result<()> {
         if self.symbols.contains_key(&symbol) {
             Errors::err(loc, EnvError::DuplicateSymbol(symbol))
         } else {
@@ -79,7 +61,7 @@ impl Symbols {
         }
     }
 
-    fn add_t(&mut self, loc: Loc, symbol: FQ<TSymbol>, target: TTarget) -> Result<()> {
+    fn add_t(&mut self, loc: Loc, symbol: FQ<TSymbol>, target: Target<TSymbolKind>) -> Result<()> {
         if self.tsymbols.contains_key(&symbol) {
             Errors::err(loc, EnvError::DuplicateTSymbol(symbol))
         } else {
@@ -236,12 +218,17 @@ impl Module {
         Interactive::new(self)
     }
 
-    fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Target) -> Result<()> {
+    fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Target<SymbolKind>) -> Result<()> {
         let fq = FQ::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
         self.symbols.add(loc, fq, target)
     }
 
-    fn add_tsymbol(&mut self, loc: Loc, symbol: TSymbol, target: TTarget) -> Result<()> {
+    fn add_tsymbol(
+        &mut self,
+        loc: Loc,
+        symbol: TSymbol,
+        target: Target<TSymbolKind>,
+    ) -> Result<()> {
         let fq = FQ::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
         self.symbols.add_t(loc, fq, target)
     }

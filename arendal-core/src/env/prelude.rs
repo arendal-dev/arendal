@@ -1,4 +1,4 @@
-use super::{Module, PkgRef, TTarget, Visibility};
+use super::{Module, PkgRef, TSymbolKind, Target, Visibility};
 use crate::{
     error::{Loc, Result},
     symbol::{ModulePath, TSymbol},
@@ -9,7 +9,7 @@ fn add_tl_tsymbol(module: &mut Module, symbol: TSymbol, tipo: Type) -> Result<()
     module.add_tsymbol(
         Loc::none(),
         symbol,
-        TTarget::tipo(Visibility::Exported, tipo),
+        Target::new(Visibility::Exported, TSymbolKind::Type(tipo)),
     )
 }
 
