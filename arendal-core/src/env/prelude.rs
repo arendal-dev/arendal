@@ -1,4 +1,4 @@
-use super::{Module, PkgRef, TSymbolKind, Target, Visibility};
+use super::{Module, PkgRef, Target, Visibility};
 use crate::{
     error::{Loc, Result},
     symbol::{ModulePath, TSymbol},
@@ -6,11 +6,7 @@ use crate::{
 };
 
 fn add_tl_tsymbol(module: &mut Module, symbol: TSymbol, tipo: Type) -> Result<()> {
-    module.add_tsymbol(
-        Loc::none(),
-        symbol,
-        Target::new(Visibility::Exported, TSymbolKind::Type(tipo)),
-    )
+    module.add_tsymbol(Loc::none(), symbol, Target::new(Visibility::Exported, tipo))
 }
 
 pub(super) fn load_prelude(pkg: &PkgRef) -> Result<()> {

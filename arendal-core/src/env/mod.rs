@@ -6,7 +6,6 @@ use crate::{
     ast::Expression,
     error::{Error, ErrorAcc, Errors, Loc, Result},
     symbol::{ModulePath, PkgId, Symbol, TSymbol, FQ},
-    typed::TypedExpr,
     types::Type,
     value::Value,
 };
@@ -29,11 +28,6 @@ enum SymbolKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum TSymbolKind {
-    Type(Type),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 struct Target<T> {
     visibility: Visibility,
     target: T,
@@ -48,7 +42,7 @@ impl<T> Target<T> {
 #[derive(Debug, Default)]
 struct Symbols {
     symbols: HashMap<FQ<Symbol>, Target<SymbolKind>>,
-    tsymbols: HashMap<FQ<TSymbol>, Target<TSymbolKind>>,
+    tsymbols: HashMap<FQ<TSymbol>, Target<Type>>,
 }
 
 impl Symbols {
@@ -61,7 +55,7 @@ impl Symbols {
         }
     }
 
-    fn add_t(&mut self, loc: Loc, symbol: FQ<TSymbol>, target: Target<TSymbolKind>) -> Result<()> {
+    fn add_t(&mut self, loc: Loc, symbol: FQ<TSymbol>, target: Target<Type>) -> Result<()> {
         if self.tsymbols.contains_key(&symbol) {
             Errors::err(loc, EnvError::DuplicateTSymbol(symbol))
         } else {
@@ -223,12 +217,7 @@ impl Module {
         self.symbols.add(loc, fq, target)
     }
 
-    fn add_tsymbol(
-        &mut self,
-        loc: Loc,
-        symbol: TSymbol,
-        target: Target<TSymbolKind>,
-    ) -> Result<()> {
+    fn add_tsymbol(&mut self, loc: Loc, symbol: TSymbol, target: Target<Type>) -> Result<()> {
         let fq = FQ::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
         self.symbols.add_t(loc, fq, target)
     }
