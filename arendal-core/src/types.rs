@@ -50,7 +50,7 @@ impl Type {
     }
 
     fn fq_std(symbol: TSymbol) -> FQ<TSymbol> {
-        FQ::top_level(Pkg::std(), ModulePath::empty(), symbol)
+        FQ::top_level(Pkg::Std, ModulePath::empty(), symbol)
     }
 
     pub fn fq(&self) -> FQ<TSymbol> {

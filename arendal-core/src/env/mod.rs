@@ -130,7 +130,7 @@ impl EnvRef {
     }
 
     pub fn empty_local_module(&self) -> Result<Module> {
-        self.create_package(Pkg::local())
+        self.create_package(Pkg::Local)
             .create_module(Loc::none(), ModulePath::empty())
     }
 }

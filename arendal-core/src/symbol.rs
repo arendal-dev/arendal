@@ -3,6 +3,7 @@ use std::fmt::{self, Display, Write};
 use std::sync::Arc;
 
 use crate::error::{Error, Errors, Loc, Result};
+use crate::id::Id;
 use crate::keyword::Keyword;
 use crate::{literal, ArcStr};
 
@@ -25,38 +26,26 @@ fn debug(f: &mut fmt::Formatter<'_>, name: &str, it: &dyn fmt::Display) -> fmt::
     f.write_char(')')
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Pkg {
-    id: u32,
-}
-
-impl Pkg {
-    pub fn new(id: u32) -> Self {
-        Pkg { id }
-    }
-
-    pub fn std() -> Self {
-        Self::new(0)
-    }
-
-    pub fn local() -> Self {
-        Self::new(1)
-    }
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum Pkg {
+    Std,
+    Local,
+    External(Id),
 }
 
 impl fmt::Display for Pkg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.id {
-            0 => f.write_str(&STD),
-            1 => f.write_str(&PKG),
-            n => write!(f, "pkg({})", n),
+        match self {
+            Self::Std => f.write_str(&STD),
+            Self::Local => f.write_str(&PKG),
+            Self::External(id) => write!(f, "pkg({})", id),
         }
     }
 }
 
 impl fmt::Debug for Pkg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        debug(f, "PkgId", self)
+        debug(f, "Pkg", self)
     }
 }
 
@@ -245,7 +234,7 @@ impl<T: Clone> FQ<T> {
     }
 
     pub(crate) fn is_std(&self) -> bool {
-        0 == self.inner.pkg.id && self.inner.path.is_empty()
+        Pkg::Std == self.inner.pkg && self.inner.path.is_empty()
     }
 
     pub(crate) fn top_level(pkg: Pkg, path: ModulePath, symbol: T) -> Self {
