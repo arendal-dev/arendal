@@ -5,7 +5,7 @@ mod twi;
 use crate::{
     ast::Expression,
     error::{Error, ErrorAcc, Errors, Loc, Result},
-    symbol::{ModulePath, PkgId, Symbol, TSymbol, FQ},
+    symbol::{ModulePath, Pkg, Symbol, TSymbol, FQ},
     types::Type,
     value::Value,
 };
@@ -101,7 +101,7 @@ impl Types {
 
 #[derive(Debug, Default)]
 struct Env {
-    packages: HashMap<PkgId, HashSet<PkgId>>,
+    packages: HashMap<Pkg, HashSet<Pkg>>,
     symbols: Symbols,
     types: Types,
 }
@@ -125,33 +125,33 @@ impl EnvRef {
         env
     }
 
-    fn create_package(&self, id: PkgId) -> PkgRef {
+    fn create_package(&self, id: Pkg) -> PkgRef {
         PkgRef::new(self.clone(), id)
     }
 
     pub fn empty_local_module(&self) -> Result<Module> {
-        self.create_package(PkgId::local())
+        self.create_package(Pkg::local())
             .create_module(Loc::none(), ModulePath::empty())
     }
 }
 
 #[derive(Debug)]
-struct Pkg {
+struct Package {
     env: EnvRef,
-    id: PkgId,
-    dependencies: HashSet<PkgId>,
+    id: Pkg,
+    dependencies: HashSet<Pkg>,
     modules: HashMap<ModulePath, HashSet<ModulePath>>,
     symbols: Symbols,
 }
 
 #[derive(Debug, Clone)]
 pub struct PkgRef {
-    pkg: Rc<RefCell<Pkg>>,
+    pkg: Rc<RefCell<Package>>,
 }
 
 impl PkgRef {
-    pub(super) fn new(env: EnvRef, id: PkgId) -> Self {
-        let pkg = Pkg {
+    pub(super) fn new(env: EnvRef, id: Pkg) -> Self {
+        let pkg = Package {
             env,
             id,
             dependencies: Default::default(),
@@ -163,15 +163,15 @@ impl PkgRef {
         }
     }
 
-    fn read(&self) -> Ref<Pkg> {
+    fn read(&self) -> Ref<Package> {
         (*self.pkg).borrow()
     }
 
-    fn clone_id(&self) -> PkgId {
+    fn clone_id(&self) -> Pkg {
         self.read().id.clone()
     }
 
-    fn write(&self) -> RefMut<Pkg> {
+    fn write(&self) -> RefMut<Package> {
         (*self.pkg).borrow_mut()
     }
 
@@ -302,7 +302,7 @@ impl Interactive {
 
 #[derive(Debug)]
 pub enum EnvError {
-    DuplicateModule(PkgId, ModulePath),
+    DuplicateModule(Pkg, ModulePath),
     DuplicateSymbol(FQ<Symbol>),
     DuplicateType(Type),
     DuplicateVal(Symbol),

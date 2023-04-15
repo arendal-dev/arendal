@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::error::{Error, Errors, Loc, Result};
-use crate::symbol::{ModulePath, PkgId, TSymbol, FQ};
+use crate::symbol::{ModulePath, Pkg, TSymbol, FQ};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Singleton {
@@ -50,7 +50,7 @@ impl Type {
     }
 
     fn fq_std(symbol: TSymbol) -> FQ<TSymbol> {
-        FQ::top_level(PkgId::std(), ModulePath::empty(), symbol)
+        FQ::top_level(Pkg::std(), ModulePath::empty(), symbol)
     }
 
     pub fn fq(&self) -> FQ<TSymbol> {

@@ -26,13 +26,13 @@ fn debug(f: &mut fmt::Formatter<'_>, name: &str, it: &dyn fmt::Display) -> fmt::
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PkgId {
+pub struct Pkg {
     id: u32,
 }
 
-impl PkgId {
+impl Pkg {
     pub fn new(id: u32) -> Self {
-        PkgId { id }
+        Pkg { id }
     }
 
     pub fn std() -> Self {
@@ -44,7 +44,7 @@ impl PkgId {
     }
 }
 
-impl fmt::Display for PkgId {
+impl fmt::Display for Pkg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.id {
             0 => f.write_str(&STD),
@@ -54,7 +54,7 @@ impl fmt::Display for PkgId {
     }
 }
 
-impl fmt::Debug for PkgId {
+impl fmt::Debug for Pkg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         debug(f, "PkgId", self)
     }
@@ -221,7 +221,7 @@ impl fmt::Debug for ModulePath {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct FQInner<T> {
-    pkg: PkgId,
+    pkg: Pkg,
     path: ModulePath,
     memberOf: Option<TSymbol>,
     symbol: T,
@@ -233,7 +233,7 @@ pub struct FQ<T> {
 }
 
 impl<T: Clone> FQ<T> {
-    fn new(pkg: PkgId, path: ModulePath, memberOf: Option<TSymbol>, symbol: T) -> Self {
+    fn new(pkg: Pkg, path: ModulePath, memberOf: Option<TSymbol>, symbol: T) -> Self {
         FQ {
             inner: Arc::new(FQInner {
                 pkg,
@@ -248,15 +248,15 @@ impl<T: Clone> FQ<T> {
         0 == self.inner.pkg.id && self.inner.path.is_empty()
     }
 
-    pub(crate) fn top_level(pkg: PkgId, path: ModulePath, symbol: T) -> Self {
+    pub(crate) fn top_level(pkg: Pkg, path: ModulePath, symbol: T) -> Self {
         Self::new(pkg, path, None, symbol)
     }
 
-    pub(crate) fn member(pkg: PkgId, path: ModulePath, memberOf: TSymbol, symbol: T) -> Self {
+    pub(crate) fn member(pkg: Pkg, path: ModulePath, memberOf: TSymbol, symbol: T) -> Self {
         Self::new(pkg, path, Some(memberOf), symbol)
     }
 
-    fn with_pkg(self, pkg: PkgId) -> Self {
+    fn with_pkg(self, pkg: Pkg) -> Self {
         if pkg == self.inner.pkg {
             self
         } else {
