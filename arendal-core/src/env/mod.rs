@@ -5,7 +5,7 @@ mod twi;
 use crate::{
     ast::Expression,
     error::{Error, ErrorAcc, Errors, Loc, Result},
-    symbol::{ModulePath, Pkg, Symbol, TSymbol, FQ},
+    symbol::{FQType, ModulePath, Pkg, Symbol, FQ},
     types::Type,
     value::Value,
 };
@@ -69,7 +69,7 @@ impl Symbols {
 
 #[derive(Debug, Default)]
 struct Types {
-    types: HashMap<FQ<TSymbol>, Target<Type>>,
+    types: HashMap<FQType, Target<Type>>,
 }
 
 impl Types {
