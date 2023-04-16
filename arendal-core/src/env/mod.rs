@@ -4,11 +4,10 @@ mod twi;
 
 use crate::{
     ast::Expression,
-    error::{Error, ErrorAcc, Errors, Loc, Result},
+    error::{Error, Errors, Loc, Result},
     symbol::{FQSym, ModulePath, Pkg, Symbol},
     types::{Type, Types},
-    value::Value,
-    visibility::Visible,
+    value::{Value, Values},
 };
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -16,44 +15,10 @@ use std::{
     rc::Rc,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum SymbolKind {
-    Value(Value),
-}
-
-#[derive(Debug, Default)]
-struct Symbols {
-    symbols: HashMap<FQSym, Visible<SymbolKind>>,
-}
-
-impl Symbols {
-    fn add(&mut self, loc: Loc, symbol: FQSym, target: Visible<SymbolKind>) -> Result<()> {
-        if self.symbols.contains_key(&symbol) {
-            Errors::err(loc, EnvError::DuplicateSymbol(symbol))
-        } else {
-            self.symbols.insert(symbol, target);
-            Ok(())
-        }
-    }
-
-    fn append(&mut self, mut other: Symbols) -> Result<()> {
-        let mut errors: ErrorAcc = Default::default();
-        for symbol in other.symbols.keys() {
-            if self.symbols.contains_key(&symbol) {
-                errors.add(Loc::none(), EnvError::DuplicateSymbol(symbol.clone()));
-            }
-        }
-        errors.to_unit_result()?;
-        self.symbols.extend(other.symbols.drain());
-        Ok(())
-    }
-}
-
 #[derive(Debug, Default)]
 struct EnvData {
-    packages: HashMap<Pkg, HashSet<Pkg>>,
-    symbols: Symbols,
     types: Types,
+    values: Values,
 }
 
 #[derive(Debug, Clone)]
@@ -90,7 +55,7 @@ struct Package {
     id: Pkg,
     dependencies: HashSet<Pkg>,
     modules: HashMap<ModulePath, HashSet<ModulePath>>,
-    symbols: Symbols,
+    values: Values,
 }
 
 #[derive(Debug, Clone)]
@@ -105,7 +70,7 @@ impl PkgRef {
             id,
             dependencies: Default::default(),
             modules: Default::default(),
-            symbols: Default::default(),
+            values: Default::default(),
         };
         PkgRef {
             pkg: Rc::new(RefCell::from(pkg)),
@@ -158,7 +123,7 @@ pub struct Module {
     pkg: PkgRef,
     path: ModulePath,
     dependencies: HashSet<ModulePath>,
-    symbols: Symbols,
+    values: Values,
     types: Types,
     val_scopes: Vec<ValScope>,
 }
@@ -169,7 +134,7 @@ impl Module {
             pkg,
             path,
             dependencies: Default::default(),
-            symbols: Default::default(),
+            values: Default::default(),
             types: Default::default(),
             val_scopes: Default::default(),
         }
@@ -177,27 +142,6 @@ impl Module {
 
     pub fn interactive(self) -> Interactive {
         Interactive::new(self)
-    }
-
-    fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Visible<SymbolKind>) -> Result<()> {
-        let fq = FQSym::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
-        self.symbols.add(loc, fq, target)
-    }
-
-    fn close(mut self) -> Result<PkgRef> {
-        let mut pkg = self.pkg.write();
-        if pkg.modules.contains_key(&self.path) {
-            return Errors::err(
-                Loc::none(),
-                EnvError::DuplicateModule(pkg.id.clone(), self.path),
-            );
-        }
-        // TODO additional validations
-        pkg.symbols.append(self.symbols)?;
-        // TODO: check dependencies are already there
-        pkg.modules.insert(self.path, self.dependencies);
-        drop(pkg);
-        Ok(self.pkg)
     }
 
     pub fn push_val_scope(&mut self) -> usize {

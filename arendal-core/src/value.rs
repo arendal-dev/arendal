@@ -1,6 +1,10 @@
 use std::fmt;
 
+use im::HashMap;
+
+use crate::symbol::FQSym;
 use crate::types::{Singleton, Type};
+use crate::visibility::Visible;
 use crate::Integer;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -71,4 +75,9 @@ impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Values {
+    values: HashMap<FQSym, Visible<Value>>,
 }
