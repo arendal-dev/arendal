@@ -3,7 +3,7 @@ use crate::error::{Errors, Result};
 use crate::typed::{TExprBuilder, TypedExpr};
 use crate::types::Type;
 
-use super::{Module, TypeError};
+use super::{Module, TypeCheckError};
 
 fn builder(input: &Expression) -> TExprBuilder {
     TExprBuilder::new(input.clone_loc())
@@ -14,7 +14,7 @@ pub(super) fn check(module: &mut Module, input: &Expression) -> Result<TypedExpr
         Expr::LitInteger(value) => Ok(builder(input).val_integer(value.clone())),
         Expr::Symbol(id) => match module.get_val(id) {
             Some(tipo) => Ok(builder(input).val(id.clone(), tipo.clone())),
-            None => error(input, TypeError::UnknownIdentifier(id.clone())),
+            None => error(input, TypeCheckError::UnknownIdentifier(id.clone())),
         },
         Expr::Assignment(id, expr) => {
             let typed = check(module, expr)?;
@@ -26,12 +26,12 @@ pub(super) fn check(module: &mut Module, input: &Expression) -> Result<TypedExpr
                 check_binary(module, input, *op, t1, t2)
             })
         }
-        _ => error(input, TypeError::InvalidType),
+        _ => error(input, TypeCheckError::InvalidType),
     }
 }
 
 // Creates and returns an error
-fn error(input: &Expression, kind: TypeError) -> Result<TypedExpr> {
+fn error(input: &Expression, kind: TypeCheckError) -> Result<TypedExpr> {
     Errors::err(input.clone_loc(), kind)
 }
 
@@ -47,7 +47,7 @@ fn check_binary(
         BinaryOp::Sub => check_sub(module, input, e1, e2),
         BinaryOp::Mul => check_mul(module, input, e1, e2),
         BinaryOp::Div => check_div(module, input, e1, e2),
-        _ => error(input, TypeError::InvalidType),
+        _ => error(input, TypeCheckError::InvalidType),
     }
 }
 
@@ -70,7 +70,7 @@ fn check_add(
     if e1.is_integer() && e2.is_integer() {
         ok_binary(input, Type::Integer, BinaryOp::Add, e1, e2)
     } else {
-        error(input, TypeError::InvalidType)
+        error(input, TypeCheckError::InvalidType)
     }
 }
 
@@ -83,7 +83,7 @@ fn check_sub(
     if e1.is_integer() && e2.is_integer() {
         ok_binary(input, Type::Integer, BinaryOp::Sub, e1, e2)
     } else {
-        error(input, TypeError::InvalidType)
+        error(input, TypeCheckError::InvalidType)
     }
 }
 
@@ -96,7 +96,7 @@ fn check_mul(
     if e1.is_integer() && e2.is_integer() {
         ok_binary(input, Type::Integer, BinaryOp::Mul, e1, e2)
     } else {
-        error(input, TypeError::InvalidType)
+        error(input, TypeCheckError::InvalidType)
     }
 }
 
@@ -109,7 +109,7 @@ fn check_div(
     if e1.is_integer() && e2.is_integer() {
         ok_binary(input, Type::Integer, BinaryOp::Div, e1, e2)
     } else {
-        error(input, TypeError::InvalidType)
+        error(input, TypeCheckError::InvalidType)
     }
 }
 

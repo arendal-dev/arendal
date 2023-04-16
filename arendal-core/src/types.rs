@@ -41,7 +41,7 @@ impl Type {
                 TSymbol::None => Ok(Self::None),
                 TSymbol::True => Ok(Self::True),
                 TSymbol::False => Ok(Self::False),
-                _ => Errors::err(loc, TypeConstructionError::InvalidSingleton(symbol)),
+                _ => Errors::err(loc, TypeError::InvalidSingleton(symbol)),
             }
         } else {
             Self::ok_singleton(symbol)
@@ -73,8 +73,8 @@ impl fmt::Debug for Type {
 }
 
 #[derive(Debug)]
-pub enum TypeConstructionError {
+pub enum TypeError {
     InvalidSingleton(FQType),
 }
 
-impl Error for TypeConstructionError {}
+impl Error for TypeError {}
