@@ -3,7 +3,7 @@ use std::fmt;
 use im::HashMap;
 
 use crate::error::{Error, Errors, Loc, Result};
-use crate::symbol::{FQType, TSymbol};
+use crate::symbol::FQType;
 use crate::visibility::{Visibility, Visible};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -34,23 +34,6 @@ pub enum Type {
 }
 
 impl Type {
-    fn ok_singleton(symbol: FQType) -> Result<Self> {
-        Ok(Self::Singleton(Singleton { symbol }))
-    }
-
-    pub fn singleton(loc: Loc, symbol: FQType) -> Result<Self> {
-        if symbol.is_known() {
-            match symbol.symbol() {
-                TSymbol::None => Ok(Self::None),
-                TSymbol::True => Ok(Self::True),
-                TSymbol::False => Ok(Self::False),
-                _ => Errors::err(loc, TypeError::InvalidSingleton(symbol)),
-            }
-        } else {
-            Self::ok_singleton(symbol)
-        }
-    }
-
     pub fn fq(&self) -> FQType {
         match self {
             Self::None => FQType::None,
@@ -102,21 +85,23 @@ impl Default for Types {
 }
 
 impl Types {
-    pub(crate) fn add(&mut self, loc: Loc, visibility: Visibility, tipo: Type) -> Result<()> {
-        let fq = tipo.fq();
-        if self.types.contains_key(&fq) {
-            Errors::err(loc, TypeError::DuplicateType(tipo))
+    pub fn singleton(&mut self, loc: Loc, visibility: Visibility, symbol: FQType) -> Result<Type> {
+        if self.types.contains_key(&symbol) {
+            Errors::err(loc, TypeError::DuplicateType(symbol))
         } else {
-            self.types.insert(fq, Visible::new(visibility, tipo));
-            Ok(())
+            let tipo = Type::Singleton(Singleton {
+                symbol: symbol.clone(),
+            });
+            self.types
+                .insert(symbol, Visible::new(visibility, tipo.clone()));
+            Ok(tipo)
         }
     }
 }
 
 #[derive(Debug)]
 pub enum TypeError {
-    InvalidSingleton(FQType),
-    DuplicateType(Type),
+    DuplicateType(FQType),
 }
 
 impl Error for TypeError {}
