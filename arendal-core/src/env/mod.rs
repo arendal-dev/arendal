@@ -5,9 +5,10 @@ mod twi;
 use crate::{
     ast::Expression,
     error::{Error, ErrorAcc, Errors, Loc, Result},
-    symbol::{FQSym, FQType, ModulePath, Pkg, Symbol},
-    types::Type,
+    symbol::{FQSym, ModulePath, Pkg, Symbol},
+    types::{Type, Types},
     value::Value,
+    visibility::Visible,
 };
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -15,37 +16,18 @@ use std::{
     rc::Rc,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Visibility {
-    Module,
-    Package,
-    Exported,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum SymbolKind {
     Value(Value),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct Target<T> {
-    visibility: Visibility,
-    target: T,
-}
-
-impl<T> Target<T> {
-    fn new(visibility: Visibility, target: T) -> Self {
-        Target { visibility, target }
-    }
-}
-
 #[derive(Debug, Default)]
 struct Symbols {
-    symbols: HashMap<FQSym, Target<SymbolKind>>,
+    symbols: HashMap<FQSym, Visible<SymbolKind>>,
 }
 
 impl Symbols {
-    fn add(&mut self, loc: Loc, symbol: FQSym, target: Target<SymbolKind>) -> Result<()> {
+    fn add(&mut self, loc: Loc, symbol: FQSym, target: Visible<SymbolKind>) -> Result<()> {
         if self.symbols.contains_key(&symbol) {
             Errors::err(loc, EnvError::DuplicateSymbol(symbol))
         } else {
@@ -63,38 +45,6 @@ impl Symbols {
         }
         errors.to_unit_result()?;
         self.symbols.extend(other.symbols.drain());
-        Ok(())
-    }
-}
-
-#[derive(Debug, Default)]
-struct Types {
-    types: HashMap<FQType, Target<Type>>,
-}
-
-impl Types {
-    fn add(&mut self, loc: Loc, visibility: Visibility, tipo: Type) -> Result<()> {
-        let fq = tipo.fq();
-        if self.types.contains_key(&fq) {
-            Errors::err(loc, EnvError::DuplicateType(tipo))
-        } else {
-            self.types.insert(fq, Target::new(visibility, tipo));
-            Ok(())
-        }
-    }
-
-    fn append(&mut self, mut other: Types) -> Result<()> {
-        let mut errors: ErrorAcc = Default::default();
-        for fq in other.types.keys() {
-            if self.types.contains_key(&fq) {
-                errors.add(
-                    Loc::none(),
-                    EnvError::DuplicateType(other.types[fq].target.clone()),
-                );
-            }
-        }
-        errors.to_unit_result()?;
-        self.types.extend(other.types.drain());
         Ok(())
     }
 }
@@ -230,7 +180,7 @@ impl Module {
         Interactive::new(self)
     }
 
-    fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Target<SymbolKind>) -> Result<()> {
+    fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Visible<SymbolKind>) -> Result<()> {
         let fq = FQSym::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
         self.symbols.add(loc, fq, target)
     }

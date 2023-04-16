@@ -1,7 +1,10 @@
 use std::fmt;
 
+use im::HashMap;
+
 use crate::error::{Error, Errors, Loc, Result};
 use crate::symbol::{FQType, TSymbol};
+use crate::visibility::{Visibility, Visible};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Singleton {
@@ -72,9 +75,27 @@ impl fmt::Debug for Type {
     }
 }
 
+#[derive(Debug, Default)]
+pub(crate) struct Types {
+    types: HashMap<FQType, Visible<Type>>,
+}
+
+impl Types {
+    pub(crate) fn add(&mut self, loc: Loc, visibility: Visibility, tipo: Type) -> Result<()> {
+        let fq = tipo.fq();
+        if self.types.contains_key(&fq) {
+            Errors::err(loc, TypeError::DuplicateType(tipo))
+        } else {
+            self.types.insert(fq, Visible::new(visibility, tipo));
+            Ok(())
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum TypeError {
     InvalidSingleton(FQType),
+    DuplicateType(Type),
 }
 
 impl Error for TypeError {}

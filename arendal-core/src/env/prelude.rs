@@ -1,7 +1,7 @@
-use super::{Types, Visibility};
 use crate::{
     error::{Loc, Result},
-    types::Type,
+    types::{Type, Types},
+    visibility::Visibility,
 };
 
 fn add_prelude_type(types: &mut Types, tipo: Type) -> Result<()> {
