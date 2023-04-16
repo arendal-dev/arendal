@@ -100,7 +100,7 @@ impl Types {
 }
 
 #[derive(Debug, Default)]
-struct Env {
+struct EnvData {
     packages: HashMap<Pkg, HashSet<Pkg>>,
     symbols: Symbols,
     types: Types,
@@ -108,20 +108,20 @@ struct Env {
 
 #[derive(Debug, Clone)]
 pub struct EnvRef {
-    env: Rc<RefCell<Env>>,
+    data: Rc<RefCell<EnvData>>,
 }
 
 impl EnvRef {
     fn new() -> Self {
-        let env: Env = Default::default();
+        let data: EnvData = Default::default();
         EnvRef {
-            env: Rc::new(RefCell::from(env)),
+            data: Rc::new(RefCell::from(data)),
         }
     }
 
     pub fn new_with_prelude() -> Self {
         let env = Self::new();
-        prelude::add_prelude_types(&mut env.env.borrow_mut().types).unwrap();
+        prelude::add_prelude_types(&mut env.data.borrow_mut().types).unwrap();
         env
     }
 
