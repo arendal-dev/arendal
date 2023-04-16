@@ -50,12 +50,6 @@ impl fmt::Debug for Pkg {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-enum Sym<T> {
-    Known(T),
-    Other(ArcStr),
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Other {
     name: ArcStr,
 }
@@ -261,72 +255,53 @@ impl<T: Display> fmt::Debug for Member<T> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-struct FQInner<T> {
-    pkg: Pkg,
-    path: ModulePath,
-    memberOf: Option<TSymbol>,
-    symbol: T,
+pub enum FQSym {
+    TopLevel(TopLevel<Symbol>),
+    Member(Member<Symbol>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct FQ<T> {
-    inner: Arc<FQInner<T>>,
-}
+impl FQSym {
+    pub(crate) fn top_level(pkg: Pkg, path: ModulePath, symbol: Symbol) -> Self {
+        Self::TopLevel(TopLevel {
+            data: Arc::new(TLData { pkg, path, symbol }),
+        })
+    }
 
-impl<T: Clone> FQ<T> {
-    fn new(pkg: Pkg, path: ModulePath, memberOf: Option<TSymbol>, symbol: T) -> Self {
-        FQ {
-            inner: Arc::new(FQInner {
-                pkg,
-                path,
-                memberOf,
-                symbol,
-            }),
+    pub(crate) fn is_top_level(&self) -> bool {
+        match self {
+            Self::Member(_) => false,
+            _ => true,
         }
     }
 
-    pub(crate) fn is_std(&self) -> bool {
-        Pkg::Std == self.inner.pkg && self.inner.path.is_empty()
-    }
-
-    pub(crate) fn top_level(pkg: Pkg, path: ModulePath, symbol: T) -> Self {
-        Self::new(pkg, path, None, symbol)
-    }
-
-    pub(crate) fn member(pkg: Pkg, path: ModulePath, memberOf: TSymbol, symbol: T) -> Self {
-        Self::new(pkg, path, Some(memberOf), symbol)
-    }
-
-    fn with_pkg(self, pkg: Pkg) -> Self {
-        if pkg == self.inner.pkg {
-            self
+    pub(crate) fn member(loc: Loc, top_level: FQType, symbol: Symbol) -> Result<Self> {
+        if top_level.is_top_level() {
+            Ok(Self::Member(Member {
+                data: Arc::new(MemberData { top_level, symbol }),
+            }))
         } else {
-            Self::new(
-                pkg,
-                self.inner.path.clone(),
-                self.inner.memberOf.clone(),
-                self.inner.symbol.clone(),
-            )
+            Errors::err(loc, SymbolError::ExpectedTopLevelType(top_level))
         }
     }
 
-    pub fn symbol(&self) -> T {
-        self.inner.symbol.clone()
+    pub fn symbol(&self) -> Symbol {
+        match self {
+            Self::TopLevel(t) => t.data.symbol.clone(),
+            Self::Member(m) => m.data.symbol.clone(),
+        }
     }
 }
 
-impl<T: Display> fmt::Display for FQ<T> {
+impl fmt::Display for FQSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner.pkg.fmt(f)?;
-        add_segment(f, &self.inner.path)?;
-        if let Some(m) = &self.inner.memberOf {
-            add_segment(f, m)?;
+        match self {
+            Self::TopLevel(t) => t.fmt(f),
+            Self::Member(m) => m.fmt(f),
         }
-        add_segment(f, &self.inner.symbol)
     }
 }
 
-impl<T: Display> fmt::Debug for FQ<T> {
+impl fmt::Debug for FQSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
@@ -347,11 +322,11 @@ impl FQType {
     fn get_known(pkg: &Pkg, path: &ModulePath, symbol: &TSymbol) -> Option<Self> {
         if *pkg == Pkg::Std && path.is_empty() {
             match symbol {
-                TSymbol::None => Some(FQType::None),
-                TSymbol::True => Some(FQType::True),
-                TSymbol::False => Some(FQType::False),
-                TSymbol::Boolean => Some(FQType::Boolean),
-                TSymbol::Integer => Some(FQType::Integer),
+                TSymbol::None => Some(Self::None),
+                TSymbol::True => Some(Self::True),
+                TSymbol::False => Some(Self::False),
+                TSymbol::Boolean => Some(Self::Boolean),
+                TSymbol::Integer => Some(Self::Integer),
                 _ => None,
             }
         } else {
@@ -370,7 +345,7 @@ impl FQType {
         if let Some(fq) = Self::get_known(&pkg, &path, &symbol) {
             fq
         } else {
-            FQType::TopLevel(TopLevel {
+            Self::TopLevel(TopLevel {
                 data: Arc::new(TLData { pkg, path, symbol }),
             })
         }
@@ -385,7 +360,7 @@ impl FQType {
 
     pub(crate) fn member(loc: Loc, top_level: FQType, symbol: TSymbol) -> Result<Self> {
         if top_level.is_top_level() {
-            Ok(FQType::Member(Member {
+            Ok(Self::Member(Member {
                 data: Arc::new(MemberData { top_level, symbol }),
             }))
         } else {

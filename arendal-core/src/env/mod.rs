@@ -5,7 +5,7 @@ mod twi;
 use crate::{
     ast::Expression,
     error::{Error, ErrorAcc, Errors, Loc, Result},
-    symbol::{FQType, ModulePath, Pkg, Symbol, FQ},
+    symbol::{FQSym, FQType, ModulePath, Pkg, Symbol},
     types::Type,
     value::Value,
 };
@@ -41,11 +41,11 @@ impl<T> Target<T> {
 
 #[derive(Debug, Default)]
 struct Symbols {
-    symbols: HashMap<FQ<Symbol>, Target<SymbolKind>>,
+    symbols: HashMap<FQSym, Target<SymbolKind>>,
 }
 
 impl Symbols {
-    fn add(&mut self, loc: Loc, symbol: FQ<Symbol>, target: Target<SymbolKind>) -> Result<()> {
+    fn add(&mut self, loc: Loc, symbol: FQSym, target: Target<SymbolKind>) -> Result<()> {
         if self.symbols.contains_key(&symbol) {
             Errors::err(loc, EnvError::DuplicateSymbol(symbol))
         } else {
@@ -231,7 +231,7 @@ impl Module {
     }
 
     fn add_symbol(&mut self, loc: Loc, symbol: Symbol, target: Target<SymbolKind>) -> Result<()> {
-        let fq = FQ::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
+        let fq = FQSym::top_level(self.pkg.clone_id(), self.path.clone(), symbol);
         self.symbols.add(loc, fq, target)
     }
 
@@ -303,7 +303,7 @@ impl Interactive {
 #[derive(Debug)]
 pub enum EnvError {
     DuplicateModule(Pkg, ModulePath),
-    DuplicateSymbol(FQ<Symbol>),
+    DuplicateSymbol(FQSym),
     DuplicateType(Type),
     DuplicateVal(Symbol),
 }
