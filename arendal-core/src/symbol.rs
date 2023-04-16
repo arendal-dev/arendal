@@ -209,6 +209,58 @@ impl fmt::Debug for ModulePath {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+struct TLData<T> {
+    pkg: Pkg,
+    path: ModulePath,
+    symbol: T,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct TopLevel<T> {
+    data: Arc<TLData<T>>,
+}
+
+impl<T: Display> fmt::Display for TopLevel<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.data.pkg.fmt(f)?;
+        if !self.data.path.is_empty() {
+            add_segment(f, &self.data.path)?;
+        }
+        add_segment(f, &self.data.symbol)
+    }
+}
+
+impl<T: Display> fmt::Debug for TopLevel<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct MemberData<T> {
+    top_level: FQType,
+    symbol: T,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Member<T> {
+    data: Arc<MemberData<T>>,
+}
+
+impl<T: Display> fmt::Display for Member<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.data.top_level.fmt(f)?;
+        add_segment(f, &self.data.symbol)
+    }
+}
+
+impl<T: Display> fmt::Debug for Member<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct FQInner<T> {
     pkg: Pkg,
     path: ModulePath,
@@ -280,6 +332,100 @@ impl<T: Display> fmt::Debug for FQ<T> {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum FQType {
+    None,
+    True,
+    False,
+    Boolean,
+    Integer,
+    TopLevel(TopLevel<TSymbol>),
+    Member(Member<TSymbol>),
+}
+
+impl FQType {
+    fn get_known(pkg: &Pkg, path: &ModulePath, symbol: &TSymbol) -> Option<Self> {
+        if *pkg == Pkg::Std && path.is_empty() {
+            match symbol {
+                TSymbol::None => Some(FQType::None),
+                TSymbol::True => Some(FQType::True),
+                TSymbol::False => Some(FQType::False),
+                TSymbol::Boolean => Some(FQType::Boolean),
+                TSymbol::Integer => Some(FQType::Integer),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn is_known(&self) -> bool {
+        match self {
+            Self::TopLevel(_) | &Self::Member(_) => false,
+            _ => true,
+        }
+    }
+
+    pub(crate) fn top_level(pkg: Pkg, path: ModulePath, symbol: TSymbol) -> Self {
+        if let Some(fq) = Self::get_known(&pkg, &path, &symbol) {
+            fq
+        } else {
+            FQType::TopLevel(TopLevel {
+                data: Arc::new(TLData { pkg, path, symbol }),
+            })
+        }
+    }
+
+    pub(crate) fn is_top_level(&self) -> bool {
+        match self {
+            Self::Member(_) => false,
+            _ => true,
+        }
+    }
+
+    pub(crate) fn member(loc: Loc, top_level: FQType, symbol: TSymbol) -> Result<Self> {
+        if top_level.is_top_level() {
+            Ok(FQType::Member(Member {
+                data: Arc::new(MemberData { top_level, symbol }),
+            }))
+        } else {
+            Errors::err(loc, SymbolError::ExpectedTopLevelType(top_level))
+        }
+    }
+
+    pub fn symbol(&self) -> TSymbol {
+        match self {
+            Self::None => TSymbol::None,
+            Self::True => TSymbol::True,
+            Self::False => TSymbol::False,
+            Self::Boolean => TSymbol::Boolean,
+            Self::Integer => TSymbol::Integer,
+            Self::TopLevel(t) => t.data.symbol.clone(),
+            Self::Member(m) => m.data.symbol.clone(),
+        }
+    }
+}
+
+impl fmt::Display for FQType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::None => f.write_str("std::None"),
+            Self::True => f.write_str("std::True"),
+            Self::False => f.write_str("std::False"),
+            Self::Boolean => f.write_str("std::Boolean"),
+            Self::Integer => f.write_str("std::Integer"),
+            Self::TopLevel(t) => t.fmt(f),
+            Self::Member(m) => m.fmt(f),
+        }
+    }
+}
+
+impl fmt::Debug for FQType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
 #[derive(Debug)]
 pub enum SymbolError {
     Empty,
@@ -290,6 +436,7 @@ pub enum SymbolError {
     InvalidChar(usize, char),
     ExpectedTypeItem(Symbol),
     ExpectedNonTypeItem(Symbol),
+    ExpectedTopLevelType(FQType),
 }
 
 impl Error for SymbolError {}
