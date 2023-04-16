@@ -71,7 +71,6 @@ impl EnvRef {
 
     pub fn new_with_prelude() -> Self {
         let env = Self::new();
-        prelude::add_prelude_types(&mut env.data.borrow_mut().types).unwrap();
         env
     }
 

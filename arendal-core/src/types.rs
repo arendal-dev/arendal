@@ -75,9 +75,30 @@ impl fmt::Debug for Type {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(crate) struct Types {
     types: HashMap<FQType, Visible<Type>>,
+}
+
+impl Default for Types {
+    fn default() -> Self {
+        let mut types: HashMap<FQType, Visible<Type>> = Default::default();
+        types.insert(FQType::None, Visible::new(Visibility::Exported, Type::None));
+        types.insert(FQType::True, Visible::new(Visibility::Exported, Type::True));
+        types.insert(
+            FQType::False,
+            Visible::new(Visibility::Exported, Type::False),
+        );
+        types.insert(
+            FQType::Boolean,
+            Visible::new(Visibility::Exported, Type::Boolean),
+        );
+        types.insert(
+            FQType::Integer,
+            Visible::new(Visibility::Exported, Type::Integer),
+        );
+        Types { types }
+    }
 }
 
 impl Types {
