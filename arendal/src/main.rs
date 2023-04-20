@@ -1,4 +1,4 @@
-use core::env::{EnvRef, Interactive};
+use core::env::Interactive;
 use core::error::Result;
 use core::value::Value;
 
@@ -16,9 +16,8 @@ struct REPL {
 
 impl REPL {
     fn new() -> Self {
-        let module = EnvRef::new_with_prelude().empty_local_module().unwrap();
         REPL {
-            interactive: module.interactive(),
+            interactive: Interactive::default(),
         }
     }
 

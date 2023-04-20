@@ -2,9 +2,10 @@ use std::fmt;
 
 use im::HashMap;
 
-use crate::symbol::FQSym;
+use crate::error::{Error, Errors, Loc, Result};
+use crate::symbol::{FQSym, ModulePath, Pkg, Symbol};
 use crate::types::{Singleton, Type};
-use crate::visibility::Visible;
+use crate::visibility::{self, Visibility, Visible};
 use crate::Integer;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -77,7 +78,35 @@ impl fmt::Debug for Value {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct Values {
     values: HashMap<FQSym, Visible<Value>>,
 }
+
+impl Values {
+    pub(crate) fn get(&self, symbol: &FQSym) -> Option<Visible<Value>> {
+        self.values.get(symbol).cloned()
+    }
+
+    pub(crate) fn set(
+        &mut self,
+        loc: Loc,
+        symbol: FQSym,
+        visibility: Visibility,
+        value: Value,
+    ) -> Result<()> {
+        if self.values.contains_key(&symbol) {
+            Errors::err(loc, ValueError::DuplicateValue(symbol))
+        } else {
+            self.values.insert(symbol, Visible::new(visibility, value));
+            Ok(())
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ValueError {
+    DuplicateValue(FQSym),
+}
+
+impl Error for ValueError {}

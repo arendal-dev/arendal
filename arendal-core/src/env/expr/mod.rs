@@ -1,115 +1,162 @@
+use im::HashMap;
+
 use crate::ast::{BinaryOp, Expr, Expression};
-use crate::error::{Errors, Result};
+use crate::error::{Errors, Loc, Result};
+use crate::symbol::{FQSym, ModulePath, Pkg, Symbol};
 use crate::typed::{TExprBuilder, TypedExpr};
 use crate::types::Type;
 
-use super::{Module, TypeCheckError};
+use super::{Env, TypeCheckError};
 
-fn builder(input: &Expression) -> TExprBuilder {
-    TExprBuilder::new(input.clone_loc())
+type Scope = HashMap<Symbol, Type>;
+
+#[derive(Debug)]
+pub(super) struct TypeChecker<'a> {
+    env: &'a Env,
+    pkg: Pkg,
+    path: ModulePath,
+    scopes: Vec<Scope>,
 }
 
-pub(super) fn check(module: &mut Module, input: &Expression) -> Result<TypedExpr> {
-    match input.borrow_expr() {
-        Expr::LitInteger(value) => Ok(builder(input).val_integer(value.clone())),
-        Expr::Symbol(id) => match module.get_val(id) {
-            Some(tipo) => Ok(builder(input).val(id.clone(), tipo.clone())),
-            None => error(input, TypeCheckError::UnknownIdentifier(id.clone())),
-        },
-        Expr::Assignment(id, expr) => {
-            let typed = check(module, expr)?;
-            module.add_val(input.clone_loc(), id.clone(), typed.clone_type())?;
-            Ok(builder(input).assignment(id.clone(), typed))
+impl<'a> TypeChecker<'a> {
+    pub(super) fn new(env: &'a Env, pkg: Pkg, path: ModulePath) -> Self {
+        TypeChecker {
+            env,
+            pkg,
+            path,
+            scopes: vec![Scope::default()],
         }
-        Expr::Binary(op, e1, e2) => {
-            Errors::merge(check(module, e1), check(module, e2), |t1, t2| {
-                check_binary(module, input, *op, t1, t2)
-            })
+    }
+
+    pub(super) fn expression(&mut self, input: &Expression) -> Result<TypedExpr> {
+        ExprChecker {
+            checker: self,
+            input,
         }
-        _ => error(input, TypeCheckError::InvalidType),
+        .check()
+    }
+
+    fn set_val(&mut self, loc: Loc, symbol: Symbol, tipo: Type) -> Result<()> {
+        self.scopes.last_mut().unwrap().insert(symbol, tipo);
+        return Ok(());
+    }
+
+    fn local_fq(&self, symbol: Symbol) -> FQSym {
+        FQSym::top_level(self.pkg.clone(), self.path.clone(), symbol)
+    }
+
+    fn get_val(&self, symbol: &Symbol) -> Option<Type> {
+        let mut i = self.scopes.len();
+        while i > 0 {
+            let result = self.scopes[i - 1].get(symbol);
+            if result.is_some() {
+                return result.cloned();
+            }
+            i = i - 1;
+        }
+        if let Some(vv) = self.env.values.get(&self.local_fq(symbol.clone())) {
+            return Some(vv.unwrap().clone_type());
+        }
+        None
     }
 }
 
-// Creates and returns an error
-fn error(input: &Expression, kind: TypeCheckError) -> Result<TypedExpr> {
-    Errors::err(input.clone_loc(), kind)
+#[derive(Debug)]
+struct ExprChecker<'a, 'b> {
+    checker: &'b mut TypeChecker<'a>,
+    input: &'b Expression,
 }
 
-fn check_binary(
-    module: &Module,
-    input: &Expression,
-    op: BinaryOp,
-    e1: TypedExpr,
-    e2: TypedExpr,
-) -> Result<TypedExpr> {
-    match op {
-        BinaryOp::Add => check_add(module, input, e1, e2),
-        BinaryOp::Sub => check_sub(module, input, e1, e2),
-        BinaryOp::Mul => check_mul(module, input, e1, e2),
-        BinaryOp::Div => check_div(module, input, e1, e2),
-        _ => error(input, TypeCheckError::InvalidType),
+impl<'a, 'b> ExprChecker<'a, 'b> {
+    fn check(mut self) -> Result<TypedExpr> {
+        match self.input.borrow_expr() {
+            Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
+            Expr::Symbol(id) => match self.checker.get_val(id) {
+                Some(tipo) => Ok(self.builder().val(id.clone(), tipo.clone())),
+                None => self.error(TypeCheckError::UnknownIdentifier(id.clone())),
+            },
+            Expr::Assignment(id, expr) => {
+                let typed = self.sub_expr(&expr)?;
+                self.checker
+                    .set_val(self.input.clone_loc(), id.clone(), typed.clone_type())?;
+                Ok(self.builder().assignment(id.clone(), typed))
+            }
+            Expr::Binary(op, e1, e2) => {
+                Errors::merge(self.sub_expr(&e1), self.sub_expr(&e2), |t1, t2| {
+                    self.check_binary(*op, t1, t2)
+                })
+            }
+            _ => self.error(TypeCheckError::InvalidType),
+        }
     }
-}
 
-fn ok_binary(
-    input: &Expression,
-    tipo: Type,
-    op: BinaryOp,
-    e1: TypedExpr,
-    e2: TypedExpr,
-) -> Result<TypedExpr> {
-    Ok(builder(input).binary(tipo, op, e1, e2))
-}
-
-fn check_add(
-    module: &Module,
-    input: &Expression,
-    e1: TypedExpr,
-    e2: TypedExpr,
-) -> Result<TypedExpr> {
-    if e1.is_integer() && e2.is_integer() {
-        ok_binary(input, Type::Integer, BinaryOp::Add, e1, e2)
-    } else {
-        error(input, TypeCheckError::InvalidType)
+    fn sub_expr(&mut self, input: &Expression) -> Result<TypedExpr> {
+        ExprChecker {
+            checker: self.checker,
+            input,
+        }
+        .check()
     }
-}
 
-fn check_sub(
-    module: &Module,
-    input: &Expression,
-    e1: TypedExpr,
-    e2: TypedExpr,
-) -> Result<TypedExpr> {
-    if e1.is_integer() && e2.is_integer() {
-        ok_binary(input, Type::Integer, BinaryOp::Sub, e1, e2)
-    } else {
-        error(input, TypeCheckError::InvalidType)
+    fn check_binary(self, op: BinaryOp, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+        match op {
+            BinaryOp::Add => self.check_add(e1, e2),
+            BinaryOp::Sub => self.check_sub(e1, e2),
+            BinaryOp::Mul => self.check_mul(e1, e2),
+            BinaryOp::Div => self.check_div(e1, e2),
+            _ => self.error(TypeCheckError::InvalidType),
+        }
     }
-}
 
-fn check_mul(
-    module: &Module,
-    input: &Expression,
-    e1: TypedExpr,
-    e2: TypedExpr,
-) -> Result<TypedExpr> {
-    if e1.is_integer() && e2.is_integer() {
-        ok_binary(input, Type::Integer, BinaryOp::Mul, e1, e2)
-    } else {
-        error(input, TypeCheckError::InvalidType)
+    fn ok_binary(
+        &self,
+        tipo: Type,
+        op: BinaryOp,
+        e1: TypedExpr,
+        e2: TypedExpr,
+    ) -> Result<TypedExpr> {
+        Ok(self.builder().binary(tipo, op, e1, e2))
     }
-}
 
-fn check_div(
-    module: &Module,
-    input: &Expression,
-    e1: TypedExpr,
-    e2: TypedExpr,
-) -> Result<TypedExpr> {
-    if e1.is_integer() && e2.is_integer() {
-        ok_binary(input, Type::Integer, BinaryOp::Div, e1, e2)
-    } else {
-        error(input, TypeCheckError::InvalidType)
+    fn check_add(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+        if e1.is_integer() && e2.is_integer() {
+            self.ok_binary(Type::Integer, BinaryOp::Add, e1, e2)
+        } else {
+            self.error(TypeCheckError::InvalidType)
+        }
+    }
+
+    fn check_sub(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+        if e1.is_integer() && e2.is_integer() {
+            self.ok_binary(Type::Integer, BinaryOp::Sub, e1, e2)
+        } else {
+            self.error(TypeCheckError::InvalidType)
+        }
+    }
+
+    fn check_mul(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+        if e1.is_integer() && e2.is_integer() {
+            self.ok_binary(Type::Integer, BinaryOp::Mul, e1, e2)
+        } else {
+            self.error(TypeCheckError::InvalidType)
+        }
+    }
+
+    fn check_div(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+        if e1.is_integer() && e2.is_integer() {
+            self.ok_binary(Type::Integer, BinaryOp::Div, e1, e2)
+        } else {
+            self.error(TypeCheckError::InvalidType)
+        }
+    }
+
+    fn builder(&self) -> TExprBuilder {
+        TExprBuilder::new(self.input.clone_loc())
+    }
+
+    // Creates and returns an error
+    fn error(self, kind: TypeCheckError) -> Result<TypedExpr> {
+        Errors::err(self.input.clone_loc(), kind)
     }
 }
 

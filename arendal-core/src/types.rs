@@ -58,7 +58,7 @@ impl fmt::Debug for Type {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Types {
     types: HashMap<FQType, Visible<Type>>,
 }

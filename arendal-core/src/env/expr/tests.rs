@@ -1,12 +1,14 @@
-use super::{check, Expression, Type};
+use super::{Expression, Type, TypeChecker};
 use crate::ast::ExprBuilder;
-use crate::env::EnvRef;
+use crate::env::Env;
+use crate::symbol::{ModulePath, Pkg};
 
 const B: ExprBuilder = ExprBuilder::none();
 
 fn ok_type(expr: Expression, t: Type) {
-    let mut module = EnvRef::new_with_prelude().empty_local_module().unwrap();
-    assert_eq!(*check(&mut module, &expr).unwrap().borrow_type(), t);
+    let env = Env::default();
+    let mut checker = TypeChecker::new(&env, Pkg::Local, ModulePath::empty());
+    assert_eq!(*checker.expression(&expr).unwrap().borrow_type(), t);
 }
 
 fn ok_int(expr: Expression) {

@@ -15,4 +15,8 @@ impl<T> Visible<T> {
     pub fn new(visibility: Visibility, it: T) -> Self {
         Visible { visibility, it }
     }
+
+    pub fn unwrap(self) -> T {
+        self.it
+    }
 }
