@@ -2,7 +2,7 @@ use im::HashMap;
 
 use crate::ast::{BinaryOp, Expr, Expression};
 use crate::error::{Errors, Loc, Result};
-use crate::symbol::{Path, Pkg, Symbol};
+use crate::symbol::{Path, Symbol};
 use crate::typed::{TExprBuilder, TypedExpr};
 use crate::types::Type;
 

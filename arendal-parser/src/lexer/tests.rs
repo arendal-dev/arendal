@@ -1,8 +1,8 @@
 use core::error::Loc;
 
 use super::{
-    Enclosure, Inner, Keyword, Lexeme, LexemeKind, Lexemes, Result, Separator, Symbol, TSymbol,
-    Token, TokenKind,
+    Enclosure, Keyword, Lexeme, LexemeKind, Lexemes, Result, Separator, Symbol, TSymbol, Token,
+    TokenKind,
 };
 use core::ArcStr;
 

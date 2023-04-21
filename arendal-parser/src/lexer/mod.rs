@@ -2,7 +2,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::Enclosure;
-use crate::tokenizer::{tokenize, NewLine, Token, TokenKind, Tokens};
+use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
 use core::error::{ErrorAcc, Loc, Result};
 use core::keyword::Keyword;
 use core::symbol::{Symbol, TSymbol};
@@ -296,7 +296,6 @@ impl Lexer {
 
 #[derive(Debug)]
 enum Error {
-    IndentationError,
     InvalidClose(Enclosure),
     UnexpectedToken,
 }

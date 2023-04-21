@@ -1,7 +1,7 @@
 use super::{Expression, Type, TypeChecker};
 use crate::ast::ExprBuilder;
 use crate::env::Env;
-use crate::symbol::{Path, Pkg};
+use crate::symbol::Pkg;
 
 const B: ExprBuilder = ExprBuilder::none();
 
