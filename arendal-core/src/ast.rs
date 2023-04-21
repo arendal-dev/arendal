@@ -1,7 +1,7 @@
 use std::cmp::{Eq, PartialEq};
 use std::fmt;
 use std::fmt::Debug;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::Integer;
 use crate::error::Loc;
@@ -24,39 +24,39 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Inner {
+struct ExprData {
     loc: Loc,
     expr: Expr,
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Expression {
-    inner: Rc<Inner>,
+    data: Arc<ExprData>,
 }
 
 impl Expression {
     fn new(loc: Loc, expr: Expr) -> Self {
         Expression {
-            inner: Rc::new(Inner { loc, expr }),
+            data: Arc::new(ExprData { loc, expr }),
         }
     }
 
     pub fn clone_loc(&self) -> Loc {
-        self.inner.loc.clone()
+        self.data.loc.clone()
     }
 
     pub fn borrow_expr(&self) -> &Expr {
-        &self.inner.expr
+        &self.data.expr
     }
 
     pub fn clone_expr(&self) -> Expr {
-        self.inner.expr.clone()
+        self.data.expr.clone()
     }
 }
 
 impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner.expr.fmt(f)
+        self.data.expr.fmt(f)
     }
 }
 
