@@ -1,6 +1,6 @@
-mod expr;
 mod prelude;
 mod twi;
+mod typecheck;
 
 use crate::{
     ast::Expression,
@@ -52,7 +52,7 @@ impl Default for Interactive {
 impl Interactive {
     pub fn expression(&mut self, input: &Expression) -> Result<Value> {
         let typed =
-            expr::TypeChecker::new(&self.interpreter.env, self.pkg.clone(), self.path.clone())
+            typecheck::TypeChecker::new(&self.interpreter.env, self.pkg.clone(), self.path.clone())
                 .expression(input)?;
         self.interpreter.expression(&typed)
     }
