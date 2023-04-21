@@ -140,3 +140,13 @@ impl ExprBuilder {
         Expression::new(self.loc.clone(), Expr::Assignment(id, expr))
     }
 }
+
+#[derive(Debug)]
+pub enum ModuleItem {
+    Expression(Expression),
+}
+
+#[derive(Debug, Default)]
+pub struct Module {
+    items: Vec<ModuleItem>,
+}
