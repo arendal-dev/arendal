@@ -1,6 +1,6 @@
 use im::HashMap;
 
-use crate::ast::{BinaryOp, Expr, Expression};
+use crate::ast::{self, BinaryOp, Expr};
 use crate::error::{Errors, Loc, Result};
 use crate::symbol::{Path, Symbol};
 use crate::typed::{TExprBuilder, TypedExpr};
@@ -26,12 +26,14 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub(super) fn expression(&mut self, input: &Expression) -> Result<TypedExpr> {
-        ExprChecker {
-            checker: self,
-            input,
+    pub(super) fn module(&mut self, input: &ast::Module) -> Result<TypedExpr> {
+        match input.get(0).unwrap() {
+            ast::ModuleItem::Expression(e) => ExprChecker {
+                checker: self,
+                input: e,
+            }
+            .check(),
         }
-        .check()
     }
 
     fn set_val(&mut self, loc: Loc, symbol: Symbol, tipo: Type) -> Result<()> {
@@ -58,7 +60,7 @@ impl<'a> TypeChecker<'a> {
 #[derive(Debug)]
 struct ExprChecker<'a, 'b> {
     checker: &'b mut TypeChecker<'a>,
-    input: &'b Expression,
+    input: &'b ast::Expression,
 }
 
 impl<'a, 'b> ExprChecker<'a, 'b> {
@@ -84,7 +86,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn sub_expr(&mut self, input: &Expression) -> Result<TypedExpr> {
+    fn sub_expr(&mut self, input: &ast::Expression) -> Result<TypedExpr> {
         ExprChecker {
             checker: self.checker,
             input,

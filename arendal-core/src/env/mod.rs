@@ -3,7 +3,7 @@ mod twi;
 mod typecheck;
 
 use crate::{
-    ast::Expression,
+    ast,
     error::{Error, Result},
     symbol::{FQSym, Path, Pkg, Symbol},
     types::{Type, Types},
@@ -49,9 +49,8 @@ impl Default for Interactive {
 }
 
 impl Interactive {
-    pub fn expression(&mut self, input: &Expression) -> Result<Value> {
-        let typed =
-            typecheck::TypeChecker::new(&self.interpreter.env, &self.path).expression(input)?;
+    pub fn module(&mut self, input: &ast::Module) -> Result<Value> {
+        let typed = typecheck::TypeChecker::new(&self.interpreter.env, &self.path).module(input)?;
         self.interpreter.expression(&typed)
     }
 }

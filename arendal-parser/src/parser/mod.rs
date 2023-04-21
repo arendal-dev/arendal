@@ -1,12 +1,13 @@
-use core::ast::Expression;
+use core::ast::{Module, ModuleItem};
 use core::error::{Error, Errors, Loc, Result};
 
 use crate::lexer::{lex, Lexeme, LexemeKind, Lexemes};
 
 // Parses the input as single expression
-pub fn parse_expression(input: &str) -> Result<Expression> {
+// Parses the input as a module
+pub fn parse_module(input: &str) -> Result<Module> {
     let lexemes = lex(input)?;
-    Parser::new(lexemes).parse_expression()
+    Parser::new(lexemes).parse_module()
 }
 
 struct Parser {
@@ -78,16 +79,16 @@ impl Parser {
     }
 
     // Parses the input as a single expression.
-    fn parse_expression(mut self) -> Result<Expression> {
+    fn parse_module(mut self) -> Result<Module> {
         if self.is_done() {
             return self.empty_input();
         }
-        let expr = expr::parse(&mut self)?;
-        if let Some(_) = self.peek() {
-            self.expression_expected()
-        } else {
-            Ok(expr)
+        let mut module = Module::default();
+        while !self.is_done() {
+            let expr = expr::parse(&mut self)?;
+            module.add(ModuleItem::Expression(expr))
         }
+        Ok(module)
     }
 
     fn ok_n<T>(&mut self, n: usize, value: T) -> Result<T> {
@@ -110,15 +111,15 @@ impl Parser {
         Err(Errors::new(loc, error))
     }
 
-    fn err_no_lexeme(&self, error: ParserError) -> Result<Expression> {
+    fn err_no_lexeme<T>(&self, error: ParserError) -> Result<T> {
         Err(Errors::new(Loc::none(), error))
     }
 
-    fn empty_input(&self) -> Result<Expression> {
+    fn empty_input<T>(&self) -> Result<T> {
         self.err_no_lexeme(ParserError::EmptyInputError)
     }
 
-    fn expression_expected(&self) -> Result<Expression> {
+    fn expression_expected<T>(&self) -> Result<T> {
         self.err(ParserError::ExpressionExpectedError)
     }
 }

@@ -1,18 +1,20 @@
-use super::{Expression, Type, TypeChecker};
-use crate::ast::ExprBuilder;
+use super::{Type, TypeChecker};
+use crate::ast;
 use crate::env::Env;
 use crate::symbol::Pkg;
 
-const B: ExprBuilder = ExprBuilder::none();
+const B: ast::ExprBuilder = ast::ExprBuilder::none();
 
-fn ok_type(expr: Expression, t: Type) {
+fn ok_type(expr: ast::Expression, t: Type) {
     let env = Env::default();
     let path = Pkg::Local.empty();
     let mut checker = TypeChecker::new(&env, &path);
-    assert_eq!(*checker.expression(&expr).unwrap().borrow_type(), t);
+    let mut module = ast::Module::default();
+    module.add(ast::ModuleItem::Expression(expr));
+    assert_eq!(*checker.module(&module).unwrap().borrow_type(), t);
 }
 
-fn ok_int(expr: Expression) {
+fn ok_int(expr: ast::Expression) {
     ok_type(expr, Type::Integer);
 }
 

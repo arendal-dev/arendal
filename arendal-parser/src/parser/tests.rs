@@ -1,9 +1,9 @@
-use core::ast::Expr::*;
+use core::ast::{Expr::*, ModuleItem};
 use core::ast::{ExprBuilder, Expression};
 use core::error::Loc;
 use core::symbol::{Symbol, TSymbol};
 
-use super::parse_expression;
+use super::parse_module;
 
 const B: ExprBuilder = ExprBuilder::none();
 
@@ -29,13 +29,15 @@ fn expr_eq(actual: &Expression, expected: &Expression) -> bool {
 }
 
 fn check_expression(input: &str, expected: Expression) {
-    let actual = parse_expression(input).unwrap();
-    assert!(
-        expr_eq(&actual, &expected),
-        "\nActual  : {:?}\nExpected: {:?}\n",
-        actual,
-        expected
-    );
+    let module = parse_module(input).unwrap();
+    match module.get(0).unwrap() {
+        ModuleItem::Expression(actual) => assert!(
+            expr_eq(actual, &expected),
+            "\nActual  : {:?}\nExpected: {:?}\n",
+            actual,
+            expected
+        ),
+    }
 }
 
 fn str_symbol(symbol: &str) -> Symbol {
