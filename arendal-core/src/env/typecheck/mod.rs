@@ -2,7 +2,7 @@ use im::HashMap;
 
 use crate::ast::{BinaryOp, Expr, Expression};
 use crate::error::{Errors, Loc, Result};
-use crate::symbol::{FQSym, ModulePath, Pkg, Symbol};
+use crate::symbol::{FQSym, Path, Pkg, Symbol};
 use crate::typed::{TExprBuilder, TypedExpr};
 use crate::types::Type;
 
@@ -14,12 +14,12 @@ type Scope = HashMap<Symbol, Type>;
 pub(super) struct TypeChecker<'a> {
     env: &'a Env,
     pkg: Pkg,
-    path: ModulePath,
+    path: Path,
     scopes: Vec<Scope>,
 }
 
 impl<'a> TypeChecker<'a> {
-    pub(super) fn new(env: &'a Env, pkg: Pkg, path: ModulePath) -> Self {
+    pub(super) fn new(env: &'a Env, pkg: Pkg, path: Path) -> Self {
         TypeChecker {
             env,
             pkg,

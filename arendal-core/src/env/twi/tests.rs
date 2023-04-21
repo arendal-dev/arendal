@@ -1,6 +1,6 @@
 use crate::env::Env;
 use crate::error::Loc;
-use crate::symbol::{ModulePath, Pkg};
+use crate::symbol::{Path, Pkg};
 use crate::typed::{TExprBuilder, TypedExpr};
 use crate::types::Type;
 
@@ -10,7 +10,7 @@ const B: TExprBuilder = TExprBuilder::new(Loc::none());
 
 fn eval_ok(input: TypedExpr, result: Value) {
     let mut interpreter: Interpreter =
-        Interpreter::new(Env::default(), Pkg::Local, ModulePath::empty());
+        Interpreter::new(Env::default(), Pkg::Local, Path::empty());
     if let Ok(v) = interpreter.expression(&input) {
         assert_eq!(v, result);
     } else {

@@ -1,6 +1,6 @@
 use crate::ast::BinaryOp;
 use crate::error::{Error, Errors, Loc, Result};
-use crate::symbol::{FQSym, ModulePath, Pkg, Symbol};
+use crate::symbol::{FQSym, Path, Pkg, Symbol};
 use crate::typed::{TExpr, TypedExpr};
 use crate::value::Value;
 use crate::visibility::Visibility;
@@ -30,12 +30,12 @@ type Scope = HashMap<Symbol, Value>;
 pub(super) struct Interpreter {
     pub(super) env: Env,
     pkg: Pkg,
-    path: ModulePath,
+    path: Path,
     scopes: Vec<Scope>,
 }
 
 impl Interpreter {
-    pub(super) fn new(env: Env, pkg: Pkg, path: ModulePath) -> Self {
+    pub(super) fn new(env: Env, pkg: Pkg, path: Path) -> Self {
         Interpreter {
             env,
             pkg,

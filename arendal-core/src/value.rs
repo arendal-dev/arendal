@@ -3,7 +3,7 @@ use std::fmt;
 use im::HashMap;
 
 use crate::error::{Error, Errors, Loc, Result};
-use crate::symbol::{FQSym, ModulePath, Pkg, Symbol};
+use crate::symbol::{FQSym, Path, Pkg, Symbol};
 use crate::types::{Singleton, Type};
 use crate::visibility::{self, Visibility, Visible};
 use crate::Integer;

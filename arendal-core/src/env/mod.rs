@@ -5,7 +5,7 @@ mod typecheck;
 use crate::{
     ast::Expression,
     error::{Error, Result},
-    symbol::{FQSym, ModulePath, Pkg, Symbol},
+    symbol::{FQSym, Path, Pkg, Symbol},
     types::{Type, Types},
     value::{Value, Values},
 };
@@ -35,7 +35,7 @@ impl Default for Package {
 
 pub struct Interactive {
     pkg: Pkg,
-    path: ModulePath,
+    path: Path,
     interpreter: twi::Interpreter,
 }
 
@@ -43,8 +43,8 @@ impl Default for Interactive {
     fn default() -> Self {
         Interactive {
             pkg: Pkg::Local,
-            path: ModulePath::empty(),
-            interpreter: Interpreter::new(Env::default(), Pkg::Local, ModulePath::empty()),
+            path: Path::empty(),
+            interpreter: Interpreter::new(Env::default(), Pkg::Local, Path::empty()),
         }
     }
 }
@@ -60,7 +60,7 @@ impl Interactive {
 
 #[derive(Debug)]
 pub enum EnvError {
-    DuplicateModule(Pkg, ModulePath),
+    DuplicateModule(Pkg, Path),
     DuplicateSymbol(FQSym),
     DuplicateType(Type),
     DuplicateVal(Symbol),

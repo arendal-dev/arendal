@@ -160,13 +160,13 @@ impl fmt::Debug for TSymbol {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct ModulePath {
+pub struct Path {
     path: Arc<Vec<Symbol>>,
 }
 
-impl ModulePath {
+impl Path {
     pub(crate) fn new(path: Vec<Symbol>) -> Self {
-        ModulePath {
+        Path {
             path: Arc::new(path),
         }
     }
@@ -184,7 +184,7 @@ impl ModulePath {
     }
 }
 
-impl fmt::Display for ModulePath {
+impl fmt::Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, id) in self.path.iter().enumerate() {
             if i > 0 {
@@ -196,7 +196,7 @@ impl fmt::Display for ModulePath {
     }
 }
 
-impl fmt::Debug for ModulePath {
+impl fmt::Debug for Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         debug(f, "ModulePath", self)
     }
@@ -205,7 +205,7 @@ impl fmt::Debug for ModulePath {
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct TLData<T> {
     pkg: Pkg,
-    path: ModulePath,
+    path: Path,
     symbol: T,
 }
 
@@ -261,7 +261,7 @@ pub enum FQSym {
 }
 
 impl FQSym {
-    pub(crate) fn top_level(pkg: Pkg, path: ModulePath, symbol: Symbol) -> Self {
+    pub(crate) fn top_level(pkg: Pkg, path: Path, symbol: Symbol) -> Self {
         Self::TopLevel(TopLevel {
             data: Arc::new(TLData { pkg, path, symbol }),
         })
@@ -319,7 +319,7 @@ pub enum FQType {
 }
 
 impl FQType {
-    fn get_known(pkg: &Pkg, path: &ModulePath, symbol: &TSymbol) -> Option<Self> {
+    fn get_known(pkg: &Pkg, path: &Path, symbol: &TSymbol) -> Option<Self> {
         if *pkg == Pkg::Std && path.is_empty() {
             match symbol {
                 TSymbol::None => Some(Self::None),
@@ -341,7 +341,7 @@ impl FQType {
         }
     }
 
-    pub(crate) fn top_level(pkg: Pkg, path: ModulePath, symbol: TSymbol) -> Self {
+    pub(crate) fn top_level(pkg: Pkg, path: Path, symbol: TSymbol) -> Self {
         if let Some(fq) = Self::get_known(&pkg, &path, &symbol) {
             fq
         } else {
