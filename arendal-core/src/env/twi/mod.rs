@@ -29,23 +29,17 @@ type Scope = HashMap<Symbol, Value>;
 #[derive(Debug)]
 pub(super) struct Interpreter {
     pub(super) env: Env,
-    pkg: Pkg,
     path: Path,
     scopes: Vec<Scope>,
 }
 
 impl Interpreter {
-    pub(super) fn new(env: Env, pkg: Pkg, path: Path) -> Self {
+    pub(super) fn new(env: Env, path: Path) -> Self {
         Interpreter {
             env,
-            pkg,
             path,
             scopes: Default::default(),
         }
-    }
-
-    fn local_fq(&self, symbol: Symbol) -> FQSym {
-        FQSym::top_level(self.pkg.clone(), self.path.clone(), symbol)
     }
 
     pub fn set_val(&mut self, loc: Loc, symbol: Symbol, value: Value) -> Result<()> {
@@ -55,7 +49,7 @@ impl Interpreter {
         }
         self.env
             .values
-            .set(loc, self.local_fq(symbol), Visibility::Module, value)
+            .set(loc, self.path.fqsym(symbol), Visibility::Module, value)
     }
 
     pub fn get_val(&self, symbol: &Symbol) -> Option<Value> {
@@ -67,7 +61,7 @@ impl Interpreter {
             }
             i = i - 1;
         }
-        if let Some(vv) = self.env.values.get(&self.local_fq(symbol.clone())) {
+        if let Some(vv) = self.env.values.get(&self.path.fqsym(symbol.clone())) {
             return Some(vv.unwrap());
         }
         None

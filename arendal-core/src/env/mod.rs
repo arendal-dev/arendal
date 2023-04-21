@@ -34,17 +34,16 @@ impl Default for Package {
 }
 
 pub struct Interactive {
-    pkg: Pkg,
     path: Path,
     interpreter: twi::Interpreter,
 }
 
 impl Default for Interactive {
     fn default() -> Self {
+        let path = Pkg::Local.empty();
         Interactive {
-            pkg: Pkg::Local,
-            path: Path::empty(),
-            interpreter: Interpreter::new(Env::default(), Pkg::Local, Path::empty()),
+            path: path.clone(),
+            interpreter: Interpreter::new(Env::default(), path),
         }
     }
 }
@@ -52,8 +51,7 @@ impl Default for Interactive {
 impl Interactive {
     pub fn expression(&mut self, input: &Expression) -> Result<Value> {
         let typed =
-            typecheck::TypeChecker::new(&self.interpreter.env, self.pkg.clone(), self.path.clone())
-                .expression(input)?;
+            typecheck::TypeChecker::new(&self.interpreter.env, &self.path).expression(input)?;
         self.interpreter.expression(&typed)
     }
 }

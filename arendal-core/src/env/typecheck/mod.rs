@@ -2,7 +2,7 @@ use im::HashMap;
 
 use crate::ast::{BinaryOp, Expr, Expression};
 use crate::error::{Errors, Loc, Result};
-use crate::symbol::{FQSym, Path, Pkg, Symbol};
+use crate::symbol::{Path, Pkg, Symbol};
 use crate::typed::{TExprBuilder, TypedExpr};
 use crate::types::Type;
 
@@ -13,16 +13,14 @@ type Scope = HashMap<Symbol, Type>;
 #[derive(Debug)]
 pub(super) struct TypeChecker<'a> {
     env: &'a Env,
-    pkg: Pkg,
-    path: Path,
+    path: &'a Path,
     scopes: Vec<Scope>,
 }
 
 impl<'a> TypeChecker<'a> {
-    pub(super) fn new(env: &'a Env, pkg: Pkg, path: Path) -> Self {
+    pub(super) fn new(env: &'a Env, path: &'a Path) -> Self {
         TypeChecker {
             env,
-            pkg,
             path,
             scopes: vec![Scope::default()],
         }
@@ -41,10 +39,6 @@ impl<'a> TypeChecker<'a> {
         return Ok(());
     }
 
-    fn local_fq(&self, symbol: Symbol) -> FQSym {
-        FQSym::top_level(self.pkg.clone(), self.path.clone(), symbol)
-    }
-
     fn get_val(&self, symbol: &Symbol) -> Option<Type> {
         let mut i = self.scopes.len();
         while i > 0 {
@@ -54,7 +48,7 @@ impl<'a> TypeChecker<'a> {
             }
             i = i - 1;
         }
-        if let Some(vv) = self.env.values.get(&self.local_fq(symbol.clone())) {
+        if let Some(vv) = self.env.values.get(&&self.path.fqsym(symbol.clone())) {
             return Some(vv.unwrap().clone_type());
         }
         None

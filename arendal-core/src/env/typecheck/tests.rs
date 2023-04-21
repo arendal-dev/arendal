@@ -7,7 +7,8 @@ const B: ExprBuilder = ExprBuilder::none();
 
 fn ok_type(expr: Expression, t: Type) {
     let env = Env::default();
-    let mut checker = TypeChecker::new(&env, Pkg::Local, Path::empty());
+    let path = Pkg::Local.empty();
+    let mut checker = TypeChecker::new(&env, &path);
     assert_eq!(*checker.expression(&expr).unwrap().borrow_type(), t);
 }
 

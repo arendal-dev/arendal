@@ -27,29 +27,6 @@ fn debug(f: &mut fmt::Formatter<'_>, name: &str, it: &dyn fmt::Display) -> fmt::
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub enum Pkg {
-    Std,
-    Local,
-    External(Id),
-}
-
-impl fmt::Display for Pkg {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Std => f.write_str(&STD),
-            Self::Local => f.write_str(&PKG),
-            Self::External(id) => write!(f, "pkg({})", id),
-        }
-    }
-}
-
-impl fmt::Debug for Pkg {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        debug(f, "Pkg", self)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Other {
     name: ArcStr,
 }
@@ -160,37 +137,83 @@ impl fmt::Debug for TSymbol {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+pub enum Pkg {
+    Std,
+    Local,
+    External(Id),
+}
+
+impl Pkg {
+    pub fn empty(&self) -> Path {
+        Path::new(self.clone(), Vec::default())
+    }
+
+    pub fn single(&self, symbol: Symbol) -> Path {
+        Path::new(self.clone(), vec![symbol])
+    }
+
+    pub fn path(&self, mut symbols: Vec<Symbol>) -> Path {
+        match symbols.len() {
+            0 => self.empty(),
+            1 => self.single(symbols.pop().unwrap()),
+            _ => Path::new(self.clone(), symbols),
+        }
+    }
+}
+
+impl fmt::Display for Pkg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Std => f.write_str(&STD),
+            Self::Local => f.write_str(&PKG),
+            Self::External(id) => write!(f, "pkg({})", id),
+        }
+    }
+}
+
+impl fmt::Debug for Pkg {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        debug(f, "Pkg", self)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Path {
+    pkg: Pkg,
     path: Arc<Vec<Symbol>>,
 }
 
 impl Path {
-    pub(crate) fn new(path: Vec<Symbol>) -> Self {
+    fn new(pkg: Pkg, path: Vec<Symbol>) -> Self {
         Path {
+            pkg,
             path: Arc::new(path),
         }
     }
 
-    pub(crate) fn empty() -> Self {
-        Self::new(Default::default())
-    }
-
-    pub(crate) fn single(symbol: Symbol) -> Self {
-        Self::new(vec![symbol])
-    }
-
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.path.is_empty()
+    }
+
+    pub fn fqsym(&self, symbol: Symbol) -> FQSym {
+        FQSym::TopLevel(TopLevel {
+            data: Arc::new(TLData {
+                path: self.clone(),
+                symbol,
+            }),
+        })
+    }
+
+    pub fn fqtype(&self, symbol: TSymbol) -> FQType {
+        FQType::top_level(self.clone(), symbol)
     }
 }
 
 impl fmt::Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (i, id) in self.path.iter().enumerate() {
-            if i > 0 {
-                separator(f)?
-            }
-            id.fmt(f)?
+        self.pkg.fmt(f)?;
+        for s in self.path.iter() {
+            s.fmt(f)?
         }
         Ok(())
     }
@@ -198,13 +221,12 @@ impl fmt::Display for Path {
 
 impl fmt::Debug for Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        debug(f, "ModulePath", self)
+        debug(f, "Path", self)
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct TLData<T> {
-    pkg: Pkg,
     path: Path,
     symbol: T,
 }
@@ -216,10 +238,7 @@ pub struct TopLevel<T> {
 
 impl<T: Display> fmt::Display for TopLevel<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.data.pkg.fmt(f)?;
-        if !self.data.path.is_empty() {
-            add_segment(f, &self.data.path)?;
-        }
+        self.data.path.fmt(f)?;
         add_segment(f, &self.data.symbol)
     }
 }
@@ -261,26 +280,10 @@ pub enum FQSym {
 }
 
 impl FQSym {
-    pub(crate) fn top_level(pkg: Pkg, path: Path, symbol: Symbol) -> Self {
-        Self::TopLevel(TopLevel {
-            data: Arc::new(TLData { pkg, path, symbol }),
-        })
-    }
-
     pub(crate) fn is_top_level(&self) -> bool {
         match self {
             Self::Member(_) => false,
             _ => true,
-        }
-    }
-
-    pub(crate) fn member(loc: Loc, top_level: FQType, symbol: Symbol) -> Result<Self> {
-        if top_level.is_top_level() {
-            Ok(Self::Member(Member {
-                data: Arc::new(MemberData { top_level, symbol }),
-            }))
-        } else {
-            Errors::err(loc, SymbolError::ExpectedTopLevelType(top_level))
         }
     }
 
@@ -319,8 +322,8 @@ pub enum FQType {
 }
 
 impl FQType {
-    fn get_known(pkg: &Pkg, path: &Path, symbol: &TSymbol) -> Option<Self> {
-        if *pkg == Pkg::Std && path.is_empty() {
+    fn get_known(path: &Path, symbol: &TSymbol) -> Option<Self> {
+        if path.pkg == Pkg::Std && path.is_empty() {
             match symbol {
                 TSymbol::None => Some(Self::None),
                 TSymbol::True => Some(Self::True),
@@ -341,30 +344,46 @@ impl FQType {
         }
     }
 
-    pub(crate) fn top_level(pkg: Pkg, path: Path, symbol: TSymbol) -> Self {
-        if let Some(fq) = Self::get_known(&pkg, &path, &symbol) {
+    fn top_level(path: Path, symbol: TSymbol) -> Self {
+        if let Some(fq) = Self::get_known(&path, &symbol) {
             fq
         } else {
             Self::TopLevel(TopLevel {
-                data: Arc::new(TLData { pkg, path, symbol }),
+                data: Arc::new(TLData { path, symbol }),
             })
         }
     }
 
-    pub(crate) fn is_top_level(&self) -> bool {
+    pub fn is_top_level(&self) -> bool {
         match self {
             Self::Member(_) => false,
             _ => true,
         }
     }
 
-    pub(crate) fn member(loc: Loc, top_level: FQType, symbol: TSymbol) -> Result<Self> {
-        if top_level.is_top_level() {
-            Ok(Self::Member(Member {
-                data: Arc::new(MemberData { top_level, symbol }),
+    pub(crate) fn member_sym(&self, loc: Loc, symbol: Symbol) -> Result<FQSym> {
+        if self.is_top_level() {
+            Ok(FQSym::Member(Member {
+                data: Arc::new(MemberData {
+                    top_level: self.clone(),
+                    symbol,
+                }),
             }))
         } else {
-            Errors::err(loc, SymbolError::ExpectedTopLevelType(top_level))
+            Errors::err(loc, SymbolError::ExpectedTopLevelType(self.clone()))
+        }
+    }
+
+    pub(crate) fn member_type(&self, loc: Loc, symbol: TSymbol) -> Result<Self> {
+        if self.is_top_level() {
+            Ok(Self::Member(Member {
+                data: Arc::new(MemberData {
+                    top_level: self.clone(),
+                    symbol,
+                }),
+            }))
+        } else {
+            Errors::err(loc, SymbolError::ExpectedTopLevelType(self.clone()))
         }
     }
 
