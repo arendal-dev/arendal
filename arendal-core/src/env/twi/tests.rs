@@ -1,14 +1,14 @@
 use crate::env::Env;
 use crate::error::Loc;
 use crate::symbol::Pkg;
-use crate::typed::{TExprBuilder, TypedExpr};
+use crate::typed::{ExprBuilder, Expression};
 use crate::types::Type;
 
 use super::{Interpreter, Value};
 
-const B: TExprBuilder = TExprBuilder::new(Loc::none());
+const B: ExprBuilder = ExprBuilder::new(Loc::none());
 
-fn eval_ok(input: TypedExpr, result: Value) {
+fn eval_ok(input: Expression, result: Value) {
     let mut interpreter: Interpreter = Interpreter::new(Env::default(), Pkg::Local.empty());
     if let Ok(v) = interpreter.expression(&input) {
         assert_eq!(v, result);

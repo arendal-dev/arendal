@@ -11,17 +11,17 @@ use std::rc::Rc;
 struct Inner {
     loc: Loc,
     tipo: Type,
-    expr: TExpr,
+    expr: Expr,
 }
 
 #[derive(Clone)]
-pub struct TypedExpr {
+pub struct Expression {
     inner: Rc<Inner>,
 }
 
-impl TypedExpr {
-    fn new(loc: Loc, tipo: Type, expr: TExpr) -> Self {
-        TypedExpr {
+impl Expression {
+    fn new(loc: Loc, tipo: Type, expr: Expr) -> Self {
+        Expression {
             inner: Rc::new(Inner { loc, tipo, expr }),
         }
     }
@@ -42,7 +42,7 @@ impl TypedExpr {
         self.inner.tipo.clone()
     }
 
-    pub fn borrow_expr(&self) -> &TExpr {
+    pub fn borrow_expr(&self) -> &Expr {
         &self.inner.expr
     }
 
@@ -67,81 +67,81 @@ impl TypedExpr {
     }
 }
 
-impl fmt::Debug for TypedExpr {
+impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?} : {:?}", self.borrow_expr(), self.borrow_type())
     }
 }
 
 #[derive(Debug)]
-pub enum TExpr {
+pub enum Expr {
     Value(Value),
     LocalSymbol(Symbol),
-    Assignment(Symbol, TypedExpr),
-    Unary(UnaryOp, TypedExpr),
-    Binary(BinaryOp, TypedExpr, TypedExpr),
+    Assignment(Symbol, Expression),
+    Unary(UnaryOp, Expression),
+    Binary(BinaryOp, Expression, Expression),
 }
 
-pub struct TExprBuilder {
+pub struct ExprBuilder {
     loc: Loc,
 }
 
-impl TExprBuilder {
+impl ExprBuilder {
     pub const fn new(loc: Loc) -> Self {
-        TExprBuilder { loc }
+        ExprBuilder { loc }
     }
 
-    pub fn value(&self, value: Value) -> TypedExpr {
-        TypedExpr::new(self.loc.clone(), value.clone_type(), TExpr::Value(value))
+    pub fn value(&self, value: Value) -> Expression {
+        Expression::new(self.loc.clone(), value.clone_type(), Expr::Value(value))
     }
 
-    pub fn val_integer(&self, value: Integer) -> TypedExpr {
+    pub fn val_integer(&self, value: Integer) -> Expression {
         self.value(Value::Integer(value))
     }
 
-    pub fn val_i64(&self, value: i64) -> TypedExpr {
+    pub fn val_i64(&self, value: i64) -> Expression {
         self.val_integer(value.into())
     }
 
-    pub fn val(&self, id: Symbol, tipo: Type) -> TypedExpr {
-        TypedExpr::new(self.loc.clone(), tipo, TExpr::LocalSymbol(id))
+    pub fn val(&self, id: Symbol, tipo: Type) -> Expression {
+        Expression::new(self.loc.clone(), tipo, Expr::LocalSymbol(id))
     }
 
-    pub fn assignment(&self, id: Symbol, expr: TypedExpr) -> TypedExpr {
-        TypedExpr::new(
+    pub fn assignment(&self, id: Symbol, expr: Expression) -> Expression {
+        Expression::new(
             self.loc.clone(),
             expr.clone_type(),
-            TExpr::Assignment(id, expr),
+            Expr::Assignment(id, expr),
         )
     }
 
-    pub fn unary(&self, tipo: Type, op: UnaryOp, expr: TypedExpr) -> TypedExpr {
-        TypedExpr::new(self.loc.clone(), tipo, TExpr::Unary(op, expr))
+    pub fn unary(&self, tipo: Type, op: UnaryOp, expr: Expression) -> Expression {
+        Expression::new(self.loc.clone(), tipo, Expr::Unary(op, expr))
     }
 
     pub fn binary(
         &self,
         tipo: Type,
         op: BinaryOp,
-        expr1: TypedExpr,
-        expr2: TypedExpr,
-    ) -> TypedExpr {
-        TypedExpr::new(self.loc.clone(), tipo, TExpr::Binary(op, expr1, expr2))
+        expr1: Expression,
+        expr2: Expression,
+    ) -> Expression {
+        Expression::new(self.loc.clone(), tipo, Expr::Binary(op, expr1, expr2))
     }
 
-    pub fn add(&self, tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
+    pub fn add(&self, tipo: Type, expr1: Expression, expr2: Expression) -> Expression {
         self.binary(tipo, BinaryOp::Add, expr1, expr2)
     }
 
-    pub fn add_i64(&self, value1: i64, value2: i64) -> TypedExpr {
+    pub fn add_i64(&self, value1: i64, value2: i64) -> Expression {
         self.add(Type::Integer, self.val_i64(value1), self.val_i64(value2))
     }
 
-    pub fn sub(&self, tipo: Type, expr1: TypedExpr, expr2: TypedExpr) -> TypedExpr {
+    pub fn sub(&self, tipo: Type, expr1: Expression, expr2: Expression) -> Expression {
         self.binary(tipo, BinaryOp::Sub, expr1, expr2)
     }
 
-    pub fn sub_i64(&self, value1: i64, value2: i64) -> TypedExpr {
+    pub fn sub_i64(&self, value1: i64, value2: i64) -> Expression {
         self.sub(Type::Integer, self.val_i64(value1), self.val_i64(value2))
     }
 }

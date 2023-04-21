@@ -1,9 +1,9 @@
 use im::HashMap;
 
-use crate::ast::{self, BinaryOp, Expr};
+use crate::ast::{self, BinaryOp};
 use crate::error::{Errors, Loc, Result};
 use crate::symbol::{Path, Symbol};
-use crate::typed::{TExprBuilder, TypedExpr};
+use crate::typed;
 use crate::types::Type;
 
 use super::{Env, TypeCheckError};
@@ -26,7 +26,7 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub(super) fn module(&mut self, input: &ast::Module) -> Result<TypedExpr> {
+    pub(super) fn module(&mut self, input: &ast::Module) -> Result<typed::Expression> {
         match input.get(0).unwrap() {
             ast::ModuleItem::Expression(e) => ExprChecker {
                 checker: self,
@@ -64,20 +64,20 @@ struct ExprChecker<'a, 'b> {
 }
 
 impl<'a, 'b> ExprChecker<'a, 'b> {
-    fn check(mut self) -> Result<TypedExpr> {
+    fn check(mut self) -> Result<typed::Expression> {
         match self.input.borrow_expr() {
-            Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
-            Expr::Symbol(id) => match self.checker.get_val(id) {
+            ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
+            ast::Expr::Symbol(id) => match self.checker.get_val(id) {
                 Some(tipo) => Ok(self.builder().val(id.clone(), tipo.clone())),
                 None => self.error(TypeCheckError::UnknownIdentifier(id.clone())),
             },
-            Expr::Assignment(id, expr) => {
+            ast::Expr::Assignment(id, expr) => {
                 let typed = self.sub_expr(&expr)?;
                 self.checker
                     .set_val(self.input.clone_loc(), id.clone(), typed.clone_type())?;
                 Ok(self.builder().assignment(id.clone(), typed))
             }
-            Expr::Binary(op, e1, e2) => {
+            ast::Expr::Binary(op, e1, e2) => {
                 Errors::merge(self.sub_expr(&e1), self.sub_expr(&e2), |t1, t2| {
                     self.check_binary(*op, t1, t2)
                 })
@@ -86,7 +86,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn sub_expr(&mut self, input: &ast::Expression) -> Result<TypedExpr> {
+    fn sub_expr(&mut self, input: &ast::Expression) -> Result<typed::Expression> {
         ExprChecker {
             checker: self.checker,
             input,
@@ -94,7 +94,12 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         .check()
     }
 
-    fn check_binary(self, op: BinaryOp, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_binary(
+        self,
+        op: BinaryOp,
+        e1: typed::Expression,
+        e2: typed::Expression,
+    ) -> Result<typed::Expression> {
         match op {
             BinaryOp::Add => self.check_add(e1, e2),
             BinaryOp::Sub => self.check_sub(e1, e2),
@@ -108,13 +113,13 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         &self,
         tipo: Type,
         op: BinaryOp,
-        e1: TypedExpr,
-        e2: TypedExpr,
-    ) -> Result<TypedExpr> {
+        e1: typed::Expression,
+        e2: typed::Expression,
+    ) -> Result<typed::Expression> {
         Ok(self.builder().binary(tipo, op, e1, e2))
     }
 
-    fn check_add(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_add(self, e1: typed::Expression, e2: typed::Expression) -> Result<typed::Expression> {
         if e1.is_integer() && e2.is_integer() {
             self.ok_binary(Type::Integer, BinaryOp::Add, e1, e2)
         } else {
@@ -122,7 +127,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_sub(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_sub(self, e1: typed::Expression, e2: typed::Expression) -> Result<typed::Expression> {
         if e1.is_integer() && e2.is_integer() {
             self.ok_binary(Type::Integer, BinaryOp::Sub, e1, e2)
         } else {
@@ -130,7 +135,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_mul(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_mul(self, e1: typed::Expression, e2: typed::Expression) -> Result<typed::Expression> {
         if e1.is_integer() && e2.is_integer() {
             self.ok_binary(Type::Integer, BinaryOp::Mul, e1, e2)
         } else {
@@ -138,7 +143,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_div(self, e1: TypedExpr, e2: TypedExpr) -> Result<TypedExpr> {
+    fn check_div(self, e1: typed::Expression, e2: typed::Expression) -> Result<typed::Expression> {
         if e1.is_integer() && e2.is_integer() {
             self.ok_binary(Type::Integer, BinaryOp::Div, e1, e2)
         } else {
@@ -146,12 +151,12 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn builder(&self) -> TExprBuilder {
-        TExprBuilder::new(self.input.clone_loc())
+    fn builder(&self) -> typed::ExprBuilder {
+        typed::ExprBuilder::new(self.input.clone_loc())
     }
 
     // Creates and returns an error
-    fn error(self, kind: TypeCheckError) -> Result<TypedExpr> {
+    fn error(self, kind: TypeCheckError) -> Result<typed::Expression> {
         Errors::err(self.input.clone_loc(), kind)
     }
 }

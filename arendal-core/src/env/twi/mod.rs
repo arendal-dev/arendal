@@ -1,7 +1,7 @@
 use crate::ast::BinaryOp;
 use crate::error::{Error, Errors, Loc, Result};
 use crate::symbol::{Path, Symbol};
-use crate::typed::{TExpr, TypedExpr};
+use crate::typed::{Expr, Expression};
 use crate::value::Value;
 use crate::visibility::Visibility;
 use crate::Integer;
@@ -52,24 +52,24 @@ impl Interpreter {
         None
     }
 
-    pub fn expression(&mut self, expr: &TypedExpr) -> Result<Value> {
+    pub fn expression(&mut self, expr: &Expression) -> Result<Value> {
         match expr.borrow_expr() {
-            TExpr::Value(v) => Ok(v.clone()),
-            TExpr::LocalSymbol(id) => match self.get_val(id) {
+            Expr::Value(v) => Ok(v.clone()),
+            Expr::LocalSymbol(id) => match self.get_val(id) {
                 Some(value) => Ok(value),
                 None => err(expr, RuntimeError::UknownVal(id.clone())),
             },
-            TExpr::Assignment(id, expr) => {
+            Expr::Assignment(id, expr) => {
                 let value = self.expression(expr)?;
                 self.set_val(expr.clone_loc(), id.clone(), value.clone())?;
                 Ok(value)
             }
-            TExpr::Binary(op, e1, e2) => self.binary(*op, e1, e2),
+            Expr::Binary(op, e1, e2) => self.binary(*op, e1, e2),
             _ => err(expr, RuntimeError::NotImplemented),
         }
     }
 
-    fn binary(&mut self, op: BinaryOp, e1: &TypedExpr, e2: &TypedExpr) -> Result<Value> {
+    fn binary(&mut self, op: BinaryOp, e1: &Expression, e2: &Expression) -> Result<Value> {
         let v1 = self.expression(e1)?;
         match op {
             BinaryOp::Add => self.add(v1, e2),
@@ -80,25 +80,25 @@ impl Interpreter {
         }
     }
 
-    fn add(&mut self, v1: Value, e2: &TypedExpr) -> Result<Value> {
+    fn add(&mut self, v1: Value, e2: &Expression) -> Result<Value> {
         let v2 = self.expression(e2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() + v2.as_integer().unwrap())
     }
 
-    fn sub(&mut self, v1: Value, e2: &TypedExpr) -> Result<Value> {
+    fn sub(&mut self, v1: Value, e2: &Expression) -> Result<Value> {
         let v2 = self.expression(e2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() - v2.as_integer().unwrap())
     }
 
-    fn mul(&mut self, v1: Value, e2: &TypedExpr) -> Result<Value> {
+    fn mul(&mut self, v1: Value, e2: &Expression) -> Result<Value> {
         let v2 = self.expression(e2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() * v2.as_integer().unwrap())
     }
 
-    fn div(&mut self, v1: Value, e2: &TypedExpr) -> Result<Value> {
+    fn div(&mut self, v1: Value, e2: &Expression) -> Result<Value> {
         let v2 = self.expression(e2)?;
         // We only have integers for now
         let i2 = v2.as_integer().unwrap();
@@ -114,7 +114,7 @@ fn integer(value: Integer) -> Result<Value> {
     Ok(Value::Integer(value))
 }
 
-fn err(expr: &TypedExpr, error: RuntimeError) -> Result<Value> {
+fn err(expr: &Expression, error: RuntimeError) -> Result<Value> {
     Errors::err(expr.clone_loc(), error)
 }
 
