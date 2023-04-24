@@ -6,6 +6,7 @@ use crate::types::Type;
 use crate::value::Value;
 use std::fmt;
 use std::rc::Rc;
+use std::slice::Iter;
 
 #[derive(Debug)]
 struct Inner {
@@ -144,4 +145,29 @@ impl ExprBuilder {
     pub fn sub_i64(&self, value1: i64, value2: i64) -> Expression {
         self.sub(Type::Integer, self.val_i64(value1), self.val_i64(value2))
     }
+}
+
+#[derive(Debug)]
+pub struct Expressions {
+    expressions: Vec<Expression>,
+}
+
+impl Expressions {
+    pub fn iter(&self) -> Iter<'_, Expression> {
+        self.expressions.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Expressions {
+    type Item = &'a Expression;
+    type IntoIter = Iter<'a, Expression>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+#[derive(Debug)]
+pub struct Module {
+    pub(crate) expressions: Expressions,
 }
