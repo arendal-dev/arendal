@@ -1,7 +1,7 @@
 use crate::ast::BinaryOp;
 use crate::error::{Error, Errors, Loc, Result};
-use crate::symbol::{Path, Symbol};
-use crate::typed::{Expr, Expression};
+use crate::symbol::Symbol;
+use crate::typed::{Expr, Expression, Module};
 use crate::value::Value;
 use crate::visibility::Visibility;
 use crate::Integer;
@@ -11,33 +11,37 @@ use super::Env;
 
 type Scope = HashMap<Symbol, Value>;
 
+pub(super) fn interpret(env: &mut Env, module: &Module) -> Result<Value> {
+    Interpreter {
+        env,
+        module,
+        scopes: Default::default(),
+    }
+    .run()
+}
+
 #[derive(Debug)]
-pub(super) struct Interpreter {
-    pub(super) env: Env,
-    path: Path,
+struct Interpreter<'a> {
+    env: &'a mut Env,
+    module: &'a Module,
     scopes: Vec<Scope>,
 }
 
-impl Interpreter {
-    pub(super) fn new(env: Env, path: Path) -> Self {
-        Interpreter {
-            env,
-            path,
-            scopes: Default::default(),
-        }
-    }
-
-    pub fn set_val(&mut self, loc: Loc, symbol: Symbol, value: Value) -> Result<()> {
+impl<'a> Interpreter<'a> {
+    fn set_val(&mut self, loc: Loc, symbol: Symbol, value: Value) -> Result<()> {
         if !self.scopes.is_empty() {
             self.scopes.last_mut().unwrap().insert(symbol, value);
             return Ok(());
         }
-        self.env
-            .values
-            .set(loc, self.path.fqsym(symbol), Visibility::Module, value)
+        self.env.values.set(
+            loc,
+            self.module.path.fqsym(symbol),
+            Visibility::Module,
+            value,
+        )
     }
 
-    pub fn get_val(&self, symbol: &Symbol) -> Option<Value> {
+    fn get_val(&self, symbol: &Symbol) -> Option<Value> {
         let mut i = self.scopes.len();
         while i > 0 {
             let result = self.scopes[i - 1].get(symbol);
@@ -46,13 +50,21 @@ impl Interpreter {
             }
             i = i - 1;
         }
-        if let Some(vv) = self.env.values.get(&self.path.fqsym(symbol.clone())) {
+        if let Some(vv) = self.env.values.get(&self.module.path.fqsym(symbol.clone())) {
             return Some(vv.unwrap());
         }
         None
     }
 
-    pub fn expression(&mut self, expr: &Expression) -> Result<Value> {
+    fn run(mut self) -> Result<Value> {
+        let mut value = Value::None;
+        for e in &self.module.expressions {
+            value = self.expression(e)?;
+        }
+        Ok(value)
+    }
+
+    fn expression(&mut self, expr: &Expression) -> Result<Value> {
         match expr.borrow_expr() {
             Expr::Value(v) => Ok(v.clone()),
             Expr::LocalSymbol(id) => match self.get_val(id) {

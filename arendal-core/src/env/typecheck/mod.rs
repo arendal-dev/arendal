@@ -26,14 +26,22 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub(super) fn module(&mut self, input: &ast::Module) -> Result<typed::Expression> {
+    pub(super) fn module(&mut self, input: &ast::Module) -> Result<typed::Module> {
+        let mut expressions: Vec<typed::Expression> = Vec::default();
         match input.get(0).unwrap() {
-            ast::ModuleItem::Expression(e) => ExprChecker {
-                checker: self,
-                input: e,
+            ast::ModuleItem::Expression(e) => {
+                let checked = ExprChecker {
+                    checker: self,
+                    input: e,
+                }
+                .check()?;
+                expressions.push(checked);
             }
-            .check(),
         }
+        Ok(typed::Module {
+            path: self.path.clone(),
+            expressions: typed::Expressions::new(expressions),
+        })
     }
 
     fn set_val(&mut self, loc: Loc, symbol: Symbol, tipo: Type) -> Result<()> {

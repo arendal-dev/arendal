@@ -1,7 +1,7 @@
 use super::Integer;
 use crate::ast::{BinaryOp, UnaryOp};
 use crate::error::Loc;
-use crate::symbol::Symbol;
+use crate::symbol::{Path, Symbol};
 use crate::types::Type;
 use crate::value::Value;
 use std::fmt;
@@ -153,6 +153,10 @@ pub struct Expressions {
 }
 
 impl Expressions {
+    pub fn new(expressions: Vec<Expression>) -> Self {
+        Self { expressions }
+    }
+
     pub fn iter(&self) -> Iter<'_, Expression> {
         self.expressions.iter()
     }
@@ -169,5 +173,6 @@ impl<'a> IntoIterator for &'a Expressions {
 
 #[derive(Debug)]
 pub struct Module {
-    pub(crate) expressions: Expressions,
+    pub path: Path,
+    pub expressions: Expressions,
 }

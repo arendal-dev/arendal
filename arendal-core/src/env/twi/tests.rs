@@ -1,16 +1,23 @@
 use crate::env::Env;
 use crate::error::Loc;
 use crate::symbol::Pkg;
-use crate::typed::{ExprBuilder, Expression};
+use crate::typed::{ExprBuilder, Expression, Expressions, Module};
 use crate::types::Type;
 
-use super::{Interpreter, Value};
+use super::Value;
 
 const B: ExprBuilder = ExprBuilder::new(Loc::none());
 
 fn eval_ok(input: Expression, result: Value) {
-    let mut interpreter: Interpreter = Interpreter::new(Env::default(), Pkg::Local.empty());
-    if let Ok(v) = interpreter.expression(&input) {
+    let mut env = Env::default();
+    let output = super::interpret(
+        &mut env,
+        &Module {
+            path: Pkg::Local.empty(),
+            expressions: Expressions::new(vec![input]),
+        },
+    );
+    if let Ok(v) = output {
         assert_eq!(v, result);
     } else {
         panic!("Error evaluating expression");

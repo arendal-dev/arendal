@@ -11,7 +11,17 @@ fn ok_type(expr: ast::Expression, t: Type) {
     let mut checker = TypeChecker::new(&env, &path);
     let mut module = ast::Module::default();
     module.add(ast::ModuleItem::Expression(expr));
-    assert_eq!(*checker.module(&module).unwrap().borrow_type(), t);
+    assert_eq!(
+        *checker
+            .module(&module)
+            .unwrap()
+            .expressions
+            .iter()
+            .next()
+            .unwrap()
+            .borrow_type(),
+        t
+    );
 }
 
 fn ok_int(expr: ast::Expression) {

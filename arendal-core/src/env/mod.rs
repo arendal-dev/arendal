@@ -10,8 +10,6 @@ use crate::{
     value::{Value, Values},
 };
 
-use self::twi::Interpreter;
-
 #[derive(Debug, Clone, Default)]
 struct Env {
     types: Types,
@@ -34,24 +32,23 @@ impl Default for Package {
 }
 
 pub struct Interactive {
+    env: Env,
     path: Path,
-    interpreter: twi::Interpreter,
 }
 
 impl Default for Interactive {
     fn default() -> Self {
-        let path = Pkg::Local.empty();
         Interactive {
-            path: path.clone(),
-            interpreter: Interpreter::new(Env::default(), path),
+            env: Env::default(),
+            path: Pkg::Local.empty(),
         }
     }
 }
 
 impl Interactive {
     pub fn module(&mut self, input: &ast::Module) -> Result<Value> {
-        let typed = typecheck::TypeChecker::new(&self.interpreter.env, &self.path).module(input)?;
-        self.interpreter.expression(&typed)
+        let module = typecheck::TypeChecker::new(&self.env, &self.path).module(input)?;
+        twi::interpret(&mut self.env, &module)
     }
 }
 
