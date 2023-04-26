@@ -83,7 +83,12 @@ impl TestCase {
 
     fn ok_without_pos(mut self) {
         match self.lex() {
-            Ok(lexemes) => assert_eq_noloc(&lexemes, &Lexemes::new(&mut self.lexemes)),
+            Ok(lexemes) => assert_eq_noloc(
+                &lexemes,
+                &Lexemes {
+                    lexemes: self.lexemes,
+                },
+            ),
             Err(_) => panic!(),
         }
     }

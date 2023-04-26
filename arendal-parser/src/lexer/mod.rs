@@ -1,5 +1,4 @@
 use std::fmt;
-use std::rc::Rc;
 
 use super::Enclosure;
 use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
@@ -36,50 +35,47 @@ impl Separator {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) struct Lexeme {
-    inner: Rc<Inner>,
+    separator: Separator,
+    token: Token, // Starting token of the lexeme
+    kind: LexemeKind,
 }
 
 impl Lexeme {
     fn new(separator: Separator, token: Token, kind: LexemeKind) -> Self {
-        let inner = Inner {
+        Lexeme {
             separator,
             token: token,
             kind,
-        };
-        Lexeme {
-            inner: Rc::new(inner),
         }
     }
 
     pub fn kind(&self) -> &LexemeKind {
-        &self.inner.kind
+        &self.kind
     }
 
     pub fn loc(&self) -> Loc {
-        self.inner.token.loc.clone()
+        self.token.loc.clone()
     }
 
     pub(crate) fn separator(&self) -> Separator {
-        self.inner.separator
+        self.separator
+    }
+}
+
+impl fmt::Debug for Lexeme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{:?}]{:?}[{:?}]", self.separator, self.kind, self.token)
     }
 }
 
 #[derive(Default, Clone)]
 pub(crate) struct Lexemes {
-    lexemes: Rc<Vec<Lexeme>>,
+    lexemes: Vec<Lexeme>,
 }
 
 impl Lexemes {
-    fn new(lexref: &mut Vec<Lexeme>) -> Self {
-        let mut lexemes: Vec<Lexeme> = Default::default();
-        lexemes.append(lexref);
-        Lexemes {
-            lexemes: Rc::new(lexemes),
-        }
-    }
-
     #[inline]
     pub(crate) fn contains(&self, index: usize) -> bool {
         index < self.lexemes.len()
@@ -93,30 +89,7 @@ impl Lexemes {
 
 impl fmt::Debug for Lexemes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.lexemes.as_ref())
-    }
-}
-
-#[derive(Clone, PartialEq, Eq)]
-struct Inner {
-    separator: Separator,
-    token: Token, // Starting token of the lexeme
-    kind: LexemeKind,
-}
-
-impl Inner {
-    fn new(separator: Separator, token: &Token, kind: LexemeKind) -> Self {
-        Inner {
-            separator,
-            token: token.clone(),
-            kind,
-        }
-    }
-}
-
-impl fmt::Debug for Inner {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{:?}]{:?}[{:?}]", self.separator, self.kind, self.token)
+        write!(f, "{:?}", self.lexemes)
     }
 }
 
@@ -216,8 +189,9 @@ impl Lexer {
                 _ => self.add_error(loc, Error::UnexpectedToken, 1),
             }
         }
-        self.errors
-            .to_lazy_result(|()| Lexemes::new(&mut self.lexemes))
+        self.errors.to_lazy_result(|()| Lexemes {
+            lexemes: self.lexemes,
+        })
     }
 
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
