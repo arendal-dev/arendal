@@ -58,7 +58,7 @@ impl Lexeme {
     }
 
     pub fn loc(&self) -> Loc {
-        self.inner.token.loc()
+        self.inner.token.loc.clone()
     }
 
     pub(crate) fn separator(&self) -> Separator {
@@ -170,21 +170,21 @@ impl Lexer {
         self.index += n;
     }
 
-    // Returns a clone of the lexer at the current index, if any
+    // Returns a clone of the token at the current index, if any
     fn peek(&self) -> Option<Token> {
-        self.input.get(self.index)
+        self.input.get(self.index).cloned()
     }
 
     // Returns a clone of the lexer the requested positions after the current one, if any.
     fn peek_ahead(&self, n: usize) -> Option<Token> {
-        self.input.get(self.index + n)
+        self.input.get(self.index + n).cloned()
     }
 
     fn lex(mut self) -> Result<Lexemes> {
         self.separator = Separator::NewLine;
         while let Some(t) = self.peek() {
             self.lexeme_start = self.index;
-            let loc = t.loc();
+            let loc = t.loc;
             match t.kind {
                 TokenKind::Tabs(_) | TokenKind::Spaces(_) => {
                     self.advance_whitespace();
@@ -223,7 +223,7 @@ impl Lexer {
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
         self.lexemes.push(Lexeme::new(
             self.separator,
-            self.input.get(self.lexeme_start).unwrap(),
+            self.input.get(self.lexeme_start).cloned().unwrap(),
             kind,
         ));
         self.advance(tokens);

@@ -15,8 +15,8 @@ pub(crate) struct Tokens {
 
 impl Tokens {
     #[inline]
-    pub fn get(&self, index: usize) -> Option<Token> {
-        self.tokens.get(index).cloned()
+    pub fn get(&self, index: usize) -> Option<&Token> {
+        self.tokens.get(index)
     }
 }
 
@@ -35,10 +35,6 @@ pub(crate) struct Token {
 impl Token {
     pub fn is_whitespace(&self) -> bool {
         self.kind.is_whitespace()
-    }
-
-    pub fn loc(&self) -> Loc {
-        self.loc.clone().into()
     }
 }
 
