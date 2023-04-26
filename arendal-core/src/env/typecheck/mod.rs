@@ -10,8 +10,17 @@ use super::{Env, TypeCheckError};
 
 type Scope = HashMap<Symbol, Type>;
 
+pub(super) fn check(env: &Env, path: &Path, input: &ast::Module) -> Result<typed::Module> {
+    TypeChecker {
+        env,
+        path,
+        scopes: vec![Scope::default()],
+    }
+    .module(input)
+}
+
 #[derive(Debug)]
-pub(super) struct TypeChecker<'a> {
+struct TypeChecker<'a> {
     env: &'a Env,
     path: &'a Path,
     scopes: Vec<Scope>,
@@ -26,7 +35,7 @@ impl<'a> TypeChecker<'a> {
         }
     }
 
-    pub(super) fn module(&mut self, input: &ast::Module) -> Result<typed::Module> {
+    fn module(&mut self, input: &ast::Module) -> Result<typed::Module> {
         let mut expressions: Vec<typed::Expression> = Vec::default();
         match input.get(0).unwrap() {
             ast::ModuleItem::Expression(e) => {

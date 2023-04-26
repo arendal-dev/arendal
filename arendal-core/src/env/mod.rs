@@ -47,7 +47,7 @@ impl Default for Interactive {
 
 impl Interactive {
     pub fn module(&mut self, input: &ast::Module) -> Result<Value> {
-        let module = typecheck::TypeChecker::new(&self.env, &self.path).module(input)?;
+        let module = typecheck::check(&self.env, &self.path, input)?;
         twi::interpret(&mut self.env, &module)
     }
 }
