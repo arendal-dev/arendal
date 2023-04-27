@@ -44,6 +44,13 @@ impl Type {
             Self::Singleton(s) => s.symbol.clone(),
         }
     }
+
+    pub fn is_singleton(&self) -> bool {
+        match self {
+            Type::None | Type::True | Type::False | Type::Singleton(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Type {
@@ -85,6 +92,10 @@ impl Default for Types {
 }
 
 impl Types {
+    pub fn get(&self, symbol: &FQType) -> Option<&Visible<Type>> {
+        self.types.get(symbol)
+    }
+
     pub fn singleton(&mut self, loc: Loc, visibility: Visibility, symbol: FQType) -> Result<Type> {
         if self.types.contains_key(&symbol) {
             Errors::err(loc, TypeError::DuplicateType(symbol))

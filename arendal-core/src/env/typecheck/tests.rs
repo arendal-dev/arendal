@@ -1,7 +1,7 @@
 use super::Type;
 use crate::ast;
 use crate::env::Env;
-use crate::symbol::Pkg;
+use crate::symbol::{Pkg, TSymbol};
 
 const B: ast::ExprBuilder = ast::ExprBuilder::none();
 
@@ -44,4 +44,9 @@ fn add2() {
 #[test]
 fn sub1() {
     ok_int(B.sub_i64(1, 2));
+}
+
+#[test]
+fn std_singleton() {
+    ok_type(B.tsymbol(TSymbol::True), Type::True);
 }

@@ -41,6 +41,10 @@ impl Expression {
         }
     }
 
+    pub fn borrow_loc(&self) -> &Loc {
+        &self.data.loc
+    }
+
     pub fn clone_loc(&self) -> Loc {
         self.data.loc.clone()
     }

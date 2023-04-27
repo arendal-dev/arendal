@@ -35,7 +35,7 @@ impl<'a> Interpreter<'a> {
         }
         self.env.values.set(
             loc,
-            self.module.path.fqsym(symbol),
+            self.module.path.fq_sym(symbol),
             Visibility::Module,
             value,
         )
@@ -50,7 +50,11 @@ impl<'a> Interpreter<'a> {
             }
             i = i - 1;
         }
-        if let Some(vv) = self.env.values.get(&self.module.path.fqsym(symbol.clone())) {
+        if let Some(vv) = self
+            .env
+            .values
+            .get(&self.module.path.fq_sym(symbol.clone()))
+        {
             return Some(vv.unwrap());
         }
         None

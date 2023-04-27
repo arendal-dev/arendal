@@ -61,11 +61,3 @@ pub enum EnvError {
 }
 
 impl Error for EnvError {}
-
-#[derive(Debug)]
-enum TypeCheckError {
-    UnknownIdentifier(Symbol),
-    InvalidType, // placeholder, temporary error
-}
-
-impl Error for TypeCheckError {}

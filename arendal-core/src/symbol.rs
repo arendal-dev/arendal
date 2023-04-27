@@ -195,7 +195,7 @@ impl Path {
         self.path.is_empty()
     }
 
-    pub fn fqsym(&self, symbol: Symbol) -> FQSym {
+    pub fn fq_sym(&self, symbol: Symbol) -> FQSym {
         FQSym::TopLevel(TopLevel {
             data: Arc::new(TLData {
                 path: self.clone(),
@@ -204,7 +204,7 @@ impl Path {
         })
     }
 
-    pub fn fqtype(&self, symbol: TSymbol) -> FQType {
+    pub fn fq_type(&self, symbol: TSymbol) -> FQType {
         FQType::top_level(self.clone(), symbol)
     }
 }

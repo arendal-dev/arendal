@@ -34,6 +34,16 @@ impl Value {
         }
     }
 
+    pub fn singleton(loc: &Loc, tipo: &Type) -> Result<Self> {
+        match tipo {
+            Type::None => Ok(Value::None),
+            Type::True => Ok(Value::True),
+            Type::False => Ok(Value::False),
+            Type::Singleton(s) => Ok(Value::Singleton(s.clone())),
+            _ => Errors::err(loc.clone(), ValueError::SingletonExpected(tipo.clone())),
+        }
+    }
+
     pub fn clone_type(&self) -> Type {
         match self {
             Self::None => Type::None,
@@ -107,6 +117,7 @@ impl Values {
 #[derive(Debug)]
 pub enum ValueError {
     DuplicateValue(FQSym),
+    SingletonExpected(Type),
 }
 
 impl Error for ValueError {}

@@ -1,12 +1,13 @@
 use im::HashMap;
 
 use crate::ast::{self, BinaryOp};
-use crate::error::{Errors, Loc, Result};
-use crate::symbol::{Path, Symbol};
+use crate::error::{Error, Errors, Loc, Result};
+use crate::symbol::{FQType, Path, Pkg, Symbol, TSymbol};
 use crate::typed;
 use crate::types::Type;
+use crate::value::Value;
 
-use super::{Env, TypeCheckError};
+use super::Env;
 
 type Scope = HashMap<Symbol, Type>;
 
@@ -15,6 +16,7 @@ pub(super) fn check(env: &Env, path: &Path, input: &ast::Module) -> Result<typed
         env,
         path,
         scopes: vec![Scope::default()],
+        types: HashMap::default(),
     }
     .module(input)
 }
@@ -24,6 +26,7 @@ struct TypeChecker<'a> {
     env: &'a Env,
     path: &'a Path,
     scopes: Vec<Scope>,
+    types: HashMap<TSymbol, Type>,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -61,10 +64,31 @@ impl<'a> TypeChecker<'a> {
             }
             i = i - 1;
         }
-        if let Some(vv) = self.env.values.get(&&self.path.fqsym(symbol.clone())) {
+        if let Some(vv) = self.env.values.get(&&self.path.fq_sym(symbol.clone())) {
             return Some(vv.unwrap().clone_type());
         }
         None
+    }
+
+    fn fq_type(&self, symbol: &TSymbol) -> FQType {
+        self.path.fq_type(symbol.clone())
+    }
+
+    fn resolve_type(&self, loc: &Loc, symbol: &TSymbol) -> Result<Type> {
+        match self.types.get(symbol) {
+            Some(t) => Ok(t.clone()),
+            None => match self.env.types.get(&self.fq_type(symbol)) {
+                Some(t) => Ok(t.cloned()),
+                None => match self
+                    .env
+                    .types
+                    .get(&Pkg::Std.empty().fq_type(symbol.clone()))
+                {
+                    Some(t) => Ok(t.cloned()),
+                    None => Errors::err(loc.clone(), TypeCheckError::UnknownType(symbol.clone())),
+                },
+            },
+        }
     }
 }
 
@@ -82,6 +106,11 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                 Some(tipo) => Ok(self.builder().val(id.clone(), tipo.clone())),
                 None => self.error(TypeCheckError::UnknownIdentifier(id.clone())),
             },
+            ast::Expr::TSymbol(s) => {
+                let tipo = self.resolve_type(s)?;
+                let value = Value::singleton(self.input.borrow_loc(), &tipo)?;
+                Ok(self.builder().value(value))
+            }
             ast::Expr::Assignment(id, expr) => {
                 let typed = self.sub_expr(&expr)?;
                 self.checker
@@ -95,6 +124,10 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             }
             _ => self.error(TypeCheckError::InvalidType),
         }
+    }
+
+    fn resolve_type(&self, symbol: &TSymbol) -> Result<Type> {
+        self.checker.resolve_type(self.input.borrow_loc(), symbol)
     }
 
     fn sub_expr(&mut self, input: &ast::Expression) -> Result<typed::Expression> {
@@ -171,6 +204,15 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         Errors::err(self.input.clone_loc(), kind)
     }
 }
+
+#[derive(Debug)]
+enum TypeCheckError {
+    UnknownType(TSymbol),
+    UnknownIdentifier(Symbol),
+    InvalidType, // placeholder, temporary error
+}
+
+impl Error for TypeCheckError {}
 
 #[cfg(test)]
 mod tests;

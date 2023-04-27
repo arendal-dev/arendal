@@ -20,3 +20,9 @@ impl<T> Visible<T> {
         self.it
     }
 }
+
+impl<T: Clone> Visible<T> {
+    pub fn cloned(&self) -> T {
+        self.it.clone()
+    }
+}
