@@ -1,9 +1,9 @@
-use core::ast::{Expr::*, ModuleItem};
+use core::ast::{BinaryOp, Expr::*, ModuleItem};
 use core::ast::{ExprBuilder, Expression};
 use core::error::Loc;
 use core::symbol::{Symbol, TSymbol};
 
-use super::parse_module;
+use super::parse;
 
 const B: ExprBuilder = ExprBuilder::none();
 
@@ -29,7 +29,7 @@ fn expr_eq(actual: &Expression, expected: &Expression) -> bool {
 }
 
 fn check_expression(input: &str, expected: Expression) {
-    let module = parse_module(input).unwrap();
+    let module = parse(input).unwrap();
     match module.get(0).unwrap() {
         ModuleItem::Expression(actual) => assert!(
             expr_eq(actual, &expected),
@@ -122,5 +122,13 @@ fn assignment2() {
     check_expression(
         "val x = y + 2",
         B.assignment(str_symbol("x"), B.add(y_expr(), B.lit_i64(2))),
+    );
+}
+
+#[test]
+fn parens1() {
+    check_expression(
+        "(1 + 2) * 2",
+        B.binary(BinaryOp::Mul, B.add_i64(1, 2), B.lit_i64(2)),
     );
 }

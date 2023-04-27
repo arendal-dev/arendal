@@ -7,8 +7,8 @@ use super::{
 use core::ArcStr;
 
 fn assert_eq_noloc(actual: &Lexemes, expected: &Lexemes) {
-    assert_eq!(actual.lexemes.len(), expected.lexemes.len());
-    for (actual_lexeme, expected_lexeme) in actual.lexemes.iter().zip(expected.lexemes.iter()) {
+    assert_eq!(actual.len(), expected.len());
+    for (actual_lexeme, expected_lexeme) in actual.iter().zip(expected.iter()) {
         assert_eq!(
             actual_lexeme.separator(),
             expected_lexeme.separator(),
@@ -83,12 +83,7 @@ impl TestCase {
 
     fn ok_without_pos(mut self) {
         match self.lex() {
-            Ok(lexemes) => assert_eq_noloc(
-                &lexemes,
-                &Lexemes {
-                    lexemes: self.lexemes,
-                },
-            ),
+            Ok(lexemes) => assert_eq_noloc(&lexemes, &self.lexemes),
             Err(_) => panic!(),
         }
     }

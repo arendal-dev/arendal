@@ -70,28 +70,7 @@ impl fmt::Debug for Lexeme {
     }
 }
 
-#[derive(Default, Clone)]
-pub(crate) struct Lexemes {
-    lexemes: Vec<Lexeme>,
-}
-
-impl Lexemes {
-    #[inline]
-    pub(crate) fn contains(&self, index: usize) -> bool {
-        index < self.lexemes.len()
-    }
-
-    #[inline]
-    pub(crate) fn get(&self, index: usize) -> Option<Lexeme> {
-        self.lexemes.get(index).cloned()
-    }
-}
-
-impl fmt::Debug for Lexemes {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.lexemes)
-    }
-}
+pub(crate) type Lexemes = Vec<Lexeme>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum LexemeKind {
@@ -118,7 +97,7 @@ pub(crate) enum LexemeKind {
 struct Lexer {
     separator: Separator,
     input: Tokens,
-    lexemes: Vec<Lexeme>,
+    lexemes: Lexemes,
     errors: ErrorAcc,
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
@@ -189,9 +168,7 @@ impl Lexer {
                 _ => self.add_error(loc, Error::UnexpectedToken, 1),
             }
         }
-        self.errors.to_lazy_result(|()| Lexemes {
-            lexemes: self.lexemes,
-        })
+        self.errors.to_result(self.lexemes)
     }
 
     fn add_lexeme(&mut self, kind: LexemeKind, tokens: usize) {
