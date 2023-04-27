@@ -64,7 +64,7 @@ impl Parser {
         while !parser.is_done() {
             let expr: Expression;
             (expr, parser) = parser.rule_toplevelexpr()?;
-            module.add(ModuleItem::Expression(expr))
+            module.push(ModuleItem::Expression(expr))
         }
         Ok(module)
     }

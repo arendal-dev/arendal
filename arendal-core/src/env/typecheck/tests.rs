@@ -1,4 +1,4 @@
-use super::{Type, TypeChecker};
+use super::Type;
 use crate::ast;
 use crate::env::Env;
 use crate::symbol::Pkg;
@@ -8,12 +8,10 @@ const B: ast::ExprBuilder = ast::ExprBuilder::none();
 fn ok_type(expr: ast::Expression, t: Type) {
     let env = Env::default();
     let path = Pkg::Local.empty();
-    let mut checker = TypeChecker::new(&env, &path);
     let mut module = ast::Module::default();
-    module.add(ast::ModuleItem::Expression(expr));
+    module.push(ast::ModuleItem::Expression(expr));
     assert_eq!(
-        *checker
-            .module(&module)
+        *super::check(&env, &path, &module)
             .unwrap()
             .expressions
             .iter()

@@ -146,17 +146,4 @@ pub enum ModuleItem {
     Expression(Expression),
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Module {
-    items: Vec<ModuleItem>,
-}
-
-impl Module {
-    pub fn add(&mut self, item: ModuleItem) {
-        self.items.push(item)
-    }
-
-    pub fn get(&self, index: usize) -> Option<&ModuleItem> {
-        self.items.get(index)
-    }
-}
+pub type Module = Vec<ModuleItem>;

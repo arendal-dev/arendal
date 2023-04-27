@@ -27,24 +27,18 @@ struct TypeChecker<'a> {
 }
 
 impl<'a> TypeChecker<'a> {
-    pub(super) fn new(env: &'a Env, path: &'a Path) -> Self {
-        TypeChecker {
-            env,
-            path,
-            scopes: vec![Scope::default()],
-        }
-    }
-
     fn module(&mut self, input: &ast::Module) -> Result<typed::Module> {
         let mut expressions: Vec<typed::Expression> = Vec::default();
-        match input.get(0).unwrap() {
-            ast::ModuleItem::Expression(e) => {
-                let checked = ExprChecker {
-                    checker: self,
-                    input: e,
+        for item in input {
+            match item {
+                ast::ModuleItem::Expression(e) => {
+                    let checked = ExprChecker {
+                        checker: self,
+                        input: e,
+                    }
+                    .check()?;
+                    expressions.push(checked);
                 }
-                .check()?;
-                expressions.push(checked);
             }
         }
         Ok(typed::Module {

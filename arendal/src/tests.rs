@@ -13,6 +13,16 @@ fn eval_i64(input: &str, result: i64) {
 }
 
 #[test]
+fn empty1() {
+    eval_ok("", Value::None);
+}
+
+#[test]
+fn empty2() {
+    eval_ok(" \t\n", Value::None);
+}
+
+#[test]
 fn integer() {
     eval_i64("1234", 1234);
 }
