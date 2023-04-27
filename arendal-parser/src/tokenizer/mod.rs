@@ -8,23 +8,7 @@ pub(crate) fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(ArcStr::from(input)).tokenize()
 }
 
-#[derive(Default, PartialEq, Eq)]
-pub(crate) struct Tokens {
-    tokens: Vec<Token>,
-}
-
-impl Tokens {
-    #[inline]
-    pub fn get(&self, index: usize) -> Option<&Token> {
-        self.tokens.get(index)
-    }
-}
-
-impl fmt::Debug for Tokens {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.tokens)
-    }
-}
+pub(crate) type Tokens = Vec<Token>;
 
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct Token {
@@ -270,7 +254,7 @@ impl Tokenizer {
     // Returns true to allow being the tail call of other add_ methods.
     fn add_token(&mut self, kind: TokenKind) -> bool {
         let chars = kind.chars();
-        self.tokens.tokens.push(Token {
+        self.tokens.push(Token {
             loc: self.loc(),
             kind,
         });

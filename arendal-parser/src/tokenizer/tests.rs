@@ -19,7 +19,7 @@ impl TestCase {
 
     fn token(mut self, kind: TokenKind) -> Self {
         let bytes = kind.bytes();
-        self.tokens.tokens.push(Token {
+        self.tokens.push(Token {
             loc: Loc::input(self.input.clone(), self.index),
             kind,
         });
