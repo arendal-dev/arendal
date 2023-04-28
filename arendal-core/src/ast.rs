@@ -29,23 +29,6 @@ pub struct Expression {
     pub expr: Expr,
 }
 
-impl Expression {
-    pub(crate) fn clear_loc(&mut self) {
-        self.loc = Loc::none();
-        let expr = match &mut self.expr {
-            Expr::Unary(u) => u.clear_loc(),
-            Expr::Binary(b) => b.clear_loc(),
-            Expr::Assignment(a) => a.clear_loc(),
-            Expr::Block(v) => {
-                for e in v {
-                    e.clear_loc()
-                }
-            }
-            _ => (),
-        };
-    }
-}
-
 impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.expr.fmt(f)
@@ -58,12 +41,6 @@ pub struct UnaryExpr {
     pub expr: Expression,
 }
 
-impl UnaryExpr {
-    pub(crate) fn clear_loc(&mut self) {
-        self.expr.clear_loc()
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct BinaryExpr {
     pub op: BinaryOp,
@@ -71,23 +48,10 @@ pub struct BinaryExpr {
     pub expr2: Expression,
 }
 
-impl BinaryExpr {
-    pub(crate) fn clear_loc(&mut self) {
-        self.expr1.clear_loc();
-        self.expr2.clear_loc()
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct AssignmentExpr {
     pub symbol: Symbol,
     pub expr: Expression,
-}
-
-impl AssignmentExpr {
-    pub(crate) fn clear_loc(&mut self) {
-        self.expr.clear_loc()
-    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -183,14 +147,6 @@ pub enum ModuleItem {
     Expression(Expression),
 }
 
-impl ModuleItem {
-    pub(crate) fn clear_loc(&mut self) {
-        match self {
-            Self::Expression(e) => e.clear_loc(),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct Module {
     items: Vec<ModuleItem>,
@@ -203,12 +159,6 @@ impl Module {
 
     pub fn iter(&self) -> Iter<'_, ModuleItem> {
         self.items.iter()
-    }
-
-    pub fn clear_loc(&mut self) {
-        for item in &mut self.items {
-            item.clear_loc()
-        }
     }
 }
 

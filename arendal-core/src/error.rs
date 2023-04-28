@@ -1,7 +1,7 @@
 use super::ArcStr;
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Loc {
     _inner: Inner,
 }
@@ -23,6 +23,14 @@ impl Loc {
         write!(f, "{:?}", error)
     }
 }
+
+impl PartialEq for Loc {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for Loc {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Inner {

@@ -8,9 +8,11 @@ use super::parse;
 const B: ExprBuilder = ExprBuilder::none();
 
 fn check_module(input: &str, expected: Module) {
-    let mut actual = parse(input).unwrap();
-    actual.clear_loc();
-    assert_eq!(actual, expected, "Left=Actual; Right=Expected")
+    assert_eq!(
+        parse(input).unwrap(),
+        expected,
+        "Left=Actual; Right=Expected"
+    )
 }
 
 fn check_expression(input: &str, expected: Expression) {
