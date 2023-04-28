@@ -4,7 +4,7 @@ use core::keyword::Keyword;
 use core::symbol::Symbol;
 use std::rc::Rc;
 
-use crate::lexer::{lex, Lexeme, LexemeKind, Lexemes};
+use crate::lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
 use crate::Enclosure;
 
 // Parses the input as a module
@@ -51,22 +51,31 @@ impl Parser {
 
     // Returns the lexeme at the current index, if its kind equals the provided one.
     fn peek_if_kind(&self, kind: LexemeKind) -> Option<&Lexeme> {
-        self.peek().filter(|l| kind == *l.kind())
+        self.peek().filter(|l| kind == l.kind)
     }
 
     fn kind_equals(&self, kind: LexemeKind) -> bool {
         self.peek_if_kind(kind).is_some()
     }
 
+    // Returns whether the current lexeme is EOI (end of item)
+    // I.e., either end of the input or a newline separator
+    fn is_eoi(&self) -> bool {
+        match self.peek() {
+            Some(lexeme) => lexeme.separator == Separator::NewLine,
+            None => true,
+        }
+    }
+
     fn parse(self) -> Result<Module> {
-        let mut module = Module::default();
+        let mut items = Vec::default();
         let mut parser = self;
         while !parser.is_done() {
-            let expr: Expression;
-            (expr, parser) = parser.rule_toplevelexpr()?;
-            module.push(ModuleItem::Expression(expr))
+            let item: ModuleItem;
+            (item, parser) = parser.rule_moduleitem()?;
+            items.push(item)
         }
-        Ok(module)
+        Ok(Module::new(items))
     }
 
     fn ok<T>(&self, value: T) -> PResult<T> {
@@ -83,11 +92,20 @@ impl Parser {
     }
 
     fn expression_expected<T>(&self) -> Result<T> {
-        self.err(ParserError::ExpressionExpectedError)
+        self.err(ParserError::ExpressionExpected)
     }
 
     fn builder(&self) -> ExprBuilder {
         ExprBuilder::new(self.loc())
+    }
+
+    fn rule_moduleitem(&self) -> PResult<ModuleItem> {
+        let (expr, parser) = self.rule_toplevelexpr()?;
+        if self.is_eoi() {
+            Ok((ModuleItem::Expression(expr), parser))
+        } else {
+            parser.err(ParserError::EndOfItemExpected)
+        }
     }
 
     fn rule_toplevelexpr(&self) -> EResult {
@@ -104,17 +122,17 @@ impl Parser {
             let (expr, next) = parser.advance().rule_expression()?;
             next.ok(parser.builder().assignment(lvalue, expr))
         } else {
-            parser.err(ParserError::AssignmentExpended)
+            parser.err(ParserError::AssignmentExpected)
         }
     }
 
     fn get_lvalue(&self) -> PResult<Symbol> {
         if let Some(lexeme) = self.peek() {
-            if let LexemeKind::Id(id) = lexeme.kind() {
+            if let LexemeKind::Id(id) = &lexeme.kind {
                 return self.advance().ok(id.clone());
             }
         }
-        self.err(ParserError::LValueExpectedError)
+        self.err(ParserError::LValueExpected)
     }
 
     fn rule_expression(&self) -> EResult {
@@ -125,7 +143,7 @@ impl Parser {
         let (mut left, mut parser) = self.rule_factor()?;
         while !parser.is_done() {
             let lexeme = parser.peek().unwrap();
-            match lexeme.kind() {
+            match lexeme.kind {
                 LexemeKind::Plus => (left, parser) = parser.advance_term(left, BinaryOp::Add)?,
                 LexemeKind::Minus => (left, parser) = parser.advance_term(left, BinaryOp::Sub)?,
                 _ => break,
@@ -143,7 +161,7 @@ impl Parser {
         let (mut left, mut parser) = self.rule_primary()?;
         while !parser.is_done() {
             let lexeme = parser.peek().unwrap();
-            match lexeme.kind() {
+            match lexeme.kind {
                 LexemeKind::Star => (left, parser) = parser.advance_factor(left, BinaryOp::Mul)?,
                 LexemeKind::Slash => (left, parser) = parser.advance_factor(left, BinaryOp::Div)?,
                 _ => break,
@@ -159,7 +177,7 @@ impl Parser {
 
     fn rule_primary(&self) -> EResult {
         if let Some(lexeme) = self.peek() {
-            match &lexeme.kind() {
+            match &lexeme.kind {
                 LexemeKind::Integer(n) => self.advance().ok(self.builder().lit_integer(n.clone())),
                 LexemeKind::TypeId(id) => self.advance().ok(self.builder().tsymbol(id.clone())),
                 LexemeKind::Id(id) => self.advance().ok(self.builder().symbol(id.clone())),
@@ -181,9 +199,10 @@ impl Parser {
 
 #[derive(Debug)]
 enum ParserError {
-    ExpressionExpectedError,
-    LValueExpectedError,
-    AssignmentExpended,
+    ExpressionExpected,
+    LValueExpected,
+    AssignmentExpected,
+    EndOfItemExpected,
     ParsingError, // placeholder, temporary error
 }
 

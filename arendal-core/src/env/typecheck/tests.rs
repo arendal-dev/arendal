@@ -8,8 +8,7 @@ const B: ast::ExprBuilder = ast::ExprBuilder::none();
 fn ok_type(expr: ast::Expression, t: Type) {
     let env = Env::default();
     let path = Pkg::Local.empty();
-    let mut module = ast::Module::default();
-    module.push(ast::ModuleItem::Expression(expr));
+    let module = ast::Module::new(vec![ast::ModuleItem::Expression(expr)]);
     assert_eq!(
         *super::check(&env, &path, &module)
             .unwrap()

@@ -10,13 +10,11 @@ fn assert_eq_noloc(actual: &Lexemes, expected: &Lexemes) {
     assert_eq!(actual.len(), expected.len());
     for (actual_lexeme, expected_lexeme) in actual.iter().zip(expected.iter()) {
         assert_eq!(
-            actual_lexeme.separator(),
-            expected_lexeme.separator(),
+            actual_lexeme.separator, expected_lexeme.separator,
             "(Separator) Left=actual, Right=expected"
         );
         assert_eq!(
-            actual_lexeme.kind(),
-            expected_lexeme.kind(),
+            actual_lexeme.kind, expected_lexeme.kind,
             "(Kind) Left=actual, Right=expected"
         );
     }

@@ -1,4 +1,4 @@
-use core::ast::{BinaryOp, Expr::*, ModuleItem};
+use core::ast::{BinaryOp, Module, ModuleItem};
 use core::ast::{ExprBuilder, Expression};
 use core::error::Loc;
 use core::symbol::{Symbol, TSymbol};
@@ -7,37 +7,14 @@ use super::parse;
 
 const B: ExprBuilder = ExprBuilder::none();
 
-fn expr_eq(actual: &Expression, expected: &Expression) -> bool {
-    let (e1, e2) = (actual.borrow_expr(), expected.borrow_expr());
-    match e1 {
-        Unary(op1, ce1) => {
-            if let Unary(op2, ce2) = e2 {
-                op1 == op2 && expr_eq(ce1, ce2)
-            } else {
-                false
-            }
-        }
-        Binary(op1, ce11, ce12) => {
-            if let Binary(op2, ce21, ce22) = e2 {
-                op1 == op2 && expr_eq(ce11, ce21) && expr_eq(ce12, ce22)
-            } else {
-                false
-            }
-        }
-        e2 => e1 == e2,
-    }
+fn check_module(input: &str, expected: Module) {
+    let mut actual = parse(input).unwrap();
+    actual.clear_loc();
+    assert_eq!(actual, expected, "Left=Actual; Right=Expected")
 }
 
 fn check_expression(input: &str, expected: Expression) {
-    let module = parse(input).unwrap();
-    match module.get(0).unwrap() {
-        ModuleItem::Expression(actual) => assert!(
-            expr_eq(actual, &expected),
-            "\nActual  : {:?}\nExpected: {:?}\n",
-            actual,
-            expected
-        ),
-    }
+    check_module(input, Module::new(vec![ModuleItem::Expression(expected)]))
 }
 
 fn str_symbol(symbol: &str) -> Symbol {

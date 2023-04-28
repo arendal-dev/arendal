@@ -100,34 +100,37 @@ struct ExprChecker<'a, 'b> {
 
 impl<'a, 'b> ExprChecker<'a, 'b> {
     fn check(mut self) -> Result<typed::Expression> {
-        match self.input.borrow_expr() {
+        match &self.input.expr {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
-            ast::Expr::Symbol(id) => match self.checker.get_val(id) {
+            ast::Expr::Symbol(id) => match self.checker.get_val(&id) {
                 Some(tipo) => Ok(self.builder().val(id.clone(), tipo.clone())),
                 None => self.error(TypeCheckError::UnknownIdentifier(id.clone())),
             },
             ast::Expr::TSymbol(s) => {
-                let tipo = self.resolve_type(s)?;
-                let value = Value::singleton(self.input.borrow_loc(), &tipo)?;
+                let tipo = self.resolve_type(&s)?;
+                let value = Value::singleton(&self.input.loc, &tipo)?;
                 Ok(self.builder().value(value))
             }
-            ast::Expr::Assignment(id, expr) => {
-                let typed = self.sub_expr(&expr)?;
-                self.checker
-                    .set_val(self.input.clone_loc(), id.clone(), typed.clone_type())?;
-                Ok(self.builder().assignment(id.clone(), typed))
+            ast::Expr::Assignment(a) => {
+                let typed = self.sub_expr(&a.expr)?;
+                self.checker.set_val(
+                    self.input.loc.clone(),
+                    a.symbol.clone(),
+                    typed.clone_type(),
+                )?;
+                Ok(self.builder().assignment(a.symbol.clone(), typed))
             }
-            ast::Expr::Binary(op, e1, e2) => {
-                Errors::merge(self.sub_expr(&e1), self.sub_expr(&e2), |t1, t2| {
-                    self.check_binary(*op, t1, t2)
-                })
-            }
+            ast::Expr::Binary(b) => Errors::merge(
+                self.sub_expr(&b.expr1),
+                self.sub_expr(&b.expr2),
+                |t1, t2| self.check_binary(b.op, t1, t2),
+            ),
             _ => self.error(TypeCheckError::InvalidType),
         }
     }
 
     fn resolve_type(&self, symbol: &TSymbol) -> Result<Type> {
-        self.checker.resolve_type(self.input.borrow_loc(), symbol)
+        self.checker.resolve_type(&self.input.loc, symbol)
     }
 
     fn sub_expr(&mut self, input: &ast::Expression) -> Result<typed::Expression> {
@@ -196,12 +199,12 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
     }
 
     fn builder(&self) -> typed::ExprBuilder {
-        typed::ExprBuilder::new(self.input.clone_loc())
+        typed::ExprBuilder::new(self.input.loc.clone())
     }
 
     // Creates and returns an error
     fn error(self, kind: TypeCheckError) -> Result<typed::Expression> {
-        Errors::err(self.input.clone_loc(), kind)
+        Errors::err(self.input.loc.clone(), kind)
     }
 }
 

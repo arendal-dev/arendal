@@ -37,9 +37,9 @@ impl Separator {
 
 #[derive(Clone, Eq, PartialEq)]
 pub(crate) struct Lexeme {
-    separator: Separator,
+    pub(crate) separator: Separator,
     token: Token, // Starting token of the lexeme
-    kind: LexemeKind,
+    pub(crate) kind: LexemeKind,
 }
 
 impl Lexeme {
@@ -51,16 +51,8 @@ impl Lexeme {
         }
     }
 
-    pub fn kind(&self) -> &LexemeKind {
-        &self.kind
-    }
-
     pub fn loc(&self) -> Loc {
         self.token.loc.clone()
-    }
-
-    pub(crate) fn separator(&self) -> Separator {
-        self.separator
     }
 }
 
