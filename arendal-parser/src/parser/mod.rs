@@ -102,7 +102,7 @@ impl Parser {
     fn rule_moduleitem(&self) -> PResult<ModuleItem> {
         let (expr, parser) = self.rule_toplevelexpr()?;
         if self.is_eoi() {
-            Ok((ModuleItem::Expression(expr), parser))
+            parser.ok(ModuleItem::Expression(expr))
         } else {
             parser.err(ParserError::EndOfItemExpected)
         }

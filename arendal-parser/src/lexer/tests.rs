@@ -79,7 +79,7 @@ impl TestCase {
         self.token(separator, LexemeKind::Keyword(keyword))
     }
 
-    fn ok_without_pos(mut self) {
+    fn ok_without_pos(self) {
         match self.lex() {
             Ok(lexemes) => assert_eq_noloc(&lexemes, &self.lexemes),
             Err(_) => panic!(),
