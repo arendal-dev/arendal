@@ -1,7 +1,7 @@
-use core::ast::{BinaryOp, Module, ModuleItem};
-use core::ast::{ExprBuilder, Expression};
-use core::error::Loc;
-use core::symbol::{Symbol, TSymbol};
+use crate::ast::{BinaryOp, Module, ModuleItem};
+use crate::ast::{ExprBuilder, Expression};
+use crate::error::Loc;
+use crate::symbol::{Symbol, TSymbol};
 
 use super::parse;
 

@@ -3,6 +3,5 @@
 members = [
     "arendal-num",
     "arendal-core",
-    "arendal-parser",
     "arendal"
 ]

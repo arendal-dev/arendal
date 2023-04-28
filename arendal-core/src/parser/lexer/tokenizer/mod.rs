@@ -1,19 +1,19 @@
 use std::fmt;
 
 use super::Enclosure;
-use core::error::{ErrorAcc, Loc, Result};
-use core::{ArcStr, Substr};
+use crate::error::{ErrorAcc, Loc, Result};
+use crate::{ArcStr, Substr};
 
-pub(crate) fn tokenize(input: &str) -> Result<Tokens> {
+pub(super) fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(ArcStr::from(input)).tokenize()
 }
 
-pub(crate) type Tokens = Vec<Token>;
+pub(super) type Tokens = Vec<Token>;
 
 #[derive(Clone, PartialEq, Eq)]
-pub(crate) struct Token {
-    pub(crate) loc: Loc, // Starting position of the token
-    pub(crate) kind: TokenKind,
+pub(super) struct Token {
+    pub(super) loc: Loc, // Starting position of the token
+    pub(super) kind: TokenKind,
 }
 
 impl Token {
@@ -29,7 +29,7 @@ impl fmt::Debug for Token {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum NewLine {
+pub(super) enum NewLine {
     LF,
     CRLF,
 }
@@ -48,7 +48,7 @@ impl NewLine {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum TokenKind {
+pub(super) enum TokenKind {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
@@ -281,7 +281,7 @@ enum Error {
     UnexpectedChar(char),
 }
 
-impl core::error::Error for Error {}
+impl crate::error::Error for Error {}
 
 #[cfg(test)]
 mod tests;

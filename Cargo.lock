@@ -13,7 +13,6 @@ name = "arendal"
 version = "0.1.0"
 dependencies = [
  "arendal-core",
- "arendal-parser",
  "rustyline",
 ]
 
@@ -31,13 +30,6 @@ dependencies = [
 [[package]]
 name = "arendal-num"
 version = "0.1.0"
-
-[[package]]
-name = "arendal-parser"
-version = "0.1.0"
-dependencies = [
- "arendal-core",
-]
 
 [[package]]
 name = "autocfg"

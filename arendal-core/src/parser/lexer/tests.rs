@@ -1,10 +1,8 @@
-use core::error::Loc;
-
 use super::{
-    Enclosure, Keyword, Lexeme, LexemeKind, Lexemes, Result, Separator, Symbol, TSymbol, Token,
-    TokenKind,
+    Enclosure, Keyword, Lexeme, LexemeKind, Lexemes, Loc, Result, Separator, Symbol, TSymbol,
+    Token, TokenKind,
 };
-use core::ArcStr;
+use crate::ArcStr;
 
 fn assert_eq_noloc(actual: &Lexemes, expected: &Lexemes) {
     assert_eq!(actual.len(), expected.len());

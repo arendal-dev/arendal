@@ -1,19 +1,21 @@
+mod tokenizer;
+
 use std::fmt;
 
 use super::Enclosure;
-use crate::tokenizer::{tokenize, Token, TokenKind, Tokens};
-use core::error::{ErrorAcc, Loc, Result};
-use core::keyword::Keyword;
-use core::symbol::{Symbol, TSymbol};
-use core::{Integer, Substr};
+use crate::error::{ErrorAcc, Loc, Result};
+use crate::keyword::Keyword;
+use crate::symbol::{Symbol, TSymbol};
+use crate::{Integer, Substr};
+use tokenizer::{tokenize, Token, TokenKind, Tokens};
 
-pub(crate) fn lex(input: &str) -> Result<Lexemes> {
+pub(super) fn lex(input: &str) -> Result<Lexemes> {
     let tokens = tokenize(input)?;
     Lexer::new(tokens).lex()
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) enum Separator {
+pub(super) enum Separator {
     Nothing,
     Whitespace,
     NewLine,
@@ -36,10 +38,10 @@ impl Separator {
 }
 
 #[derive(Clone, Eq, PartialEq)]
-pub(crate) struct Lexeme {
-    pub(crate) separator: Separator,
+pub(super) struct Lexeme {
+    pub(super) separator: Separator,
     token: Token, // Starting token of the lexeme
-    pub(crate) kind: LexemeKind,
+    pub(super) kind: LexemeKind,
 }
 
 impl Lexeme {
@@ -62,10 +64,10 @@ impl fmt::Debug for Lexeme {
     }
 }
 
-pub(crate) type Lexemes = Vec<Lexeme>;
+pub(super) type Lexemes = Vec<Lexeme>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum LexemeKind {
+pub(super) enum LexemeKind {
     Plus,
     Minus,
     Star,
@@ -243,7 +245,7 @@ enum Error {
     UnexpectedToken,
 }
 
-impl core::error::Error for Error {}
+impl crate::error::Error for Error {}
 
 #[cfg(test)]
 mod tests;

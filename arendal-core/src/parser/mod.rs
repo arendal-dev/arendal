@@ -1,11 +1,19 @@
-use core::ast::{BinaryOp, ExprBuilder, Expression, Module, ModuleItem};
-use core::error::{Error, Errors, Loc, Result};
-use core::keyword::Keyword;
-use core::symbol::Symbol;
+mod lexer;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Enclosure {
+    Parens,
+    Square,
+    Curly,
+}
+
+use crate::ast::{BinaryOp, ExprBuilder, Expression, Module, ModuleItem};
+use crate::error::{Error, Errors, Loc, Result};
+use crate::keyword::Keyword;
+use crate::symbol::Symbol;
 use std::rc::Rc;
 
-use crate::lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
-use crate::Enclosure;
+use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
 
 // Parses the input as a module
 pub fn parse(input: &str) -> Result<Module> {
