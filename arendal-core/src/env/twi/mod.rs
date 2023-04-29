@@ -1,7 +1,6 @@
-use crate::ast::BinaryOp;
 use crate::error::{Error, Loc, Result};
 use crate::symbol::Symbol;
-use crate::typed::{Binary, Expr, Expression, Module};
+use crate::typed::{Expr, Expression, Module};
 use crate::value::Value;
 use crate::visibility::Visibility;
 use crate::Integer;
@@ -71,55 +70,51 @@ impl<'a> Interpreter<'a> {
     fn expression(&mut self, expr: &Expression) -> Result<Value> {
         match &expr.expr {
             Expr::Value(v) => Ok(v.clone()),
-            Expr::LocalSymbol(s) => match self.get_val(s) {
+            Expr::Local(l) => match self.get_val(&l.symbol) {
                 Some(value) => Ok(value),
-                None => err(expr, RuntimeError::UknownVal(s.clone())),
+                None => err(expr, RuntimeError::UknownVal(l.symbol.clone())),
             },
             Expr::Assignment(a) => {
                 let value = self.expression(&a.expr)?;
                 self.set_val(expr.loc.clone(), a.symbol.clone(), value.clone())?;
                 Ok(value)
             }
-            Expr::Binary(b) => self.binary(&b),
+            Expr::Add(t) => self.add(&t.expr1, &t.expr2),
+            Expr::Sub(t) => self.sub(&t.expr1, &t.expr2),
+            Expr::Mul(t) => self.mul(&t.expr1, &t.expr2),
+            Expr::Div(t) => self.div(&t.expr1, &t.expr2),
             _ => err(expr, RuntimeError::NotImplemented),
         }
     }
 
-    fn binary(&mut self, b: &Binary) -> Result<Value> {
-        let v1 = self.expression(&b.expr1)?;
-        match b.op {
-            BinaryOp::Add => self.add(v1, &b.expr2),
-            BinaryOp::Sub => self.sub(v1, &b.expr2),
-            BinaryOp::Mul => self.mul(v1, &b.expr2),
-            BinaryOp::Div => self.div(v1, &b.expr2),
-            _ => err(&b.expr1, RuntimeError::NotImplemented),
-        }
-    }
-
-    fn add(&mut self, v1: Value, e2: &Expression) -> Result<Value> {
-        let v2 = self.expression(e2)?;
+    fn add(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+        let v1 = self.expression(expr1)?;
+        let v2 = self.expression(expr2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() + v2.as_integer().unwrap())
     }
 
-    fn sub(&mut self, v1: Value, e2: &Expression) -> Result<Value> {
-        let v2 = self.expression(e2)?;
+    fn sub(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+        let v1 = self.expression(expr1)?;
+        let v2 = self.expression(expr2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() - v2.as_integer().unwrap())
     }
 
-    fn mul(&mut self, v1: Value, e2: &Expression) -> Result<Value> {
-        let v2 = self.expression(e2)?;
+    fn mul(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+        let v1 = self.expression(expr1)?;
+        let v2 = self.expression(expr2)?;
         // We only have integers for now
         integer(v1.as_integer().unwrap() * v2.as_integer().unwrap())
     }
 
-    fn div(&mut self, v1: Value, e2: &Expression) -> Result<Value> {
-        let v2 = self.expression(e2)?;
+    fn div(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+        let v1 = self.expression(expr1)?;
+        let v2 = self.expression(expr2)?;
         // We only have integers for now
         let i2 = v2.as_integer().unwrap();
         if i2.is_zero() {
-            err(e2, RuntimeError::DivisionByZero)
+            err(expr2, RuntimeError::DivisionByZero)
         } else {
             integer(v1.as_integer().unwrap() / i2)
         }

@@ -2,7 +2,6 @@ use crate::env::Env;
 use crate::error::Loc;
 use crate::symbol::Pkg;
 use crate::typed::{ExprBuilder, Expression, Expressions, Module};
-use crate::types::Type;
 
 use super::Value;
 
@@ -36,16 +35,10 @@ fn add1() {
 
 #[test]
 fn add2() {
-    eval_ok(
-        B.add(Type::Integer, B.val_i64(3), B.add_i64(1, 2)),
-        Value::int64(6),
-    );
+    eval_ok(B.add(B.val_i64(3), B.add_i64(1, 2)), Value::int64(6));
 }
 
 #[test]
 fn add_sub() {
-    eval_ok(
-        B.sub(Type::Integer, B.val_i64(3), B.add_i64(1, 2)),
-        Value::int64(0),
-    );
+    eval_ok(B.sub(B.val_i64(3), B.add_i64(1, 2)), Value::int64(0));
 }

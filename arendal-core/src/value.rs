@@ -4,9 +4,26 @@ use im::HashMap;
 
 use crate::error::{Error, Loc, Result};
 use crate::symbol::FQSym;
-use crate::types::{Singleton, Type};
+use crate::types::Type;
 use crate::visibility::{Visibility, Visible};
 use crate::Integer;
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct PrivateType {
+    tipo: Type,
+}
+
+impl fmt::Debug for PrivateType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.tipo.fmt(f)
+    }
+}
+
+impl fmt::Display for PrivateType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.tipo.fmt(f)
+    }
+}
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Value {
@@ -14,7 +31,7 @@ pub enum Value {
     True,
     False,
     Integer(Integer),
-    Singleton(Singleton),
+    Singleton(PrivateType),
 }
 
 impl Value {
@@ -39,19 +56,23 @@ impl Value {
             Type::None => Ok(Value::None),
             Type::True => Ok(Value::True),
             Type::False => Ok(Value::False),
-            Type::Singleton(s) => Ok(Value::Singleton(s.clone())),
+            Type::Singleton(s) => Ok(Value::Singleton(PrivateType { tipo: tipo.clone() })),
             _ => Error::err(loc.clone(), ValueError::SingletonExpected(tipo.clone())),
         }
     }
 
-    pub fn clone_type(&self) -> Type {
+    pub fn borrow_type(&self) -> &Type {
         match self {
-            Self::None => Type::None,
-            Self::True => Type::True,
-            Self::False => Type::False,
-            Self::Integer(_) => Type::Integer,
-            Self::Singleton(t) => Type::Singleton(t.clone()),
+            Self::None => &Type::None,
+            Self::True => &Type::True,
+            Self::False => &Type::False,
+            Self::Integer(_) => &Type::Integer,
+            Self::Singleton(t) => &t.tipo,
         }
+    }
+
+    pub fn clone_type(&self) -> Type {
+        self.borrow_type().clone()
     }
 
     pub fn as_integer(self) -> Option<Integer> {

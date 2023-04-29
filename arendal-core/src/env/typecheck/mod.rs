@@ -103,7 +103,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         match &self.input.expr {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
             ast::Expr::Symbol(id) => match self.checker.get_val(&id) {
-                Some(tipo) => Ok(self.builder().val(id.clone(), tipo.clone())),
+                Some(tipo) => Ok(self.builder().local(id.clone(), tipo.clone())),
                 None => self.error(TypeCheckError::UnknownIdentifier(id.clone())),
             },
             ast::Expr::TSymbol(s) => {
@@ -116,7 +116,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                 self.checker.set_val(
                     self.input.loc.clone(),
                     a.symbol.clone(),
-                    typed.tipo.clone(),
+                    typed.clone_type(),
                 )?;
                 Ok(self.builder().assignment(a.symbol.clone(), typed))
             }
@@ -156,43 +156,49 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn ok_binary(
-        &self,
-        tipo: Type,
-        op: BinaryOp,
-        e1: typed::Expression,
-        e2: typed::Expression,
+    fn check_add(
+        self,
+        expr1: typed::Expression,
+        expr2: typed::Expression,
     ) -> Result<typed::Expression> {
-        Ok(self.builder().binary(tipo, op, e1, e2))
-    }
-
-    fn check_add(self, e1: typed::Expression, e2: typed::Expression) -> Result<typed::Expression> {
-        if e1.tipo.is_integer() && e2.tipo.is_integer() {
-            self.ok_binary(Type::Integer, BinaryOp::Add, e1, e2)
+        if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
+            Ok(self.builder().add(expr1, expr2))
         } else {
             self.error(TypeCheckError::InvalidType)
         }
     }
 
-    fn check_sub(self, e1: typed::Expression, e2: typed::Expression) -> Result<typed::Expression> {
-        if e1.tipo.is_integer() && e2.tipo.is_integer() {
-            self.ok_binary(Type::Integer, BinaryOp::Sub, e1, e2)
+    fn check_sub(
+        self,
+        expr1: typed::Expression,
+        expr2: typed::Expression,
+    ) -> Result<typed::Expression> {
+        if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
+            Ok(self.builder().sub(expr1, expr2))
         } else {
             self.error(TypeCheckError::InvalidType)
         }
     }
 
-    fn check_mul(self, e1: typed::Expression, e2: typed::Expression) -> Result<typed::Expression> {
-        if e1.tipo.is_integer() && e2.tipo.is_integer() {
-            self.ok_binary(Type::Integer, BinaryOp::Mul, e1, e2)
+    fn check_mul(
+        self,
+        expr1: typed::Expression,
+        expr2: typed::Expression,
+    ) -> Result<typed::Expression> {
+        if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
+            Ok(self.builder().mul(expr1, expr2))
         } else {
             self.error(TypeCheckError::InvalidType)
         }
     }
 
-    fn check_div(self, e1: typed::Expression, e2: typed::Expression) -> Result<typed::Expression> {
-        if e1.tipo.is_integer() && e2.tipo.is_integer() {
-            self.ok_binary(Type::Integer, BinaryOp::Div, e1, e2)
+    fn check_div(
+        self,
+        expr1: typed::Expression,
+        expr2: typed::Expression,
+    ) -> Result<typed::Expression> {
+        if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
+            Ok(self.builder().div(expr1, expr2))
         } else {
             self.error(TypeCheckError::InvalidType)
         }

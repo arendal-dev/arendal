@@ -1,5 +1,5 @@
 use super::Integer;
-use crate::ast::{BinaryOp, UnaryOp};
+use crate::ast::UnaryOp;
 use crate::error::Loc;
 use crate::symbol::{Path, Symbol};
 use crate::types::Type;
@@ -10,113 +10,145 @@ use std::sync::Arc;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Expression {
-    pub loc: Loc,
-    pub tipo: Type,
-    pub expr: Expr,
+    pub(crate) loc: Loc,
+    pub(crate) expr: Expr,
+}
+
+impl Expression {
+    pub(crate) fn borrow_type(&self) -> &Type {
+        self.expr.borrow_type()
+    }
+
+    pub(crate) fn clone_type(&self) -> Type {
+        self.borrow_type().clone()
+    }
 }
 
 impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} : {:?}", self.expr, self.tipo)
+        write!(f, "{:?} : {:?}", self.expr, self.borrow_type())
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Unary {
-    pub op: UnaryOp,
-    pub expr: Expression,
+pub(crate) struct Unary {
+    pub(crate) op: UnaryOp,
+    pub(crate) expr: Expression,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Binary {
-    pub op: BinaryOp,
-    pub expr1: Expression,
-    pub expr2: Expression,
+pub(crate) struct Two {
+    pub(crate) expr1: Expression,
+    pub(crate) expr2: Expression,
+}
+
+impl Two {
+    fn new(expr1: Expression, expr2: Expression) -> Arc<Two> {
+        Arc::new(Two { expr1, expr2 })
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Assignment {
-    pub symbol: Symbol,
-    pub expr: Expression,
+pub(crate) struct Assignment {
+    pub(crate) symbol: Symbol,
+    pub(crate) expr: Expression,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Local {
+    pub(crate) symbol: Symbol,
+    pub(crate) tipo: Type,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Expr {
+pub(crate) enum Expr {
     Value(Value),
-    LocalSymbol(Symbol),
+    Local(Arc<Local>),
     Assignment(Arc<Assignment>),
     Unary(Arc<Unary>),
-    Binary(Arc<Binary>),
+    Add(Arc<Two>),
+    Sub(Arc<Two>),
+    Mul(Arc<Two>),
+    Div(Arc<Two>),
 }
 
-pub struct ExprBuilder {
+impl Expr {
+    pub(crate) fn borrow_type(&self) -> &Type {
+        match self {
+            Self::Value(v) => v.borrow_type(),
+            Self::Local(l) => &l.tipo,
+            Self::Assignment(a) => a.expr.borrow_type(),
+            Self::Unary(u) => u.expr.borrow_type(),
+            Self::Add(t) => t.expr1.borrow_type(),
+            Self::Sub(t) => t.expr1.borrow_type(),
+            Self::Mul(t) => t.expr1.borrow_type(),
+            Self::Div(t) => t.expr1.borrow_type(),
+        }
+    }
+}
+
+pub(crate) struct ExprBuilder {
     loc: Loc,
 }
 
 impl ExprBuilder {
-    pub const fn new(loc: Loc) -> Self {
+    pub(crate) const fn new(loc: Loc) -> Self {
         ExprBuilder { loc }
     }
 
-    fn build(&self, tipo: Type, expr: Expr) -> Expression {
+    fn build(&self, expr: Expr) -> Expression {
         Expression {
             loc: self.loc.clone(),
-            tipo,
             expr,
         }
     }
 
-    pub fn value(&self, value: Value) -> Expression {
-        self.build(value.clone_type(), Expr::Value(value))
+    pub(crate) fn value(&self, value: Value) -> Expression {
+        self.build(Expr::Value(value))
     }
 
-    pub fn val_integer(&self, value: Integer) -> Expression {
+    pub(crate) fn val_integer(&self, value: Integer) -> Expression {
         self.value(Value::Integer(value))
     }
 
-    pub fn val_i64(&self, value: i64) -> Expression {
+    pub(crate) fn val_i64(&self, value: i64) -> Expression {
         self.val_integer(value.into())
     }
 
-    pub fn val(&self, id: Symbol, tipo: Type) -> Expression {
-        self.build(tipo, Expr::LocalSymbol(id))
+    pub(crate) fn local(&self, symbol: Symbol, tipo: Type) -> Expression {
+        self.build(Expr::Local(Arc::new(Local { symbol, tipo })))
     }
 
-    pub fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {
-        self.build(
-            expr.tipo.clone(),
-            Expr::Assignment(Arc::new(Assignment { symbol, expr })),
-        )
+    pub(crate) fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {
+        self.build(Expr::Assignment(Arc::new(Assignment { symbol, expr })))
     }
 
-    pub fn unary(&self, tipo: Type, op: UnaryOp, expr: Expression) -> Expression {
-        self.build(tipo, Expr::Unary(Arc::new(Unary { op, expr })))
+    pub(crate) fn unary(&self, op: UnaryOp, expr: Expression) -> Expression {
+        self.build(Expr::Unary(Arc::new(Unary { op, expr })))
     }
 
-    pub fn binary(
-        &self,
-        tipo: Type,
-        op: BinaryOp,
-        expr1: Expression,
-        expr2: Expression,
-    ) -> Expression {
-        self.build(tipo, Expr::Binary(Arc::new(Binary { op, expr1, expr2 })))
+    pub(crate) fn add(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.build(Expr::Add(Two::new(expr1, expr2)))
     }
 
-    pub fn add(&self, tipo: Type, expr1: Expression, expr2: Expression) -> Expression {
-        self.binary(tipo, BinaryOp::Add, expr1, expr2)
+    pub(crate) fn add_i64(&self, value1: i64, value2: i64) -> Expression {
+        self.add(self.val_i64(value1), self.val_i64(value2))
     }
 
-    pub fn add_i64(&self, value1: i64, value2: i64) -> Expression {
-        self.add(Type::Integer, self.val_i64(value1), self.val_i64(value2))
+    pub(crate) fn sub(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.build(Expr::Sub(Two::new(expr1, expr2)))
     }
 
-    pub fn sub(&self, tipo: Type, expr1: Expression, expr2: Expression) -> Expression {
-        self.binary(tipo, BinaryOp::Sub, expr1, expr2)
+    pub(crate) fn sub_i64(&self, value1: i64, value2: i64) -> Expression {
+        self.sub(self.val_i64(value1), self.val_i64(value2))
     }
 
-    pub fn sub_i64(&self, value1: i64, value2: i64) -> Expression {
-        self.sub(Type::Integer, self.val_i64(value1), self.val_i64(value2))
+    pub(crate) fn mul(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.build(Expr::Mul(Two::new(expr1, expr2)))
+    }
+
+    pub(crate) fn div(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.build(Expr::Mul(Two::new(expr1, expr2)))
     }
 }
 

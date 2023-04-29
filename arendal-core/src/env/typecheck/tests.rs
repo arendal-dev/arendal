@@ -10,13 +10,13 @@ fn ok_type(expr: ast::Expression, t: Type) {
     let path = Pkg::Local.empty();
     let module = ast::Module::new(vec![ast::ModuleItem::Expression(expr)]);
     assert_eq!(
-        super::check(&env, &path, &module)
+        *super::check(&env, &path, &module)
             .unwrap()
             .expressions
             .iter()
             .next()
             .unwrap()
-            .tipo,
+            .borrow_type(),
         t
     );
 }
