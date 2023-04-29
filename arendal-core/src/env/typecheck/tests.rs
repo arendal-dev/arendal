@@ -1,16 +1,19 @@
 use super::Type;
-use crate::ast;
 use crate::env::Env;
-use crate::symbol::{Pkg, TSymbol};
+use crate::error::Result;
+use crate::symbol::Pkg;
+use crate::typed;
 
-const B: ast::ExprBuilder = ast::ExprBuilder::none();
-
-fn ok_type(expr: ast::Expression, t: Type) {
+fn check_module(input: &str) -> Result<typed::Module> {
+    let parsed = crate::parser::parse(input)?;
     let env = Env::default();
     let path = Pkg::Local.empty();
-    let module = ast::Module::new(vec![ast::ModuleItem::Expression(expr)]);
+    super::check(&env, &path, &parsed)
+}
+
+fn ok_expression(input: &str, t: Type) {
     assert_eq!(
-        *super::check(&env, &path, &module)
+        *check_module(input)
             .unwrap()
             .expressions
             .iter()
@@ -21,31 +24,31 @@ fn ok_type(expr: ast::Expression, t: Type) {
     );
 }
 
-fn ok_int(expr: ast::Expression) {
-    ok_type(expr, Type::Integer);
+fn ok_int(input: &str) {
+    ok_expression(input, Type::Integer);
 }
 
 #[test]
 fn integer() {
-    ok_int(B.lit_i64(1234));
+    ok_int("1234");
 }
 
 #[test]
 fn add1() {
-    ok_int(B.add_i64(1, 2));
+    ok_int("1 + 2");
 }
 
 #[test]
 fn add2() {
-    ok_int(B.add(B.add_i64(1, 2), B.lit_i64(3)));
+    ok_int("1 + 2 + 3");
 }
 
 #[test]
 fn sub1() {
-    ok_int(B.sub_i64(1, 2));
+    ok_int("1- 2");
 }
 
 #[test]
 fn std_singleton() {
-    ok_type(B.tsymbol(TSymbol::True), Type::True);
+    ok_expression("True", Type::True);
 }
