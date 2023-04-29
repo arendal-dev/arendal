@@ -3,7 +3,7 @@ use crate::ast::{ExprBuilder, Expression};
 use crate::error::Loc;
 use crate::symbol::{Symbol, TSymbol};
 
-use super::parse;
+use super::{parse, ParserError};
 
 const B: ExprBuilder = ExprBuilder::none();
 
@@ -17,6 +17,26 @@ fn check_module(input: &str, expected: Module) {
 
 fn check_expression(input: &str, expected: Expression) {
     check_module(input, Module::new(vec![ModuleItem::Expression(expected)]))
+}
+
+fn check_expressions(input: &str, expected: Vec<Expression>) {
+    let items = expected
+        .into_iter()
+        .map(|e| ModuleItem::Expression(e))
+        .collect();
+    check_module(input, Module::new(items))
+}
+
+fn expect_one_error(input: &str, expected: ParserError) {
+    match parse(input) {
+        Ok(_) => panic!("Parsed correctly but expected {:?}", expected),
+        Err(e) => assert!(
+            e.is(expected.clone()),
+            "Expected {:?} but error was {:?}",
+            expected,
+            e
+        ),
+    }
 }
 
 fn str_symbol(symbol: &str) -> Symbol {
@@ -110,4 +130,14 @@ fn parens1() {
         "(1 + 2) * 2",
         B.binary(BinaryOp::Mul, B.add_i64(1, 2), B.lit_i64(2)),
     );
+}
+
+#[test]
+fn multiple1() {
+    check_expressions("1\n2", vec![B.lit_i64(1), B.lit_i64(2)]);
+}
+
+#[test]
+fn multiple2() {
+    expect_one_error("1 2", ParserError::EndOfItemExpected)
 }

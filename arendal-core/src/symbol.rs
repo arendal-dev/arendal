@@ -420,7 +420,7 @@ impl fmt::Debug for FQType {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SymbolError {
     Empty,
     TypeEmpty,

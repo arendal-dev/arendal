@@ -91,8 +91,13 @@ impl Parser {
     }
 
     fn loc(&self) -> Loc {
-        let len = self.input.len(); // we now the vector is not empty
-        self.input[if self.index < len { self.index } else { len }].loc()
+        let len = self.input.len(); // we know the vector is not empty
+        self.input[if self.index < len {
+            self.index
+        } else {
+            len - 1
+        }]
+        .loc()
     }
 
     fn err<T>(&self, error: ParserError) -> Result<T> {
@@ -205,7 +210,7 @@ impl Parser {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParserError {
     // Tokenizer
     UnexpectedChar(char),

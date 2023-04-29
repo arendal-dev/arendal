@@ -96,6 +96,20 @@ impl Error {
     fn append(&mut self, mut other: Error) {
         self.errors.append(&mut other.errors);
     }
+
+    pub fn is<E: Into<ErrorKind>>(&self, error: E) -> bool {
+        self.errors.len() == 1 && self.errors[0].error == error.into()
+    }
+
+    pub fn contains<E: Into<ErrorKind>>(&self, error: E) -> bool {
+        let e = error.into();
+        for item in &self.errors {
+            if item.error == e {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 // Error accumulator and builder.
@@ -147,7 +161,7 @@ impl Errors {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorKind {
     Symbol(crate::symbol::SymbolError),
     Parser(crate::parser::ParserError),

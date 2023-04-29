@@ -110,7 +110,7 @@ impl Types {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypesError {
     DuplicateType(FQType),
 }

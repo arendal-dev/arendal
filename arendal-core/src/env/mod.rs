@@ -52,7 +52,7 @@ impl Interactive {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EnvError {
     DuplicateModule(Pkg, Path),
     DuplicateSymbol(FQSym),
@@ -60,14 +60,14 @@ pub enum EnvError {
     DuplicateVal(Symbol),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RuntimeError {
     UknownVal(Symbol),
     DivisionByZero,
     NotImplemented,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeCheckError {
     UnknownType(TSymbol),
     UnknownIdentifier(Symbol),

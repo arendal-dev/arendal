@@ -114,7 +114,7 @@ impl Values {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValueError {
     DuplicateValue(FQSym),
     SingletonExpected(Type),
