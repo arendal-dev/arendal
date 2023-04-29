@@ -8,7 +8,7 @@ pub enum Enclosure {
 }
 
 use crate::ast::{BinaryOp, ExprBuilder, Expression, Module, ModuleItem};
-use crate::error::{Error, Errors, Loc, Result};
+use crate::error::{Errors, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::Symbol;
 use std::rc::Rc;
@@ -96,7 +96,7 @@ impl Parser {
     }
 
     fn err<T>(&self, error: ParserError) -> Result<T> {
-        Err(Errors::new(self.loc(), error))
+        Errors::err(self.loc(), error)
     }
 
     fn expression_expected<T>(&self) -> Result<T> {
@@ -205,16 +205,20 @@ impl Parser {
     }
 }
 
-#[derive(Debug)]
-enum ParserError {
+#[derive(Debug, PartialEq, Eq)]
+pub enum ParserError {
+    // Tokenizer
+    UnexpectedChar(char),
+    // Lexer
+    InvalidClose(Enclosure),
+    UnexpectedToken,
+    // Parser
     ExpressionExpected,
     LValueExpected,
     AssignmentExpected,
     EndOfItemExpected,
     ParsingError, // placeholder, temporary error
 }
-
-impl Error for ParserError {}
 
 #[cfg(test)]
 mod tests;

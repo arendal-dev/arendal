@@ -2,7 +2,7 @@ mod tokenizer;
 
 use std::fmt;
 
-use super::Enclosure;
+use super::{Enclosure, ParserError};
 use crate::error::{ErrorAcc, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::{Symbol, TSymbol};
@@ -159,7 +159,7 @@ impl Lexer {
                 TokenKind::Close(e) => self.add_close(loc, e),
                 TokenKind::Digits(s) => self.add_digits(&s),
                 TokenKind::Word(s) => self.add_word(loc, &s),
-                _ => self.add_error(loc, Error::UnexpectedToken, 1),
+                _ => self.add_error(loc, ParserError::UnexpectedToken, 1),
             }
         }
         self.errors.to_result(self.lexemes)
@@ -206,10 +206,10 @@ impl Lexer {
                         n += 1;
                     }
                 }
-                self.add_error(loc, Error::InvalidClose(e), n);
+                self.add_error(loc, ParserError::InvalidClose(e), n);
             }
             None => {
-                self.add_error(loc, Error::InvalidClose(e), 1);
+                self.add_error(loc, ParserError::InvalidClose(e), 1);
             }
         }
     }
@@ -233,19 +233,11 @@ impl Lexer {
         }
     }
 
-    fn add_error(&mut self, loc: Loc, error: Error, tokens: usize) {
+    fn add_error(&mut self, loc: Loc, error: ParserError, tokens: usize) {
         self.errors.add(loc, error);
         self.advance(tokens)
     }
 }
-
-#[derive(Debug)]
-enum Error {
-    InvalidClose(Enclosure),
-    UnexpectedToken,
-}
-
-impl crate::error::Error for Error {}
 
 #[cfg(test)]
 mod tests;

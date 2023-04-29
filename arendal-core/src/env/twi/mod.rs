@@ -1,5 +1,5 @@
 use crate::ast::BinaryOp;
-use crate::error::{Error, Errors, Loc, Result};
+use crate::error::{Errors, Loc, Result};
 use crate::symbol::Symbol;
 use crate::typed::{Expr, Expression, Module};
 use crate::value::Value;
@@ -7,7 +7,7 @@ use crate::visibility::Visibility;
 use crate::Integer;
 use std::collections::HashMap;
 
-use super::Env;
+use super::{Env, RuntimeError};
 
 type Scope = HashMap<Symbol, Value>;
 
@@ -133,15 +133,6 @@ fn integer(value: Integer) -> Result<Value> {
 fn err(expr: &Expression, error: RuntimeError) -> Result<Value> {
     Errors::err(expr.clone_loc(), error)
 }
-
-#[derive(Debug)]
-pub enum RuntimeError {
-    UknownVal(Symbol),
-    DivisionByZero,
-    NotImplemented,
-}
-
-impl Error for RuntimeError {}
 
 #[cfg(test)]
 mod tests;

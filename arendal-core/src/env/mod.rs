@@ -4,8 +4,8 @@ mod typecheck;
 
 use crate::{
     ast,
-    error::{Error, Result},
-    symbol::{FQSym, Path, Pkg, Symbol},
+    error::Result,
+    symbol::{FQSym, Path, Pkg, Symbol, TSymbol},
     types::{Type, Types},
     value::{Value, Values},
 };
@@ -52,7 +52,7 @@ impl Interactive {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum EnvError {
     DuplicateModule(Pkg, Path),
     DuplicateSymbol(FQSym),
@@ -60,4 +60,16 @@ pub enum EnvError {
     DuplicateVal(Symbol),
 }
 
-impl Error for EnvError {}
+#[derive(Debug, PartialEq, Eq)]
+pub enum RuntimeError {
+    UknownVal(Symbol),
+    DivisionByZero,
+    NotImplemented,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum TypeCheckError {
+    UnknownType(TSymbol),
+    UnknownIdentifier(Symbol),
+    InvalidType, // placeholder, temporary error
+}

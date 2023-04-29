@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::Enclosure;
+use super::{Enclosure, ParserError};
 use crate::error::{ErrorAcc, Loc, Result};
 use crate::{ArcStr, Substr};
 
@@ -200,7 +200,7 @@ impl Tokenizer {
         let mut errors: ErrorAcc = Default::default();
         while let Some(c) = self.peek() {
             if !self.add_known_first_char(c) && !self.add_digits(c) && !self.add_word(c) {
-                errors.add(self.loc(), Error::UnexpectedChar(c));
+                errors.add(self.loc(), ParserError::UnexpectedChar(c));
                 self.consume();
             }
         }
@@ -275,13 +275,6 @@ impl Tokenizer {
         self.add_token_if_next(c, kind2) || self.add_token(kind1)
     }
 }
-
-#[derive(Debug)]
-enum Error {
-    UnexpectedChar(char),
-}
-
-impl crate::error::Error for Error {}
 
 #[cfg(test)]
 mod tests;

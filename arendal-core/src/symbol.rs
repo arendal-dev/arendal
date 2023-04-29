@@ -2,7 +2,7 @@ use phf::phf_map;
 use std::fmt::{self, Display, Write};
 use std::sync::Arc;
 
-use crate::error::{Error, Errors, Loc, Result};
+use crate::error::{Errors, Loc, Result};
 use crate::id::Id;
 use crate::keyword::Keyword;
 use crate::{literal, ArcStr};
@@ -420,7 +420,7 @@ impl fmt::Debug for FQType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum SymbolError {
     Empty,
     TypeEmpty,
@@ -432,5 +432,3 @@ pub enum SymbolError {
     ExpectedNonTypeItem(Symbol),
     ExpectedTopLevelType(FQType),
 }
-
-impl Error for SymbolError {}

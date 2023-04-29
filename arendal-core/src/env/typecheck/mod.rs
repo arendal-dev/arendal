@@ -1,13 +1,13 @@
 use im::HashMap;
 
 use crate::ast::{self, BinaryOp};
-use crate::error::{Error, Errors, Loc, Result};
+use crate::error::{Errors, Loc, Result};
 use crate::symbol::{FQType, Path, Pkg, Symbol, TSymbol};
 use crate::typed;
 use crate::types::Type;
 use crate::value::Value;
 
-use super::Env;
+use super::{Env, TypeCheckError};
 
 type Scope = HashMap<Symbol, Type>;
 
@@ -203,19 +203,10 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
     }
 
     // Creates and returns an error
-    fn error(self, kind: TypeCheckError) -> Result<typed::Expression> {
-        Errors::err(self.input.loc.clone(), kind)
+    fn error(self, error: TypeCheckError) -> Result<typed::Expression> {
+        Errors::err(self.input.loc.clone(), error)
     }
 }
-
-#[derive(Debug)]
-enum TypeCheckError {
-    UnknownType(TSymbol),
-    UnknownIdentifier(Symbol),
-    InvalidType, // placeholder, temporary error
-}
-
-impl Error for TypeCheckError {}
 
 #[cfg(test)]
 mod tests;

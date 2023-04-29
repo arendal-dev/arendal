@@ -2,7 +2,7 @@ use std::fmt;
 
 use im::HashMap;
 
-use crate::error::{Error, Errors, Loc, Result};
+use crate::error::{Errors, Loc, Result};
 use crate::symbol::FQSym;
 use crate::types::{Singleton, Type};
 use crate::visibility::{Visibility, Visible};
@@ -114,10 +114,8 @@ impl Values {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ValueError {
     DuplicateValue(FQSym),
     SingletonExpected(Type),
 }
-
-impl Error for ValueError {}
