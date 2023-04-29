@@ -19,7 +19,7 @@ impl Loc {
         }
     }
 
-    fn fmt(&self, f: &mut fmt::Formatter<'_>, error: &Error) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>, error: &ErrorKind) -> fmt::Result {
         write!(f, "{:?}", error)
     }
 }
@@ -41,17 +41,17 @@ enum Inner {
 #[derive(Debug)]
 struct ErrorItem {
     loc: Loc,
-    error: Error,
+    error: ErrorKind,
 }
 
 type ErrorVec = Vec<ErrorItem>;
 
 #[derive(Debug)]
-pub struct Errors {
+pub struct Error {
     errors: ErrorVec,
 }
 
-impl fmt::Display for Errors {
+impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for e in self.errors.iter() {
             e.loc.fmt(f, &e.error)?
@@ -60,17 +60,17 @@ impl fmt::Display for Errors {
     }
 }
 
-pub type Result<T> = std::result::Result<T, Errors>;
+pub type Result<T> = std::result::Result<T, Error>;
 
-impl Errors {
-    fn new(loc: Loc, error: Error) -> Self {
+impl Error {
+    fn new(loc: Loc, error: ErrorKind) -> Self {
         Self {
             errors: vec![ErrorItem { loc, error }],
         }
     }
 
     #[inline]
-    pub fn err<E: Into<Error>, T>(loc: Loc, error: E) -> Result<T> {
+    pub fn err<E: Into<ErrorKind>, T>(loc: Loc, error: E) -> Result<T> {
         Err(Self::new(loc, error.into()))
     }
 
@@ -89,25 +89,26 @@ impl Errors {
         }
     }
 
-    fn add(&mut self, loc: Loc, error: Error) {
+    fn add(&mut self, loc: Loc, error: ErrorKind) {
         self.errors.push(ErrorItem { loc, error });
     }
 
-    fn append(&mut self, mut other: Errors) {
+    fn append(&mut self, mut other: Error) {
         self.errors.append(&mut other.errors);
     }
 }
 
+// Error accumulator and builder.
 #[derive(Debug, Default)]
-pub struct ErrorAcc {
-    errors: Option<Errors>,
+pub struct Errors {
+    errors: Option<Error>,
 }
 
-impl ErrorAcc {
-    pub fn add<E: Into<Error>>(&mut self, loc: Loc, error: E) {
+impl Errors {
+    pub fn add<E: Into<ErrorKind>>(&mut self, loc: Loc, error: E) {
         match &mut self.errors {
             Some(e) => e.add(loc, error.into()),
-            None => self.errors = Some(Errors::new(loc, error.into())),
+            None => self.errors = Some(Error::new(loc, error.into())),
         }
     }
 
@@ -147,7 +148,7 @@ impl ErrorAcc {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Error {
+pub enum ErrorKind {
     Symbol(crate::symbol::SymbolError),
     Parser(crate::parser::ParserError),
     Types(crate::types::TypesError),
@@ -157,44 +158,44 @@ pub enum Error {
     TypeCheck(crate::env::TypeCheckError),
 }
 
-impl From<crate::symbol::SymbolError> for Error {
+impl From<crate::symbol::SymbolError> for ErrorKind {
     fn from(value: crate::symbol::SymbolError) -> Self {
-        Error::Symbol(value)
+        ErrorKind::Symbol(value)
     }
 }
 
-impl From<crate::parser::ParserError> for Error {
+impl From<crate::parser::ParserError> for ErrorKind {
     fn from(value: crate::parser::ParserError) -> Self {
-        Error::Parser(value)
+        ErrorKind::Parser(value)
     }
 }
 
-impl From<crate::types::TypesError> for Error {
+impl From<crate::types::TypesError> for ErrorKind {
     fn from(value: crate::types::TypesError) -> Self {
-        Error::Types(value)
+        ErrorKind::Types(value)
     }
 }
 
-impl From<crate::value::ValueError> for Error {
+impl From<crate::value::ValueError> for ErrorKind {
     fn from(value: crate::value::ValueError) -> Self {
-        Error::Value(value)
+        ErrorKind::Value(value)
     }
 }
 
-impl From<crate::env::EnvError> for Error {
+impl From<crate::env::EnvError> for ErrorKind {
     fn from(value: crate::env::EnvError) -> Self {
-        Error::Env(value)
+        ErrorKind::Env(value)
     }
 }
 
-impl From<crate::env::RuntimeError> for Error {
+impl From<crate::env::RuntimeError> for ErrorKind {
     fn from(value: crate::env::RuntimeError) -> Self {
-        Error::Runtime(value)
+        ErrorKind::Runtime(value)
     }
 }
 
-impl From<crate::env::TypeCheckError> for Error {
+impl From<crate::env::TypeCheckError> for ErrorKind {
     fn from(value: crate::env::TypeCheckError) -> Self {
-        Error::TypeCheck(value)
+        ErrorKind::TypeCheck(value)
     }
 }

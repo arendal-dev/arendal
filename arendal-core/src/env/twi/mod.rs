@@ -1,5 +1,5 @@
 use crate::ast::BinaryOp;
-use crate::error::{Errors, Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::symbol::Symbol;
 use crate::typed::{Expr, Expression, Module};
 use crate::value::Value;
@@ -131,7 +131,7 @@ fn integer(value: Integer) -> Result<Value> {
 }
 
 fn err(expr: &Expression, error: RuntimeError) -> Result<Value> {
-    Errors::err(expr.clone_loc(), error)
+    Error::err(expr.clone_loc(), error)
 }
 
 #[cfg(test)]

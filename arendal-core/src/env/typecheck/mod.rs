@@ -1,7 +1,7 @@
 use im::HashMap;
 
 use crate::ast::{self, BinaryOp};
-use crate::error::{Errors, Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::symbol::{FQType, Path, Pkg, Symbol, TSymbol};
 use crate::typed;
 use crate::types::Type;
@@ -85,7 +85,7 @@ impl<'a> TypeChecker<'a> {
                     .get(&Pkg::Std.empty().fq_type(symbol.clone()))
                 {
                     Some(t) => Ok(t.cloned()),
-                    None => Errors::err(loc.clone(), TypeCheckError::UnknownType(symbol.clone())),
+                    None => Error::err(loc.clone(), TypeCheckError::UnknownType(symbol.clone())),
                 },
             },
         }
@@ -120,7 +120,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                 )?;
                 Ok(self.builder().assignment(a.symbol.clone(), typed))
             }
-            ast::Expr::Binary(b) => Errors::merge(
+            ast::Expr::Binary(b) => Error::merge(
                 self.sub_expr(&b.expr1),
                 self.sub_expr(&b.expr2),
                 |t1, t2| self.check_binary(b.op, t1, t2),
@@ -204,7 +204,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
 
     // Creates and returns an error
     fn error(self, error: TypeCheckError) -> Result<typed::Expression> {
-        Errors::err(self.input.loc.clone(), error)
+        Error::err(self.input.loc.clone(), error)
     }
 }
 

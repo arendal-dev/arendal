@@ -2,7 +2,7 @@ use std::fmt;
 
 use im::HashMap;
 
-use crate::error::{Errors, Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::symbol::FQSym;
 use crate::types::{Singleton, Type};
 use crate::visibility::{Visibility, Visible};
@@ -40,7 +40,7 @@ impl Value {
             Type::True => Ok(Value::True),
             Type::False => Ok(Value::False),
             Type::Singleton(s) => Ok(Value::Singleton(s.clone())),
-            _ => Errors::err(loc.clone(), ValueError::SingletonExpected(tipo.clone())),
+            _ => Error::err(loc.clone(), ValueError::SingletonExpected(tipo.clone())),
         }
     }
 
@@ -106,7 +106,7 @@ impl Values {
         value: Value,
     ) -> Result<()> {
         if self.values.contains_key(&symbol) {
-            Errors::err(loc, ValueError::DuplicateValue(symbol))
+            Error::err(loc, ValueError::DuplicateValue(symbol))
         } else {
             self.values.insert(symbol, Visible::new(visibility, value));
             Ok(())

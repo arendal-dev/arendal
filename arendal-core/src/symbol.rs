@@ -2,7 +2,7 @@ use phf::phf_map;
 use std::fmt::{self, Display, Write};
 use std::sync::Arc;
 
-use crate::error::{Errors, Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::id::Id;
 use crate::keyword::Keyword;
 use crate::{literal, ArcStr};
@@ -39,19 +39,19 @@ pub struct Symbol {
 impl Symbol {
     pub fn new(loc: Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
-            return Errors::err(loc, SymbolError::Empty);
+            return Error::err(loc, SymbolError::Empty);
         }
         if let Some(k) = Keyword::parse(name.as_str()) {
-            return Errors::err(loc, SymbolError::Keyword(k));
+            return Error::err(loc, SymbolError::Keyword(k));
         }
         for (i, c) in name.char_indices() {
             if i == 0 {
                 if !c.is_ascii_alphabetic() || !c.is_ascii_lowercase() {
-                    return Errors::err(loc, SymbolError::InvalidInitial(c));
+                    return Error::err(loc, SymbolError::InvalidInitial(c));
                 }
             } else {
                 if !c.is_ascii_alphanumeric() {
-                    return Errors::err(loc, SymbolError::InvalidChar(i, c));
+                    return Error::err(loc, SymbolError::InvalidChar(i, c));
                 }
             }
         }
@@ -92,7 +92,7 @@ static T_SYMBOLS: phf::Map<&'static str, TSymbol> = phf_map! {
 impl TSymbol {
     pub fn new(loc: Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
-            return Errors::err(loc, SymbolError::Empty);
+            return Error::err(loc, SymbolError::Empty);
         }
         if let Some(s) = T_SYMBOLS.get(&name) {
             Ok(s.clone())
@@ -100,11 +100,11 @@ impl TSymbol {
             for (i, c) in name.char_indices() {
                 if i == 0 {
                     if !c.is_ascii_alphabetic() || !c.is_ascii_uppercase() {
-                        return Errors::err(loc, SymbolError::InvalidTypeInitial(c));
+                        return Error::err(loc, SymbolError::InvalidTypeInitial(c));
                     }
                 } else {
                     if !c.is_ascii_alphanumeric() {
-                        return Errors::err(loc, SymbolError::InvalidChar(i, c));
+                        return Error::err(loc, SymbolError::InvalidChar(i, c));
                     }
                 }
             }
@@ -370,7 +370,7 @@ impl FQType {
                 }),
             }))
         } else {
-            Errors::err(loc, SymbolError::ExpectedTopLevelType(self.clone()))
+            Error::err(loc, SymbolError::ExpectedTopLevelType(self.clone()))
         }
     }
 
@@ -383,7 +383,7 @@ impl FQType {
                 }),
             }))
         } else {
-            Errors::err(loc, SymbolError::ExpectedTopLevelType(self.clone()))
+            Error::err(loc, SymbolError::ExpectedTopLevelType(self.clone()))
         }
     }
 

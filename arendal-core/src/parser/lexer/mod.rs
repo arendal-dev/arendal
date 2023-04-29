@@ -3,7 +3,7 @@ mod tokenizer;
 use std::fmt;
 
 use super::{Enclosure, ParserError};
-use crate::error::{ErrorAcc, Loc, Result};
+use crate::error::{Errors, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::{Symbol, TSymbol};
 use crate::{Integer, Substr};
@@ -92,7 +92,7 @@ struct Lexer {
     separator: Separator,
     input: Tokens,
     lexemes: Lexemes,
-    errors: ErrorAcc,
+    errors: Errors,
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
     enclosures: Vec<Enclosure>,

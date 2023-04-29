@@ -8,7 +8,7 @@ pub enum Enclosure {
 }
 
 use crate::ast::{BinaryOp, ExprBuilder, Expression, Module, ModuleItem};
-use crate::error::{Errors, Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::Symbol;
 use std::rc::Rc;
@@ -96,7 +96,7 @@ impl Parser {
     }
 
     fn err<T>(&self, error: ParserError) -> Result<T> {
-        Errors::err(self.loc(), error)
+        Error::err(self.loc(), error)
     }
 
     fn expression_expected<T>(&self) -> Result<T> {

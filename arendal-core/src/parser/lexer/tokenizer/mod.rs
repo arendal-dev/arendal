@@ -1,7 +1,7 @@
 use std::fmt;
 
 use super::{Enclosure, ParserError};
-use crate::error::{ErrorAcc, Loc, Result};
+use crate::error::{Errors, Loc, Result};
 use crate::{ArcStr, Substr};
 
 pub(super) fn tokenize(input: &str) -> Result<Tokens> {
@@ -197,7 +197,7 @@ impl Tokenizer {
     }
 
     fn tokenize(mut self) -> Result<Tokens> {
-        let mut errors: ErrorAcc = Default::default();
+        let mut errors: Errors = Default::default();
         while let Some(c) = self.peek() {
             if !self.add_known_first_char(c) && !self.add_digits(c) && !self.add_word(c) {
                 errors.add(self.loc(), ParserError::UnexpectedChar(c));
