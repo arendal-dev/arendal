@@ -78,7 +78,7 @@ impl ExprBuilder {
         Self::new(Loc::none())
     }
 
-    fn expr(&self, expr: Expr) -> Expression {
+    fn build(&self, expr: Expr) -> Expression {
         Expression {
             loc: self.loc.clone(),
             expr,
@@ -86,7 +86,7 @@ impl ExprBuilder {
     }
 
     pub fn lit_integer(&self, value: Integer) -> Expression {
-        self.expr(Expr::LitInteger(value))
+        self.build(Expr::LitInteger(value))
     }
 
     pub fn lit_i64(&self, value: i64) -> Expression {
@@ -94,19 +94,19 @@ impl ExprBuilder {
     }
 
     pub fn symbol(&self, symbol: Symbol) -> Expression {
-        self.expr(Expr::Symbol(symbol))
+        self.build(Expr::Symbol(symbol))
     }
 
     pub fn tsymbol(&self, symbol: TSymbol) -> Expression {
-        self.expr(Expr::TSymbol(symbol))
+        self.build(Expr::TSymbol(symbol))
     }
 
     pub fn unary(&self, op: UnaryOp, expr: Expression) -> Expression {
-        self.expr(Expr::Unary(Box::new(UnaryExpr { op, expr })))
+        self.build(Expr::Unary(Box::new(UnaryExpr { op, expr })))
     }
 
     pub fn binary(&self, op: BinaryOp, expr1: Expression, expr2: Expression) -> Expression {
-        self.expr(Expr::Binary(Box::new(BinaryExpr { op, expr1, expr2 })))
+        self.build(Expr::Binary(Box::new(BinaryExpr { op, expr1, expr2 })))
     }
 
     pub fn add(&self, expr1: Expression, expr2: Expression) -> Expression {
@@ -133,12 +133,12 @@ impl ExprBuilder {
         if exprs.len() == 1 {
             exprs.pop().unwrap()
         } else {
-            self.expr(Expr::Block(exprs))
+            self.build(Expr::Block(exprs))
         }
     }
 
     pub fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {
-        self.expr(Expr::Assignment(Box::new(AssignmentExpr { symbol, expr })))
+        self.build(Expr::Assignment(Box::new(AssignmentExpr { symbol, expr })))
     }
 }
 

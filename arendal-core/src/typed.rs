@@ -5,82 +5,48 @@ use crate::symbol::{Path, Symbol};
 use crate::types::Type;
 use crate::value::Value;
 use std::fmt;
-use std::rc::Rc;
 use std::slice::Iter;
+use std::sync::Arc;
 
-#[derive(Debug)]
-struct Inner {
-    loc: Loc,
-    tipo: Type,
-    expr: Expr,
-}
-
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Expression {
-    inner: Rc<Inner>,
-}
-
-impl Expression {
-    fn new(loc: Loc, tipo: Type, expr: Expr) -> Self {
-        Expression {
-            inner: Rc::new(Inner { loc, tipo, expr }),
-        }
-    }
-
-    pub fn borrow_loc(&self) -> &Loc {
-        &self.inner.loc
-    }
-
-    pub fn clone_loc(&self) -> Loc {
-        self.inner.loc.clone()
-    }
-
-    pub fn borrow_type(&self) -> &Type {
-        &self.inner.tipo
-    }
-
-    pub fn clone_type(&self) -> Type {
-        self.inner.tipo.clone()
-    }
-
-    pub fn borrow_expr(&self) -> &Expr {
-        &self.inner.expr
-    }
-
-    pub fn is_integer(&self) -> bool {
-        self.inner.tipo == Type::Integer
-    }
-
-    pub fn is_boolean(&self) -> bool {
-        self.inner.tipo == Type::Boolean
-    }
-
-    pub fn is_boolean_true(&self) -> bool {
-        self.inner.tipo == Type::True
-    }
-
-    pub fn is_boolean_false(&self) -> bool {
-        self.inner.tipo == Type::False
-    }
-
-    pub fn is_none(&self) -> bool {
-        self.inner.tipo == Type::None
-    }
+    pub loc: Loc,
+    pub tipo: Type,
+    pub expr: Expr,
 }
 
 impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} : {:?}", self.borrow_expr(), self.borrow_type())
+        write!(f, "{:?} : {:?}", self.expr, self.tipo)
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct Unary {
+    pub op: UnaryOp,
+    pub expr: Expression,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Binary {
+    pub op: BinaryOp,
+    pub expr1: Expression,
+    pub expr2: Expression,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Assignment {
+    pub symbol: Symbol,
+    pub expr: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     Value(Value),
     LocalSymbol(Symbol),
-    Assignment(Symbol, Expression),
-    Unary(UnaryOp, Expression),
-    Binary(BinaryOp, Expression, Expression),
+    Assignment(Arc<Assignment>),
+    Unary(Arc<Unary>),
+    Binary(Arc<Binary>),
 }
 
 pub struct ExprBuilder {
@@ -92,8 +58,16 @@ impl ExprBuilder {
         ExprBuilder { loc }
     }
 
+    fn build(&self, tipo: Type, expr: Expr) -> Expression {
+        Expression {
+            loc: self.loc.clone(),
+            tipo,
+            expr,
+        }
+    }
+
     pub fn value(&self, value: Value) -> Expression {
-        Expression::new(self.loc.clone(), value.clone_type(), Expr::Value(value))
+        self.build(value.clone_type(), Expr::Value(value))
     }
 
     pub fn val_integer(&self, value: Integer) -> Expression {
@@ -105,19 +79,18 @@ impl ExprBuilder {
     }
 
     pub fn val(&self, id: Symbol, tipo: Type) -> Expression {
-        Expression::new(self.loc.clone(), tipo, Expr::LocalSymbol(id))
+        self.build(tipo, Expr::LocalSymbol(id))
     }
 
-    pub fn assignment(&self, id: Symbol, expr: Expression) -> Expression {
-        Expression::new(
-            self.loc.clone(),
-            expr.clone_type(),
-            Expr::Assignment(id, expr),
+    pub fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {
+        self.build(
+            expr.tipo.clone(),
+            Expr::Assignment(Arc::new(Assignment { symbol, expr })),
         )
     }
 
     pub fn unary(&self, tipo: Type, op: UnaryOp, expr: Expression) -> Expression {
-        Expression::new(self.loc.clone(), tipo, Expr::Unary(op, expr))
+        self.build(tipo, Expr::Unary(Arc::new(Unary { op, expr })))
     }
 
     pub fn binary(
@@ -127,7 +100,7 @@ impl ExprBuilder {
         expr1: Expression,
         expr2: Expression,
     ) -> Expression {
-        Expression::new(self.loc.clone(), tipo, Expr::Binary(op, expr1, expr2))
+        self.build(tipo, Expr::Binary(Arc::new(Binary { op, expr1, expr2 })))
     }
 
     pub fn add(&self, tipo: Type, expr1: Expression, expr2: Expression) -> Expression {

@@ -45,6 +45,17 @@ impl Type {
         }
     }
 
+    pub fn is_boolean(&self) -> bool {
+        match self {
+            Self::True | Self::False | Self::Boolean => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_integer(&self) -> bool {
+        *self == Self::Integer
+    }
+
     pub fn is_singleton(&self) -> bool {
         match self {
             Type::None | Type::True | Type::False | Type::Singleton(_) => true,

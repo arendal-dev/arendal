@@ -1,7 +1,7 @@
 use crate::ast::BinaryOp;
 use crate::error::{Error, Loc, Result};
 use crate::symbol::Symbol;
-use crate::typed::{Expr, Expression, Module};
+use crate::typed::{Binary, Expr, Expression, Module};
 use crate::value::Value;
 use crate::visibility::Visibility;
 use crate::Integer;
@@ -69,30 +69,30 @@ impl<'a> Interpreter<'a> {
     }
 
     fn expression(&mut self, expr: &Expression) -> Result<Value> {
-        match expr.borrow_expr() {
+        match &expr.expr {
             Expr::Value(v) => Ok(v.clone()),
-            Expr::LocalSymbol(id) => match self.get_val(id) {
+            Expr::LocalSymbol(s) => match self.get_val(s) {
                 Some(value) => Ok(value),
-                None => err(expr, RuntimeError::UknownVal(id.clone())),
+                None => err(expr, RuntimeError::UknownVal(s.clone())),
             },
-            Expr::Assignment(id, expr) => {
-                let value = self.expression(expr)?;
-                self.set_val(expr.clone_loc(), id.clone(), value.clone())?;
+            Expr::Assignment(a) => {
+                let value = self.expression(&a.expr)?;
+                self.set_val(expr.loc.clone(), a.symbol.clone(), value.clone())?;
                 Ok(value)
             }
-            Expr::Binary(op, e1, e2) => self.binary(*op, e1, e2),
+            Expr::Binary(b) => self.binary(&b),
             _ => err(expr, RuntimeError::NotImplemented),
         }
     }
 
-    fn binary(&mut self, op: BinaryOp, e1: &Expression, e2: &Expression) -> Result<Value> {
-        let v1 = self.expression(e1)?;
-        match op {
-            BinaryOp::Add => self.add(v1, e2),
-            BinaryOp::Sub => self.sub(v1, e2),
-            BinaryOp::Mul => self.mul(v1, e2),
-            BinaryOp::Div => self.div(v1, e2),
-            _ => err(e1, RuntimeError::NotImplemented),
+    fn binary(&mut self, b: &Binary) -> Result<Value> {
+        let v1 = self.expression(&b.expr1)?;
+        match b.op {
+            BinaryOp::Add => self.add(v1, &b.expr2),
+            BinaryOp::Sub => self.sub(v1, &b.expr2),
+            BinaryOp::Mul => self.mul(v1, &b.expr2),
+            BinaryOp::Div => self.div(v1, &b.expr2),
+            _ => err(&b.expr1, RuntimeError::NotImplemented),
         }
     }
 
@@ -131,7 +131,7 @@ fn integer(value: Integer) -> Result<Value> {
 }
 
 fn err(expr: &Expression, error: RuntimeError) -> Result<Value> {
-    Error::err(expr.clone_loc(), error)
+    Error::err(expr.loc.clone(), error)
 }
 
 #[cfg(test)]
