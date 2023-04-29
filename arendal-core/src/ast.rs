@@ -21,6 +21,12 @@ pub enum BinaryOp {
     Div,
     Eq,
     NEq,
+    GT,
+    GE,
+    LT,
+    LE,
+    And,
+    Or,
 }
 
 #[derive(PartialEq, Eq)]
@@ -101,6 +107,18 @@ impl ExprBuilder {
         self.build(Expr::TSymbol(symbol))
     }
 
+    pub(crate) fn lit_none(&self) -> Expression {
+        self.tsymbol(TSymbol::None)
+    }
+
+    pub(crate) fn lit_true(&self) -> Expression {
+        self.tsymbol(TSymbol::True)
+    }
+
+    pub(crate) fn lit_false(&self) -> Expression {
+        self.tsymbol(TSymbol::False)
+    }
+
     pub fn unary(&self, op: UnaryOp, expr: Expression) -> Expression {
         self.build(Expr::Unary(Box::new(UnaryExpr { op, expr })))
     }
@@ -123,6 +141,14 @@ impl ExprBuilder {
 
     pub fn sub_i64(&self, value1: i64, value2: i64) -> Expression {
         self.sub(self.lit_i64(value1), self.lit_i64(value2))
+    }
+
+    pub(crate) fn and(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.binary(BinaryOp::And, expr1, expr2)
+    }
+
+    pub(crate) fn or(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.binary(BinaryOp::Or, expr1, expr2)
     }
 
     pub fn block(&self, mut exprs: Vec<Expression>) -> Expression {

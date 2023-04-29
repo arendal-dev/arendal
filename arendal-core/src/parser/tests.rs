@@ -63,6 +63,14 @@ fn y_expr() -> Expression {
     B.symbol(y())
 }
 
+fn true_expr() -> Expression {
+    B.lit_true()
+}
+
+fn false_expr() -> Expression {
+    B.lit_false()
+}
+
 #[test]
 fn int_literal_expr() {
     check_expression("1234", B.lit_i64(1234));
@@ -140,4 +148,12 @@ fn multiple1() {
 #[test]
 fn multiple2() {
     expect_one_error("1 2", ParserError::EndOfItemExpected)
+}
+
+#[test]
+fn logical_ops() {
+    check_expression(
+        "True || False && True",
+        B.or(true_expr(), B.and(false_expr(), true_expr())),
+    );
 }

@@ -149,43 +149,74 @@ impl Parser {
     }
 
     fn rule_expression(&self) -> EResult {
-        self.rule_term()
+        self.rule_logterm()
+    }
+
+    fn binary_rule<O, F>(&self, op: O, rule: F) -> EResult
+    where
+        O: Fn(&LexemeKind) -> Option<BinaryOp>,
+        F: Fn(&Parser) -> EResult,
+    {
+        let (mut left, mut parser) = rule(self)?;
+        while let Some(bop) = parser.peek().and_then(|l| op(&l.kind)) {
+            let (right, p2) = rule(&parser.advance())?;
+            (left, parser) = p2.ok(parser.builder().binary(bop, left, right))?;
+        }
+        parser.ok(left)
+    }
+
+    fn rule_logterm(&self) -> EResult {
+        let op = |k: &LexemeKind| match k {
+            LexemeKind::LogicalOr => Some(BinaryOp::Or),
+            _ => None,
+        };
+        self.binary_rule(op, Self::rule_logfactor)
+    }
+
+    fn rule_logfactor(&self) -> EResult {
+        let op = |k: &LexemeKind| match k {
+            LexemeKind::LogicalAnd => Some(BinaryOp::And),
+            _ => None,
+        };
+        self.binary_rule(op, Self::rule_equality)
+    }
+
+    fn rule_equality(&self) -> EResult {
+        let op = |k: &LexemeKind| match k {
+            LexemeKind::Equals => Some(BinaryOp::Eq),
+            LexemeKind::NotEquals => Some(BinaryOp::NEq),
+            _ => None,
+        };
+        self.binary_rule(op, Self::rule_comparison)
+    }
+
+    fn rule_comparison(&self) -> EResult {
+        let op = |k: &LexemeKind| match k {
+            LexemeKind::Greater => Some(BinaryOp::GT),
+            LexemeKind::GreaterOrEq => Some(BinaryOp::GE),
+            LexemeKind::Less => Some(BinaryOp::LT),
+            LexemeKind::LessOrEq => Some(BinaryOp::LE),
+            _ => None,
+        };
+        self.binary_rule(op, Self::rule_term)
     }
 
     fn rule_term(&self) -> EResult {
-        let (mut left, mut parser) = self.rule_factor()?;
-        while !parser.is_done() {
-            let lexeme = parser.peek().unwrap();
-            match lexeme.kind {
-                LexemeKind::Plus => (left, parser) = parser.advance_term(left, BinaryOp::Add)?,
-                LexemeKind::Minus => (left, parser) = parser.advance_term(left, BinaryOp::Sub)?,
-                _ => break,
-            }
-        }
-        parser.ok(left)
-    }
-
-    fn advance_term(&self, left: Expression, op: BinaryOp) -> EResult {
-        let (right, parser) = self.advance().rule_factor()?;
-        parser.ok(self.builder().binary(op, left, right))
+        let op = |k: &LexemeKind| match k {
+            LexemeKind::Plus => Some(BinaryOp::Add),
+            LexemeKind::Minus => Some(BinaryOp::Sub),
+            _ => None,
+        };
+        self.binary_rule(op, Self::rule_factor)
     }
 
     fn rule_factor(&self) -> EResult {
-        let (mut left, mut parser) = self.rule_primary()?;
-        while !parser.is_done() {
-            let lexeme = parser.peek().unwrap();
-            match lexeme.kind {
-                LexemeKind::Star => (left, parser) = parser.advance_factor(left, BinaryOp::Mul)?,
-                LexemeKind::Slash => (left, parser) = parser.advance_factor(left, BinaryOp::Div)?,
-                _ => break,
-            }
-        }
-        parser.ok(left)
-    }
-
-    fn advance_factor(&self, left: Expression, op: BinaryOp) -> EResult {
-        let (right, parser) = self.advance().rule_primary()?;
-        parser.ok(self.builder().binary(op, left, right))
+        let op = |k: &LexemeKind| match k {
+            LexemeKind::Star => Some(BinaryOp::Mul),
+            LexemeKind::Slash => Some(BinaryOp::Div),
+            _ => None,
+        };
+        self.binary_rule(op, Self::rule_primary)
     }
 
     fn rule_primary(&self) -> EResult {

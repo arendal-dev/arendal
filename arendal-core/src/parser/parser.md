@@ -10,7 +10,11 @@ module -> moduleitem*
 moduleitem -> toplevelexpr EOI
 toplevelexpr -> assignment | expression
 assignment -> "val" identifier "=" expression
-expression -> term
+expression -> logterm
+logterm -> logfactor ( "||" logfactor )*
+logfactor -> equality ( "&&" equality )*
+equality -> comparison ( ("==" | "!=") comparison )*
+comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
 primary -> IntLiteral | TypeLiteral | identified | "(" expression ")" | "{" toplevelexpr* "}"
