@@ -111,10 +111,6 @@ impl ExprBuilder {
         self.value(Value::Integer(value))
     }
 
-    pub(crate) fn val_i64(&self, value: i64) -> Expression {
-        self.val_integer(value.into())
-    }
-
     pub(crate) fn local(&self, symbol: Symbol, tipo: Type) -> Expression {
         self.build(Expr::Local(Arc::new(Local { symbol, tipo })))
     }
@@ -131,16 +127,8 @@ impl ExprBuilder {
         self.build(Expr::Add(Two::new(expr1, expr2)))
     }
 
-    pub(crate) fn add_i64(&self, value1: i64, value2: i64) -> Expression {
-        self.add(self.val_i64(value1), self.val_i64(value2))
-    }
-
     pub(crate) fn sub(&self, expr1: Expression, expr2: Expression) -> Expression {
         self.build(Expr::Sub(Two::new(expr1, expr2)))
-    }
-
-    pub(crate) fn sub_i64(&self, value1: i64, value2: i64) -> Expression {
-        self.sub(self.val_i64(value1), self.val_i64(value2))
     }
 
     pub(crate) fn mul(&self, expr1: Expression, expr2: Expression) -> Expression {
