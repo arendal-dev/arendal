@@ -5,11 +5,9 @@ use crate::symbol::Pkg;
 use super::Value;
 
 fn eval_module(input: &str) -> Result<Value> {
-    let parsed = crate::parser::parse(input)?;
     let mut env = Env::default();
     let path = Pkg::Local.empty();
-    let module = crate::env::typecheck::check(&env, &path, &parsed)?;
-    super::interpret(&mut env, &module)
+    super::super::run(&mut env, &path, input)
 }
 
 fn eval_ok(input: &str, result: Value) {

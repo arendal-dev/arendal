@@ -3,15 +3,16 @@ use im::HashMap;
 use crate::ast::{self, BinaryOp};
 use crate::error::{Error, Loc, Result};
 use crate::symbol::{FQType, Path, Pkg, Symbol, TSymbol};
-use crate::typed;
 use crate::types::Type;
 use crate::value::Value;
 
-use super::{Env, TypeCheckError};
+use crate::env::{Env, TypeCheckError};
+
+use super::{ExprBuilder, Expression, Expressions, Module};
 
 type Scope = HashMap<Symbol, Type>;
 
-pub(super) fn check(env: &Env, path: &Path, input: &ast::Module) -> Result<typed::Module> {
+pub(super) fn check(env: &Env, path: &Path, input: &ast::Module) -> Result<Module> {
     TypeChecker {
         env,
         path,
@@ -30,8 +31,8 @@ struct TypeChecker<'a> {
 }
 
 impl<'a> TypeChecker<'a> {
-    fn module(&mut self, input: &ast::Module) -> Result<typed::Module> {
-        let mut expressions: Vec<typed::Expression> = Vec::default();
+    fn module(&mut self, input: &ast::Module) -> Result<Module> {
+        let mut expressions: Vec<Expression> = Vec::default();
         for item in input {
             match item {
                 ast::ModuleItem::Expression(e) => {
@@ -44,9 +45,9 @@ impl<'a> TypeChecker<'a> {
                 }
             }
         }
-        Ok(typed::Module {
+        Ok(Module {
             path: self.path.clone(),
-            expressions: typed::Expressions::new(expressions),
+            expressions: Expressions::new(expressions),
         })
     }
 
@@ -99,7 +100,7 @@ struct ExprChecker<'a, 'b> {
 }
 
 impl<'a, 'b> ExprChecker<'a, 'b> {
-    fn check(mut self) -> Result<typed::Expression> {
+    fn check(mut self) -> Result<Expression> {
         match &self.input.expr {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
             ast::Expr::Symbol(id) => match self.checker.get_val(&id) {
@@ -133,7 +134,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.checker.resolve_type(&self.input.loc, symbol)
     }
 
-    fn sub_expr(&mut self, input: &ast::Expression) -> Result<typed::Expression> {
+    fn sub_expr(&mut self, input: &ast::Expression) -> Result<Expression> {
         ExprChecker {
             checker: self.checker,
             input,
@@ -141,12 +142,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         .check()
     }
 
-    fn check_binary(
-        self,
-        op: BinaryOp,
-        e1: typed::Expression,
-        e2: typed::Expression,
-    ) -> Result<typed::Expression> {
+    fn check_binary(self, op: BinaryOp, e1: Expression, e2: Expression) -> Result<Expression> {
         match op {
             BinaryOp::Add => self.check_add(e1, e2),
             BinaryOp::Sub => self.check_sub(e1, e2),
@@ -156,11 +152,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_add(
-        self,
-        expr1: typed::Expression,
-        expr2: typed::Expression,
-    ) -> Result<typed::Expression> {
+    fn check_add(self, expr1: Expression, expr2: Expression) -> Result<Expression> {
         if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
             Ok(self.builder().add(expr1, expr2))
         } else {
@@ -168,11 +160,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_sub(
-        self,
-        expr1: typed::Expression,
-        expr2: typed::Expression,
-    ) -> Result<typed::Expression> {
+    fn check_sub(self, expr1: Expression, expr2: Expression) -> Result<Expression> {
         if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
             Ok(self.builder().sub(expr1, expr2))
         } else {
@@ -180,11 +168,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_mul(
-        self,
-        expr1: typed::Expression,
-        expr2: typed::Expression,
-    ) -> Result<typed::Expression> {
+    fn check_mul(self, expr1: Expression, expr2: Expression) -> Result<Expression> {
         if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
             Ok(self.builder().mul(expr1, expr2))
         } else {
@@ -192,11 +176,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_div(
-        self,
-        expr1: typed::Expression,
-        expr2: typed::Expression,
-    ) -> Result<typed::Expression> {
+    fn check_div(self, expr1: Expression, expr2: Expression) -> Result<Expression> {
         if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
             Ok(self.builder().div(expr1, expr2))
         } else {
@@ -204,12 +184,12 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn builder(&self) -> typed::ExprBuilder {
-        typed::ExprBuilder::new(self.input.loc.clone())
+    fn builder(&self) -> ExprBuilder {
+        ExprBuilder::new(self.input.loc.clone())
     }
 
     // Creates and returns an error
-    fn error(self, error: TypeCheckError) -> Result<typed::Expression> {
+    fn error(self, error: TypeCheckError) -> Result<Expression> {
         Error::err(self.input.loc.clone(), error)
     }
 }

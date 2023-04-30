@@ -1,25 +1,36 @@
-use super::Integer;
+mod twi;
+mod typecheck;
+
 use crate::ast::UnaryOp;
-use crate::error::Loc;
+use crate::error::{Loc, Result};
 use crate::symbol::{Path, Symbol};
 use crate::types::Type;
 use crate::value::Value;
+use crate::Integer;
 use std::fmt;
 use std::slice::Iter;
 use std::sync::Arc;
 
+use super::Env;
+
+pub(super) fn run(env: &mut Env, path: &Path, input: &str) -> Result<Value> {
+    let parsed = crate::parser::parse(input)?;
+    let checked = typecheck::check(&env, &path, &parsed)?;
+    twi::interpret(env, &checked)
+}
+
 #[derive(Clone, PartialEq, Eq)]
-pub struct Expression {
-    pub(crate) loc: Loc,
-    pub(crate) expr: Expr,
+struct Expression {
+    loc: Loc,
+    expr: Expr,
 }
 
 impl Expression {
-    pub(crate) fn borrow_type(&self) -> &Type {
+    fn borrow_type(&self) -> &Type {
         self.expr.borrow_type()
     }
 
-    pub(crate) fn clone_type(&self) -> Type {
+    fn clone_type(&self) -> Type {
         self.borrow_type().clone()
     }
 }
@@ -31,15 +42,15 @@ impl fmt::Debug for Expression {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Unary {
-    pub(crate) op: UnaryOp,
-    pub(crate) expr: Expression,
+struct Unary {
+    op: UnaryOp,
+    expr: Expression,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Two {
-    pub(crate) expr1: Expression,
-    pub(crate) expr2: Expression,
+struct Two {
+    expr1: Expression,
+    expr2: Expression,
 }
 
 impl Two {
@@ -49,19 +60,19 @@ impl Two {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Assignment {
-    pub(crate) symbol: Symbol,
-    pub(crate) expr: Expression,
+struct Assignment {
+    symbol: Symbol,
+    expr: Expression,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Local {
-    pub(crate) symbol: Symbol,
-    pub(crate) tipo: Type,
+struct Local {
+    symbol: Symbol,
+    tipo: Type,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum Expr {
+enum Expr {
     Value(Value),
     Local(Arc<Local>),
     Assignment(Arc<Assignment>),
@@ -87,12 +98,12 @@ impl Expr {
     }
 }
 
-pub(crate) struct ExprBuilder {
+struct ExprBuilder {
     loc: Loc,
 }
 
 impl ExprBuilder {
-    pub(crate) const fn new(loc: Loc) -> Self {
+    const fn new(loc: Loc) -> Self {
         ExprBuilder { loc }
     }
 
@@ -103,35 +114,35 @@ impl ExprBuilder {
         }
     }
 
-    pub(crate) fn value(&self, value: Value) -> Expression {
+    fn value(&self, value: Value) -> Expression {
         self.build(Expr::Value(value))
     }
 
-    pub(crate) fn val_integer(&self, value: Integer) -> Expression {
+    fn val_integer(&self, value: Integer) -> Expression {
         self.value(Value::Integer(value))
     }
 
-    pub(crate) fn local(&self, symbol: Symbol, tipo: Type) -> Expression {
+    fn local(&self, symbol: Symbol, tipo: Type) -> Expression {
         self.build(Expr::Local(Arc::new(Local { symbol, tipo })))
     }
 
-    pub(crate) fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {
+    fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {
         self.build(Expr::Assignment(Arc::new(Assignment { symbol, expr })))
     }
 
-    pub(crate) fn unary(&self, op: UnaryOp, expr: Expression) -> Expression {
+    fn unary(&self, op: UnaryOp, expr: Expression) -> Expression {
         self.build(Expr::Unary(Arc::new(Unary { op, expr })))
     }
 
-    pub(crate) fn add(&self, expr1: Expression, expr2: Expression) -> Expression {
+    fn add(&self, expr1: Expression, expr2: Expression) -> Expression {
         self.build(Expr::Add(Two::new(expr1, expr2)))
     }
 
-    pub(crate) fn sub(&self, expr1: Expression, expr2: Expression) -> Expression {
+    fn sub(&self, expr1: Expression, expr2: Expression) -> Expression {
         self.build(Expr::Sub(Two::new(expr1, expr2)))
     }
 
-    pub(crate) fn mul(&self, expr1: Expression, expr2: Expression) -> Expression {
+    fn mul(&self, expr1: Expression, expr2: Expression) -> Expression {
         self.build(Expr::Mul(Two::new(expr1, expr2)))
     }
 
@@ -141,7 +152,7 @@ impl ExprBuilder {
 }
 
 #[derive(Debug)]
-pub struct Expressions {
+struct Expressions {
     expressions: Vec<Expression>,
 }
 
@@ -165,7 +176,7 @@ impl<'a> IntoIterator for &'a Expressions {
 }
 
 #[derive(Debug)]
-pub struct Module {
-    pub path: Path,
-    pub expressions: Expressions,
+pub(super) struct Module {
+    path: Path,
+    expressions: Expressions,
 }

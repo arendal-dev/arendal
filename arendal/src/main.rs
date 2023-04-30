@@ -38,8 +38,7 @@ impl REPL {
     }
 
     fn eval(&mut self, input: &str) -> Result<Value> {
-        let parsed = core::parser::parse(input)?;
-        self.interactive.module(&parsed)
+        self.interactive.run(input)
     }
 
     fn eval_and_print(&mut self, input: &str) {

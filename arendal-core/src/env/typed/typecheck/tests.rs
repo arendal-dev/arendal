@@ -1,10 +1,9 @@
-use super::Type;
+use super::{Module, Type};
 use crate::env::Env;
 use crate::error::Result;
 use crate::symbol::Pkg;
-use crate::typed;
 
-fn check_module(input: &str) -> Result<typed::Module> {
+fn check_module(input: &str) -> Result<Module> {
     let parsed = crate::parser::parse(input)?;
     let env = Env::default();
     let path = Pkg::Local.empty();

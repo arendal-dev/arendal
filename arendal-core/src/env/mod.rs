@@ -1,6 +1,5 @@
 mod prelude;
-mod twi;
-mod typecheck;
+mod typed;
 
 use crate::{
     ast,
@@ -46,9 +45,8 @@ impl Default for Interactive {
 }
 
 impl Interactive {
-    pub fn module(&mut self, input: &ast::Module) -> Result<Value> {
-        let module = typecheck::check(&self.env, &self.path, input)?;
-        twi::interpret(&mut self.env, &module)
+    pub fn run(&mut self, input: &str) -> Result<Value> {
+        typed::run(&mut self.env, &self.path, input)
     }
 }
 
