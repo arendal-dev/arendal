@@ -72,7 +72,7 @@ impl<'a> Interpreter<'a> {
             Expr::Value(v) => Ok(v.clone()),
             Expr::Local(l) => match self.get_val(&l.symbol) {
                 Some(value) => Ok(value),
-                None => err(expr, RuntimeError::UknownVal(l.symbol.clone())),
+                None => expr.rt_err(RuntimeError::UknownVal(l.symbol.clone())),
             },
             Expr::Assignment(a) => {
                 let value = self.expression(&a.expr)?;
@@ -83,7 +83,9 @@ impl<'a> Interpreter<'a> {
             Expr::Sub(t) => self.sub(&t.expr1, &t.expr2),
             Expr::Mul(t) => self.mul(&t.expr1, &t.expr2),
             Expr::Div(t) => self.div(&t.expr1, &t.expr2),
-            _ => err(expr, RuntimeError::NotImplemented),
+            Expr::LogicalAnd(t) => self.and(&t.expr1, &t.expr2),
+            Expr::LogicalOr(t) => self.or(&t.expr1, &t.expr2),
+            _ => expr.rt_err(RuntimeError::NotImplemented),
         }
     }
 
@@ -114,19 +116,35 @@ impl<'a> Interpreter<'a> {
         // We only have integers for now
         let i2 = v2.as_integer().unwrap();
         if i2.is_zero() {
-            err(expr2, RuntimeError::DivisionByZero)
+            expr2.rt_err(RuntimeError::DivisionByZero)
         } else {
             integer(v1.as_integer().unwrap() / i2)
+        }
+    }
+
+    fn and(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+        let v1 = self.expression(expr1)?;
+        if v1.as_boolean().unwrap() {
+            let v2 = self.expression(expr2)?;
+            Ok(Value::boolean(v2.as_boolean().unwrap()))
+        } else {
+            Ok(Value::False) // short-circuit
+        }
+    }
+
+    fn or(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+        let v1 = self.expression(expr1)?;
+        if v1.as_boolean().unwrap() {
+            Ok(Value::True) // short-circuit
+        } else {
+            let v2 = self.expression(expr2)?;
+            Ok(Value::boolean(v2.as_boolean().unwrap()))
         }
     }
 }
 
 fn integer(value: Integer) -> Result<Value> {
     Ok(Value::Integer(value))
-}
-
-fn err(expr: &Expression, error: RuntimeError) -> Result<Value> {
-    expr.loc.err(error)
 }
 
 #[cfg(test)]

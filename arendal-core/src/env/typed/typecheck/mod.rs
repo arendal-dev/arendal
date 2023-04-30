@@ -151,7 +151,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         if expr.borrow_type().is_boolean() {
             Ok(())
         } else {
-            expr.type_mismatch(Type::Integer)
+            expr.type_mismatch(Type::Boolean)
         }
     }
 
@@ -187,6 +187,12 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             BinaryOp::Div => self
                 .check_integers(&expr1, &expr2)
                 .map(|()| self.builder().div(expr1, expr2)),
+            BinaryOp::And => self
+                .check_booleans(&expr1, &expr2)
+                .map(|()| self.builder().log_and(expr1, expr2)),
+            BinaryOp::Or => self
+                .check_booleans(&expr1, &expr2)
+                .map(|()| self.builder().log_or(expr1, expr2)),
             _ => self.error(TypeCheckError::InvalidType),
         }
     }

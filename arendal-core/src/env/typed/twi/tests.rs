@@ -65,3 +65,8 @@ fn parens1() {
 fn parens2() {
     eval_i64("(((1 + 2) * 2) + 1) * 2", 14);
 }
+
+#[test]
+fn logical() {
+    eval_ok("(True || False) && True", Value::True);
+}

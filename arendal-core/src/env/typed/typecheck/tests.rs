@@ -71,3 +71,11 @@ fn mismatch1() {
         TypeCheckError::type_mismatch(Type::Integer, Type::True),
     )
 }
+
+#[test]
+fn mismatch2() {
+    error(
+        "1 && True",
+        TypeCheckError::type_mismatch(Type::Boolean, Type::Integer),
+    )
+}
