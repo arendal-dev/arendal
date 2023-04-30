@@ -81,6 +81,8 @@ enum Expr {
     Sub(Arc<Two>),
     Mul(Arc<Two>),
     Div(Arc<Two>),
+    LogicalAnd(Arc<Two>),
+    LogicalOr(Arc<Two>),
 }
 
 impl Expr {
@@ -94,6 +96,7 @@ impl Expr {
             Self::Sub(t) => t.expr1.borrow_type(),
             Self::Mul(t) => t.expr1.borrow_type(),
             Self::Div(t) => t.expr1.borrow_type(),
+            Self::LogicalAnd(_) | Self::LogicalOr(_) => &Type::Boolean,
         }
     }
 }
@@ -146,8 +149,16 @@ impl ExprBuilder {
         self.build(Expr::Mul(Two::new(expr1, expr2)))
     }
 
-    pub(crate) fn div(&self, expr1: Expression, expr2: Expression) -> Expression {
-        self.build(Expr::Mul(Two::new(expr1, expr2)))
+    fn div(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.build(Expr::Div(Two::new(expr1, expr2)))
+    }
+
+    fn log_and(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.build(Expr::LogicalAnd(Two::new(expr1, expr2)))
+    }
+
+    fn log_or(&self, expr1: Expression, expr2: Expression) -> Expression {
+        self.build(Expr::LogicalOr(Two::new(expr1, expr2)))
     }
 }
 
