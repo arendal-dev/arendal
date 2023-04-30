@@ -229,12 +229,12 @@ impl Lexer {
     fn add_word(&mut self, loc: Loc, word: &Substr) {
         if let Some(k) = Keyword::parse(word) {
             self.add_lexeme(LexemeKind::Keyword(k), 1);
-        } else if let Ok(name) = TSymbol::new(loc.clone(), word.as_str().into()) {
+        } else if let Ok(name) = TSymbol::new(&loc, word.as_str().into()) {
             self.add_lexeme(LexemeKind::TypeId(name), 1);
         } else {
             if let Some(symbol) = self
                 .errors
-                .add_result(Symbol::new(loc, word.as_str().into()))
+                .add_result(Symbol::new(&loc, word.as_str().into()))
             {
                 self.add_lexeme(LexemeKind::Id(symbol), 1);
             }

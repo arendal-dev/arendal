@@ -2,7 +2,6 @@ mod prelude;
 mod typed;
 
 use crate::{
-    ast,
     error::Result,
     symbol::{FQSym, Path, Pkg, Symbol, TSymbol},
     types::{Type, Types},

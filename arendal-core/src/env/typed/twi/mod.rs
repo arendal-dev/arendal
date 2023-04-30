@@ -1,5 +1,5 @@
 use super::{Expr, Expression, Module};
-use crate::error::{Error, Loc, Result};
+use crate::error::{Loc, Result};
 use crate::symbol::Symbol;
 use crate::value::Value;
 use crate::visibility::Visibility;
@@ -27,7 +27,7 @@ struct Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    fn set_val(&mut self, loc: Loc, symbol: Symbol, value: Value) -> Result<()> {
+    fn set_val(&mut self, loc: &Loc, symbol: Symbol, value: Value) -> Result<()> {
         if !self.scopes.is_empty() {
             self.scopes.last_mut().unwrap().insert(symbol, value);
             return Ok(());
@@ -76,7 +76,7 @@ impl<'a> Interpreter<'a> {
             },
             Expr::Assignment(a) => {
                 let value = self.expression(&a.expr)?;
-                self.set_val(expr.loc.clone(), a.symbol.clone(), value.clone())?;
+                self.set_val(&expr.loc, a.symbol.clone(), value.clone())?;
                 Ok(value)
             }
             Expr::Add(t) => self.add(&t.expr1, &t.expr2),
@@ -126,7 +126,7 @@ fn integer(value: Integer) -> Result<Value> {
 }
 
 fn err(expr: &Expression, error: RuntimeError) -> Result<Value> {
-    Error::err(expr.loc.clone(), error)
+    expr.loc.err(error)
 }
 
 #[cfg(test)]

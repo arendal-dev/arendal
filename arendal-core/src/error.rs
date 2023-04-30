@@ -22,6 +22,10 @@ impl Loc {
     fn fmt(&self, f: &mut fmt::Formatter<'_>, error: &ErrorKind) -> fmt::Result {
         write!(f, "{:?}", error)
     }
+
+    pub fn err<E: Into<ErrorKind>, T>(&self, error: E) -> Result<T> {
+        Err(Error::new(self.clone(), error.into()))
+    }
 }
 
 impl PartialEq for Loc {
@@ -67,11 +71,6 @@ impl Error {
         Self {
             errors: vec![ErrorItem { loc, error }],
         }
-    }
-
-    #[inline]
-    pub fn err<E: Into<ErrorKind>, T>(loc: Loc, error: E) -> Result<T> {
-        Err(Self::new(loc, error.into()))
     }
 
     pub fn merge<T1, T2, TO, O>(r1: Result<T1>, r2: Result<T2>, op: O) -> Result<TO>

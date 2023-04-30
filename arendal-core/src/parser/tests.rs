@@ -40,11 +40,11 @@ fn expect_one_error(input: &str, expected: ParserError) {
 }
 
 fn sym(symbol: &str) -> Symbol {
-    Symbol::new(Loc::none(), symbol.into()).unwrap()
+    Symbol::new(&Loc::none(), symbol.into()).unwrap()
 }
 
 fn tsym(symbol: &str) -> TSymbol {
-    TSymbol::new(Loc::none(), symbol.into()).unwrap()
+    TSymbol::new(&Loc::none(), symbol.into()).unwrap()
 }
 
 fn x() -> Symbol {

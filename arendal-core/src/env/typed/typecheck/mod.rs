@@ -86,7 +86,7 @@ impl<'a> TypeChecker<'a> {
                     .get(&Pkg::Std.empty().fq_type(symbol.clone()))
                 {
                     Some(t) => Ok(t.cloned()),
-                    None => Error::err(loc.clone(), TypeCheckError::UnknownType(symbol.clone())),
+                    None => loc.err(TypeCheckError::UnknownType(symbol.clone())),
                 },
             },
         }
@@ -190,7 +190,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
 
     // Creates and returns an error
     fn error(self, error: TypeCheckError) -> Result<Expression> {
-        Error::err(self.input.loc.clone(), error)
+        self.input.loc.err(error)
     }
 }
 
