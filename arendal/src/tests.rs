@@ -28,31 +28,6 @@ fn integer() {
 }
 
 #[test]
-fn add1() {
+fn add() {
     eval_i64("1+2", 3);
-}
-
-#[test]
-fn add2() {
-    eval_i64("1 + 2 + 3", 6);
-}
-
-#[test]
-fn sub1() {
-    eval_i64("1 - 2", -1);
-}
-
-#[test]
-fn mul1() {
-    eval_i64("1 + 2 * 2", 5);
-}
-
-#[test]
-fn parens1() {
-    eval_i64("(1 + 2) * 2", 6);
-}
-
-#[test]
-fn parens2() {
-    eval_i64("(((1 + 2) * 2) + 1) * 2", 14);
 }

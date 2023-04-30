@@ -19,22 +19,51 @@ fn eval_ok(input: &str, result: Value) {
     }
 }
 
+fn eval_i64(input: &str, result: i64) {
+    eval_ok(input, Value::int64(result))
+}
+
+#[test]
+fn empty1() {
+    eval_ok("", Value::None);
+}
+
+#[test]
+fn empty2() {
+    eval_ok(" \t\n", Value::None);
+}
+
 #[test]
 fn integer() {
-    eval_ok("1234", Value::int64(1234));
+    eval_i64("1234", 1234);
 }
 
 #[test]
 fn add1() {
-    eval_ok("1+2", Value::int64(3));
+    eval_i64("1+2", 3);
 }
 
 #[test]
 fn add2() {
-    eval_ok("3+1+2", Value::int64(6));
+    eval_i64("1 + 2 + 3", 6);
 }
 
 #[test]
-fn add_sub() {
-    eval_ok("3-(1+2)", Value::int64(0));
+fn sub1() {
+    eval_i64("1 - 2", -1);
+}
+
+#[test]
+fn mul1() {
+    eval_i64("1 + 2 * 2", 5);
+}
+
+#[test]
+fn parens1() {
+    eval_i64("(1 + 2) * 2", 6);
+}
+
+#[test]
+fn parens2() {
+    eval_i64("(((1 + 2) * 2) + 1) * 2", 14);
 }
