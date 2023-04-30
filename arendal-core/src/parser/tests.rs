@@ -39,110 +39,135 @@ fn expect_one_error(input: &str, expected: ParserError) {
     }
 }
 
-fn str_symbol(symbol: &str) -> Symbol {
+fn sym(symbol: &str) -> Symbol {
     Symbol::new(Loc::none(), symbol.into()).unwrap()
 }
 
-fn str_tsymbol(symbol: &str) -> TSymbol {
+fn tsym(symbol: &str) -> TSymbol {
     TSymbol::new(Loc::none(), symbol.into()).unwrap()
 }
 
 fn x() -> Symbol {
-    str_symbol("x")
+    sym("x")
 }
 
 fn y() -> Symbol {
-    str_symbol("y")
+    sym("y")
 }
 
-fn x_expr() -> Expression {
+fn e_i64(value: i64) -> Expression {
+    B.lit_integer(value.into())
+}
+
+fn e_x() -> Expression {
     B.symbol(x())
 }
 
-fn y_expr() -> Expression {
+fn e_y() -> Expression {
     B.symbol(y())
 }
 
-fn true_expr() -> Expression {
-    B.lit_true()
+fn e_true() -> Expression {
+    B.tsymbol(TSymbol::True)
 }
 
-fn false_expr() -> Expression {
-    B.lit_false()
+fn e_false() -> Expression {
+    B.tsymbol(TSymbol::False)
+}
+
+fn add(expr1: Expression, expr2: Expression) -> Expression {
+    B.binary(BinaryOp::Add, expr1, expr2)
+}
+
+fn add_i64(value1: i64, value2: i64) -> Expression {
+    add(e_i64(value1), e_i64(value2))
+}
+
+fn sub(expr1: Expression, expr2: Expression) -> Expression {
+    B.binary(BinaryOp::Sub, expr1, expr2)
+}
+
+fn sub_i64(value1: i64, value2: i64) -> Expression {
+    sub(e_i64(value1), e_i64(value2))
+}
+
+fn and(expr1: Expression, expr2: Expression) -> Expression {
+    B.binary(BinaryOp::And, expr1, expr2)
+}
+
+fn or(expr1: Expression, expr2: Expression) -> Expression {
+    B.binary(BinaryOp::Or, expr1, expr2)
 }
 
 #[test]
 fn int_literal_expr() {
-    check_expression("1234", B.lit_i64(1234));
+    check_expression("1234", e_i64(1234));
 }
 
 #[test]
 fn add1() {
-    check_expression("1+2", B.add_i64(1, 2));
+    check_expression("1+2", add_i64(1, 2));
 }
 
 #[test]
 fn add2() {
-    check_expression("1 + 2", B.add_i64(1, 2));
+    check_expression("1 + 2", add_i64(1, 2));
 }
 
 #[test]
 fn add3() {
-    check_expression("\t1 + 2", B.add_i64(1, 2));
+    check_expression("\t1 + 2", add_i64(1, 2));
 }
 
 #[test]
 fn add4() {
-    check_expression("1 + 2 + 3", B.add(B.add_i64(1, 2), B.lit_i64(3)));
+    check_expression("1 + 2 + 3", add(add_i64(1, 2), e_i64(3)));
 }
 
 #[test]
 fn add5() {
     check_expression(
         "1 +\t2 + 3\n+ 4",
-        B.add(B.add(B.add_i64(1, 2), B.lit_i64(3)), B.lit_i64(4)),
+        add(add(add_i64(1, 2), e_i64(3)), e_i64(4)),
     );
 }
 
 #[test]
 fn sub1() {
-    check_expression("1 - 2 + 1", B.add(B.sub_i64(1, 2), B.lit_i64(1)));
+    check_expression("1 - 2 + 1", add(sub_i64(1, 2), e_i64(1)));
 }
 
 #[test]
 fn lit_type() {
-    check_expression("  True ", B.tsymbol(str_tsymbol("True")));
+    check_expression("  True ", e_true());
 }
 
 #[test]
 fn add_id() {
-    check_expression("1 +x", B.add(B.lit_i64(1), x_expr()));
+    check_expression("1 +x", add(e_i64(1), e_x()));
 }
 
 #[test]
 fn assignment1() {
-    check_expression("val x = 1", B.assignment(str_symbol("x"), B.lit_i64(1)));
+    check_expression("val x = 1", B.assignment(x(), e_i64(1)));
 }
 
 #[test]
 fn assignment2() {
-    check_expression(
-        "val x = y + 2",
-        B.assignment(str_symbol("x"), B.add(y_expr(), B.lit_i64(2))),
-    );
+    check_expression("val x = y + 2", B.assignment(x(), add(e_y(), e_i64(2))));
 }
 
 #[test]
 fn parens1() {
     check_expression(
         "(1 + 2) * 2",
-        B.binary(BinaryOp::Mul, B.add_i64(1, 2), B.lit_i64(2)),
+        B.binary(BinaryOp::Mul, add_i64(1, 2), e_i64(2)),
     );
 }
 
 #[test]
 fn multiple1() {
-    check_expressions("1\n2", vec![B.lit_i64(1), B.lit_i64(2)]);
+    check_expressions("1\n2", vec![e_i64(1), e_i64(2)]);
 }
 
 #[test]
@@ -154,6 +179,6 @@ fn multiple2() {
 fn logical_ops() {
     check_expression(
         "True || False && True",
-        B.or(true_expr(), B.and(false_expr(), true_expr())),
+        or(e_true(), and(e_false(), e_true())),
     );
 }
