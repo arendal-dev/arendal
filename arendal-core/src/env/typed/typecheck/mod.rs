@@ -134,6 +134,32 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.checker.resolve_type(&self.input.loc, symbol)
     }
 
+    fn check_integer(&self, expr: &Expression) -> Result<()> {
+        if expr.borrow_type().is_integer() {
+            Ok(())
+        } else {
+            expr.type_mismatch(Type::Integer)
+        }
+    }
+
+    fn check_integers(&self, expr1: &Expression, expr2: &Expression) -> Result<()> {
+        self.check_integer(expr1)?;
+        self.check_integer(expr2)
+    }
+
+    fn check_boolean(&self, expr: &Expression) -> Result<()> {
+        if expr.borrow_type().is_boolean() {
+            Ok(())
+        } else {
+            expr.type_mismatch(Type::Integer)
+        }
+    }
+
+    fn check_booleans(&self, expr1: &Expression, expr2: &Expression) -> Result<()> {
+        self.check_boolean(expr1)?;
+        self.check_boolean(expr2)
+    }
+
     fn sub_expr(&mut self, input: &ast::Expression) -> Result<Expression> {
         ExprChecker {
             checker: self.checker,
@@ -142,45 +168,26 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         .check()
     }
 
-    fn check_binary(self, op: BinaryOp, e1: Expression, e2: Expression) -> Result<Expression> {
+    fn check_binary(
+        self,
+        op: BinaryOp,
+        expr1: Expression,
+        expr2: Expression,
+    ) -> Result<Expression> {
         match op {
-            BinaryOp::Add => self.check_add(e1, e2),
-            BinaryOp::Sub => self.check_sub(e1, e2),
-            BinaryOp::Mul => self.check_mul(e1, e2),
-            BinaryOp::Div => self.check_div(e1, e2),
+            BinaryOp::Add => self
+                .check_integers(&expr1, &expr2)
+                .map(|()| self.builder().add(expr1, expr2)),
+            BinaryOp::Sub => self
+                .check_integers(&expr1, &expr2)
+                .map(|()| self.builder().sub(expr1, expr2)),
+            BinaryOp::Mul => self
+                .check_integers(&expr1, &expr2)
+                .map(|()| self.builder().mul(expr1, expr2)),
+            BinaryOp::Div => self
+                .check_integers(&expr1, &expr2)
+                .map(|()| self.builder().div(expr1, expr2)),
             _ => self.error(TypeCheckError::InvalidType),
-        }
-    }
-
-    fn check_add(self, expr1: Expression, expr2: Expression) -> Result<Expression> {
-        if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
-            Ok(self.builder().add(expr1, expr2))
-        } else {
-            self.error(TypeCheckError::InvalidType)
-        }
-    }
-
-    fn check_sub(self, expr1: Expression, expr2: Expression) -> Result<Expression> {
-        if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
-            Ok(self.builder().sub(expr1, expr2))
-        } else {
-            self.error(TypeCheckError::InvalidType)
-        }
-    }
-
-    fn check_mul(self, expr1: Expression, expr2: Expression) -> Result<Expression> {
-        if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
-            Ok(self.builder().mul(expr1, expr2))
-        } else {
-            self.error(TypeCheckError::InvalidType)
-        }
-    }
-
-    fn check_div(self, expr1: Expression, expr2: Expression) -> Result<Expression> {
-        if expr1.borrow_type().is_integer() && expr2.borrow_type().is_integer() {
-            Ok(self.builder().div(expr1, expr2))
-        } else {
-            self.error(TypeCheckError::InvalidType)
         }
     }
 

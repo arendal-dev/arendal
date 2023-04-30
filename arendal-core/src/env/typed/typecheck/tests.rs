@@ -1,5 +1,5 @@
 use super::{Module, Type};
-use crate::env::Env;
+use crate::env::{Env, TypeCheckError};
 use crate::error::Result;
 use crate::symbol::Pkg;
 
@@ -8,6 +8,18 @@ fn check_module(input: &str) -> Result<Module> {
     let env = Env::default();
     let path = Pkg::Local.empty();
     super::check(&env, &path, &parsed)
+}
+
+fn error(input: &str, error: TypeCheckError) {
+    match check_module(input) {
+        Ok(_) => panic!("Expected error: {:?}", error),
+        Err(e) => assert!(
+            e.is(error.clone()),
+            "Expected error: {:?}\nActual: {:?}",
+            error,
+            e
+        ),
+    }
 }
 
 fn ok_expression(input: &str, t: Type) {
@@ -50,4 +62,12 @@ fn sub1() {
 #[test]
 fn std_singleton() {
     ok_expression("True", Type::True);
+}
+
+#[test]
+fn mismatch1() {
+    error(
+        "1 + True",
+        TypeCheckError::type_mismatch(Type::Integer, Type::True),
+    )
 }
