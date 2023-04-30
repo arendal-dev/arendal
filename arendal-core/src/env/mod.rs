@@ -1,6 +1,8 @@
 mod prelude;
 mod typed;
 
+use std::sync::Arc;
+
 use crate::{
     error::Result,
     symbol::{FQSym, Path, Pkg, Symbol, TSymbol},
@@ -65,8 +67,21 @@ pub enum RuntimeError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeMismatch {
+    expected: Type,
+    actual: Type,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeCheckError {
     UnknownType(TSymbol),
     UnknownIdentifier(Symbol),
+    TypeMismatch(Arc<TypeMismatch>),
     InvalidType, // placeholder, temporary error
+}
+
+impl TypeCheckError {
+    fn type_mismatch(expected: Type, actual: Type) -> Self {
+        TypeCheckError::TypeMismatch(Arc::new(TypeMismatch { expected, actual }))
+    }
 }

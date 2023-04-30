@@ -11,7 +11,7 @@ use std::fmt;
 use std::slice::Iter;
 use std::sync::Arc;
 
-use super::Env;
+use super::{Env, TypeCheckError};
 
 pub(super) fn run(env: &mut Env, path: &Path, input: &str) -> Result<Value> {
     let parsed = crate::parser::parse(input)?;
@@ -32,6 +32,14 @@ impl Expression {
 
     fn clone_type(&self) -> Type {
         self.borrow_type().clone()
+    }
+
+    fn err<T>(&self, error: TypeCheckError) -> Result<T> {
+        self.loc.err(error)
+    }
+
+    fn type_mismatch<T>(&self, expected: Type) -> Result<T> {
+        self.err(TypeCheckError::type_mismatch(expected, self.clone_type()))
     }
 }
 
