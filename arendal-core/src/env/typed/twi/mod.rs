@@ -1,6 +1,7 @@
 use super::{Expr, Expression, Module};
 use crate::error::{Loc, Result};
 use crate::symbol::Symbol;
+use crate::types::Type;
 use crate::value::Value;
 use crate::visibility::Visibility;
 use crate::Integer;
@@ -89,56 +90,65 @@ impl<'a> Interpreter<'a> {
         }
     }
 
+    fn as_integer(&mut self, expr: &Expression) -> Result<Integer> {
+        match self.expression(expr)?.as_integer() {
+            Some(v) => Ok(v),
+            None => expr.type_mismatch(Type::Integer),
+        }
+    }
+
+    fn as_boolean(&mut self, expr: &Expression) -> Result<bool> {
+        match self.expression(expr)?.as_boolean() {
+            Some(v) => Ok(v),
+            None => expr.type_mismatch(Type::Boolean),
+        }
+    }
+
     fn add(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.expression(expr1)?;
-        let v2 = self.expression(expr2)?;
+        let v1 = self.as_integer(expr1)?;
+        let v2 = self.as_integer(expr2)?;
         // We only have integers for now
-        integer(v1.as_integer().unwrap() + v2.as_integer().unwrap())
+        integer(v1 + v2)
     }
 
     fn sub(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.expression(expr1)?;
-        let v2 = self.expression(expr2)?;
+        let v1 = self.as_integer(expr1)?;
+        let v2 = self.as_integer(expr2)?;
         // We only have integers for now
-        integer(v1.as_integer().unwrap() - v2.as_integer().unwrap())
+        integer(v1 - v2)
     }
 
     fn mul(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.expression(expr1)?;
-        let v2 = self.expression(expr2)?;
+        let v1 = self.as_integer(expr1)?;
+        let v2 = self.as_integer(expr2)?;
         // We only have integers for now
-        integer(v1.as_integer().unwrap() * v2.as_integer().unwrap())
+        integer(v1 * v2)
     }
 
     fn div(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.expression(expr1)?;
-        let v2 = self.expression(expr2)?;
+        let v1 = self.as_integer(expr1)?;
+        let v2 = self.as_integer(expr2)?;
         // We only have integers for now
-        let i2 = v2.as_integer().unwrap();
-        if i2.is_zero() {
+        if v2.is_zero() {
             expr2.rt_err(RuntimeError::DivisionByZero)
         } else {
-            integer(v1.as_integer().unwrap() / i2)
+            integer(v1 / v2)
         }
     }
 
     fn and(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.expression(expr1)?;
-        if v1.as_boolean().unwrap() {
-            let v2 = self.expression(expr2)?;
-            Ok(Value::boolean(v2.as_boolean().unwrap()))
+        if self.as_boolean(expr1)? {
+            Ok(Value::boolean(self.as_boolean(expr2)?))
         } else {
             Ok(Value::False) // short-circuit
         }
     }
 
     fn or(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.expression(expr1)?;
-        if v1.as_boolean().unwrap() {
+        if self.as_boolean(expr1)? {
             Ok(Value::True) // short-circuit
         } else {
-            let v2 = self.expression(expr2)?;
-            Ok(Value::boolean(v2.as_boolean().unwrap()))
+            Ok(Value::boolean(self.as_boolean(expr2)?))
         }
     }
 }
