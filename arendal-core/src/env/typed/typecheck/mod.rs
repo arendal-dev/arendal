@@ -121,11 +121,8 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                 )?;
                 Ok(self.builder().assignment(a.symbol.clone(), typed))
             }
-            ast::Expr::Binary(b) => Error::merge(
-                self.sub_expr(&b.expr1),
-                self.sub_expr(&b.expr2),
-                |t1, t2| self.check_binary(b.op, t1, t2),
-            ),
+            ast::Expr::Binary(b) => Error::merge(self.sub_expr(&b.expr1), self.sub_expr(&b.expr2))
+                .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
             _ => self.error(TypeCheckError::InvalidType),
         }
     }

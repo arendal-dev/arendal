@@ -73,10 +73,7 @@ impl Error {
         }
     }
 
-    pub fn merge<T1, T2, TO, O>(r1: Result<T1>, r2: Result<T2>, op: O) -> Result<TO>
-    where
-        O: FnOnce(T1, T2) -> Result<TO>,
-    {
+    pub fn merge<T1, T2>(r1: Result<T1>, r2: Result<T2>) -> Result<(T1, T2)> {
         match (r1, r2) {
             (Err(mut e1), Err(e2)) => {
                 e1.append(e2);
@@ -84,7 +81,7 @@ impl Error {
             }
             (Err(e1), Ok(_)) => Err(e1),
             (Ok(_), Err(e2)) => Err(e2),
-            (Ok(t1), Ok(t2)) => op(t1, t2),
+            (Ok(t1), Ok(t2)) => Ok((t1, t2)),
         }
     }
 
