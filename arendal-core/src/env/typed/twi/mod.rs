@@ -1,5 +1,5 @@
 use super::{Expr, Expression, Module};
-use crate::error::{Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::symbol::Symbol;
 use crate::types::Type;
 use crate::value::Value;
@@ -80,9 +80,15 @@ impl<'a> Interpreter<'a> {
                 self.set_val(&expr.loc, a.symbol.clone(), value.clone())?;
                 Ok(value)
             }
-            Expr::Add(t) => self.add(&t.expr1, &t.expr2),
-            Expr::Sub(t) => self.sub(&t.expr1, &t.expr2),
-            Expr::Mul(t) => self.mul(&t.expr1, &t.expr2),
+            Expr::Add(t) => self
+                .as_two_integers(&t.expr1, &t.expr2)
+                .map(|(v1, v2)| Value::Integer(v1 + v2)),
+            Expr::Sub(t) => self
+                .as_two_integers(&t.expr1, &t.expr2)
+                .map(|(v1, v2)| Value::Integer(v1 - v2)),
+            Expr::Mul(t) => self
+                .as_two_integers(&t.expr1, &t.expr2)
+                .map(|(v1, v2)| Value::Integer(v1 * v2)),
             Expr::Div(t) => self.div(&t.expr1, &t.expr2),
             Expr::LogicalAnd(t) => self.and(&t.expr1, &t.expr2),
             Expr::LogicalOr(t) => self.or(&t.expr1, &t.expr2),
@@ -97,6 +103,14 @@ impl<'a> Interpreter<'a> {
         }
     }
 
+    fn as_two_integers(
+        &mut self,
+        expr1: &Expression,
+        expr2: &Expression,
+    ) -> Result<(Integer, Integer)> {
+        Error::merge(self.as_integer(expr1), self.as_integer(expr2))
+    }
+
     fn as_boolean(&mut self, expr: &Expression) -> Result<bool> {
         match self.expression(expr)?.as_boolean() {
             Some(v) => Ok(v),
@@ -104,30 +118,8 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn add(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.as_integer(expr1)?;
-        let v2 = self.as_integer(expr2)?;
-        // We only have integers for now
-        integer(v1 + v2)
-    }
-
-    fn sub(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.as_integer(expr1)?;
-        let v2 = self.as_integer(expr2)?;
-        // We only have integers for now
-        integer(v1 - v2)
-    }
-
-    fn mul(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.as_integer(expr1)?;
-        let v2 = self.as_integer(expr2)?;
-        // We only have integers for now
-        integer(v1 * v2)
-    }
-
     fn div(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
-        let v1 = self.as_integer(expr1)?;
-        let v2 = self.as_integer(expr2)?;
+        let (v1, v2) = self.as_two_integers(&expr1, &expr2)?;
         // We only have integers for now
         if v2.is_zero() {
             expr2.rt_err(RuntimeError::DivisionByZero)
