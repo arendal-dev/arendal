@@ -3,7 +3,7 @@ use crate::ast::{ExprBuilder, Expression};
 use crate::error::Loc;
 use crate::symbol::{Symbol, TSymbol};
 
-use super::{parse, ParserError};
+use super::{parse, Error};
 
 const B: ExprBuilder = ExprBuilder::none();
 
@@ -27,11 +27,11 @@ fn check_expressions(input: &str, expected: Vec<Expression>) {
     check_module(input, Module::new(items))
 }
 
-fn expect_one_error(input: &str, expected: ParserError) {
+fn expect_error(input: &str, expected: &Error) {
     match parse(input) {
         Ok(_) => panic!("Parsed correctly but expected {:?}", expected),
         Err(e) => assert!(
-            e.is(expected.clone()),
+            e.contains(&expected),
             "Expected {:?} but error was {:?}",
             expected,
             e
@@ -172,7 +172,7 @@ fn multiple1() {
 
 #[test]
 fn multiple2() {
-    expect_one_error("1 2", ParserError::EndOfItemExpected)
+    expect_error("1 2", &Error::EndOfItemExpected)
 }
 
 #[test]

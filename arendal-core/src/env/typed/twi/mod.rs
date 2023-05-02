@@ -7,7 +7,7 @@ use crate::visibility::Visibility;
 use crate::Integer;
 use std::collections::HashMap;
 
-use crate::env::{Env, RuntimeError};
+use crate::env::Env;
 
 type Scope = HashMap<Symbol, Value>;
 
@@ -28,17 +28,15 @@ struct Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    fn set_val(&mut self, loc: &Loc, symbol: Symbol, value: Value) -> Result<()> {
+    fn set_val(&mut self, symbol: Symbol, value: Value) -> Result<()> {
         if !self.scopes.is_empty() {
             self.scopes.last_mut().unwrap().insert(symbol, value);
-            return Ok(());
+            Ok(())
+        } else {
+            self.env
+                .values
+                .set(self.module.path.fq_sym(symbol), Visibility::Module, value)
         }
-        self.env.values.set(
-            loc,
-            self.module.path.fq_sym(symbol),
-            Visibility::Module,
-            value,
-        )
     }
 
     fn get_val(&self, symbol: &Symbol) -> Option<Value> {
@@ -61,7 +59,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn run(mut self) -> Result<Value> {
-        let mut value = Value::None;
+        let mut value = Value::v_none(&Loc::none());
         for e in &self.module.expressions {
             value = self.expression(e)?;
         }
@@ -73,26 +71,26 @@ impl<'a> Interpreter<'a> {
             Expr::Value(v) => Ok(v.clone()),
             Expr::Local(l) => match self.get_val(&l.symbol) {
                 Some(value) => Ok(value),
-                None => expr.rt_err(RuntimeError::UknownVal(l.symbol.clone())),
+                None => expr.rt_err(Error::UnknownLocalSymbol(l.symbol.clone())),
             },
             Expr::Assignment(a) => {
                 let value = self.expression(&a.expr)?;
-                self.set_val(&expr.loc, a.symbol.clone(), value.clone())?;
+                self.set_val(a.symbol.clone(), value.clone())?;
                 Ok(value)
             }
             Expr::Add(t) => self
                 .as_two_integers(&t.expr1, &t.expr2)
-                .map(|(v1, v2)| Value::Integer(v1 + v2)),
+                .map(|(v1, v2)| Value::integer(&expr.loc, v1 + v2)),
             Expr::Sub(t) => self
                 .as_two_integers(&t.expr1, &t.expr2)
-                .map(|(v1, v2)| Value::Integer(v1 - v2)),
+                .map(|(v1, v2)| Value::integer(&expr.loc, v1 - v2)),
             Expr::Mul(t) => self
                 .as_two_integers(&t.expr1, &t.expr2)
-                .map(|(v1, v2)| Value::Integer(v1 * v2)),
-            Expr::Div(t) => self.div(&t.expr1, &t.expr2),
-            Expr::LogicalAnd(t) => self.and(&t.expr1, &t.expr2),
-            Expr::LogicalOr(t) => self.or(&t.expr1, &t.expr2),
-            _ => expr.rt_err(RuntimeError::NotImplemented),
+                .map(|(v1, v2)| Value::integer(&expr.loc, v1 * v2)),
+            Expr::Div(t) => self.div(&expr.loc, &t.expr1, &t.expr2),
+            Expr::LogicalAnd(t) => self.and(&expr.loc, &t.expr1, &t.expr2),
+            Expr::LogicalOr(t) => self.or(&expr.loc, &t.expr1, &t.expr2),
+            _ => expr.rt_err(Error::NotImplemented),
         }
     }
 
@@ -118,35 +116,31 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn div(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+    fn div(&mut self, loc: &Loc, expr1: &Expression, expr2: &Expression) -> Result<Value> {
         let (v1, v2) = self.as_two_integers(&expr1, &expr2)?;
         // We only have integers for now
         if v2.is_zero() {
-            expr2.rt_err(RuntimeError::DivisionByZero)
+            expr2.rt_err(Error::DivisionByZero)
         } else {
-            integer(v1 / v2)
+            Ok(Value::integer(loc, v1 / v2))
         }
     }
 
-    fn and(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+    fn and(&mut self, loc: &Loc, expr1: &Expression, expr2: &Expression) -> Result<Value> {
         if self.as_boolean(expr1)? {
-            Ok(Value::boolean(self.as_boolean(expr2)?))
+            Ok(Value::boolean(loc, self.as_boolean(expr2)?))
         } else {
-            Ok(Value::False) // short-circuit
+            Ok(Value::v_false(loc)) // short-circuit
         }
     }
 
-    fn or(&mut self, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+    fn or(&mut self, loc: &Loc, expr1: &Expression, expr2: &Expression) -> Result<Value> {
         if self.as_boolean(expr1)? {
-            Ok(Value::True) // short-circuit
+            Ok(Value::v_true(loc)) // short-circuit
         } else {
-            Ok(Value::boolean(self.as_boolean(expr2)?))
+            Ok(Value::boolean(loc, self.as_boolean(expr2)?))
         }
     }
-}
-
-fn integer(value: Integer) -> Result<Value> {
-    Ok(Value::Integer(value))
 }
 
 #[cfg(test)]

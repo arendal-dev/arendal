@@ -2,7 +2,7 @@ use std::fmt;
 
 use im::HashMap;
 
-use crate::error::{Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::symbol::FQType;
 use crate::visibility::{Visibility, Visible};
 
@@ -103,13 +103,13 @@ impl Default for Types {
 }
 
 impl Types {
-    pub fn get(&self, symbol: &FQType) -> Option<&Visible<Type>> {
+    pub(crate) fn get(&self, symbol: &FQType) -> Option<&Visible<Type>> {
         self.types.get(symbol)
     }
 
     pub fn singleton(&mut self, loc: &Loc, visibility: Visibility, symbol: FQType) -> Result<Type> {
         if self.types.contains_key(&symbol) {
-            loc.err(TypesError::DuplicateType(symbol))
+            loc.err(Error::DuplicateType(symbol))
         } else {
             let tipo = Type::Singleton(Singleton {
                 symbol: symbol.clone(),
@@ -119,9 +119,4 @@ impl Types {
             Ok(tipo)
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TypesError {
-    DuplicateType(FQType),
 }

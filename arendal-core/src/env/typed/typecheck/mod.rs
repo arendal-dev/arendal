@@ -6,7 +6,7 @@ use crate::symbol::{FQType, Path, Pkg, Symbol, TSymbol};
 use crate::types::Type;
 use crate::value::Value;
 
-use crate::env::{Env, TypeCheckError};
+use crate::env::Env;
 
 use super::{ExprBuilder, Expression, Expressions, Module};
 
@@ -78,17 +78,19 @@ impl<'a> TypeChecker<'a> {
     fn resolve_type(&self, loc: &Loc, symbol: &TSymbol) -> Result<Type> {
         match self.types.get(symbol) {
             Some(t) => Ok(t.clone()),
-            None => match self.env.types.get(&self.fq_type(symbol)) {
-                Some(t) => Ok(t.cloned()),
-                None => match self
-                    .env
-                    .types
-                    .get(&Pkg::Std.empty().fq_type(symbol.clone()))
-                {
-                    Some(t) => Ok(t.cloned()),
-                    None => loc.err(TypeCheckError::UnknownType(symbol.clone())),
-                },
-            },
+            None => self
+                .env
+                .types
+                .get(&self.fq_type(symbol))
+                .or_else(|| {
+                    self.env
+                        .types
+                        .get(&Pkg::Std.empty().fq_type(symbol.clone()))
+                })
+                .map_or_else(
+                    || loc.err(Error::UnknownLocalType(symbol.clone())),
+                    |t| Ok(t.cloned()),
+                ),
         }
     }
 }
@@ -105,7 +107,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
             ast::Expr::Symbol(id) => match self.checker.get_val(&id) {
                 Some(tipo) => Ok(self.builder().local(id.clone(), tipo.clone())),
-                None => self.error(TypeCheckError::UnknownIdentifier(id.clone())),
+                None => self.error(Error::UnknownLocalSymbol(id.clone())),
             },
             ast::Expr::TSymbol(s) => {
                 let tipo = self.resolve_type(&s)?;
@@ -123,7 +125,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             }
             ast::Expr::Binary(b) => Error::merge(self.sub_expr(&b.expr1), self.sub_expr(&b.expr2))
                 .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
-            _ => self.error(TypeCheckError::InvalidType),
+            _ => self.error(Error::InvalidType),
         }
     }
 
@@ -190,7 +192,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             BinaryOp::Or => self
                 .check_booleans(&expr1, &expr2)
                 .map(|()| self.builder().log_or(expr1, expr2)),
-            _ => self.error(TypeCheckError::InvalidType),
+            _ => self.error(Error::InvalidType),
         }
     }
 
@@ -199,7 +201,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
     }
 
     // Creates and returns an error
-    fn error(self, error: TypeCheckError) -> Result<Expression> {
+    fn error(self, error: Error) -> Result<Expression> {
         self.input.loc.err(error)
     }
 }

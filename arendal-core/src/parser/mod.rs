@@ -8,7 +8,7 @@ pub enum Enclosure {
 }
 
 use crate::ast::{BinaryOp, ExprBuilder, Expression, Module, ModuleItem};
-use crate::error::{Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::Symbol;
 use std::rc::Rc;
@@ -100,12 +100,12 @@ impl Parser {
         .loc()
     }
 
-    fn err<T>(&self, error: ParserError) -> Result<T> {
+    fn err<T>(&self, error: Error) -> Result<T> {
         self.loc().err(error)
     }
 
     fn expression_expected<T>(&self) -> Result<T> {
-        self.err(ParserError::ExpressionExpected)
+        self.err(Error::ExpressionExpected)
     }
 
     fn builder(&self) -> ExprBuilder {
@@ -117,7 +117,7 @@ impl Parser {
         if self.is_eoi() {
             parser.ok(ModuleItem::Expression(expr))
         } else {
-            parser.err(ParserError::EndOfItemExpected)
+            parser.err(Error::EndOfItemExpected)
         }
     }
 
@@ -135,7 +135,7 @@ impl Parser {
             let (expr, next) = parser.advance().rule_expression()?;
             next.ok(parser.builder().assignment(lvalue, expr))
         } else {
-            parser.err(ParserError::AssignmentExpected)
+            parser.err(Error::AssignmentExpected)
         }
     }
 
@@ -145,7 +145,7 @@ impl Parser {
                 return self.advance().ok(id.clone());
             }
         }
-        self.err(ParserError::LValueExpected)
+        self.err(Error::LValueExpected)
     }
 
     fn rule_expression(&self) -> EResult {
@@ -228,7 +228,7 @@ impl Parser {
                 LexemeKind::Open(Enclosure::Parens) => {
                     let (expr, next) = self.advance().rule_expression()?;
                     if !next.kind_equals(LexemeKind::Close(Enclosure::Parens)) {
-                        next.err(ParserError::ParsingError)
+                        next.err(Error::ParsingError)
                     } else {
                         next.advance().ok(expr)
                     }
@@ -239,21 +239,6 @@ impl Parser {
             self.expression_expected()
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParserError {
-    // Tokenizer
-    UnexpectedChar(char),
-    // Lexer
-    InvalidClose(Enclosure),
-    UnexpectedToken,
-    // Parser
-    ExpressionExpected,
-    LValueExpected,
-    AssignmentExpected,
-    EndOfItemExpected,
-    ParsingError, // placeholder, temporary error
 }
 
 #[cfg(test)]

@@ -2,7 +2,7 @@ mod twi;
 mod typecheck;
 
 use crate::ast::UnaryOp;
-use crate::error::{Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::symbol::{Path, Symbol};
 use crate::types::Type;
 use crate::value::Value;
@@ -11,7 +11,7 @@ use std::fmt;
 use std::slice::Iter;
 use std::sync::Arc;
 
-use super::{Env, RuntimeError, TypeCheckError};
+use super::Env;
 
 pub(super) fn run(env: &mut Env, path: &Path, input: &str) -> Result<Value> {
     let parsed = crate::parser::parse(input)?;
@@ -34,16 +34,36 @@ impl Expression {
         self.borrow_type().clone()
     }
 
-    fn err<T>(&self, error: TypeCheckError) -> Result<T> {
+    fn check_integer(&self) -> Result<()> {
+        if self.borrow_type().is_integer() {
+            Ok(())
+        } else {
+            self.type_mismatch(Type::Integer)
+        }
+    }
+
+    fn check_boolean(&self) -> Result<()> {
+        if self.borrow_type().is_boolean() {
+            Ok(())
+        } else {
+            self.type_mismatch(Type::Boolean)
+        }
+    }
+
+    fn err<T>(&self, error: Error) -> Result<T> {
         self.loc.err(error)
     }
 
     fn type_mismatch<T>(&self, expected: Type) -> Result<T> {
-        self.err(TypeCheckError::type_mismatch(expected, self.clone_type()))
+        self.err(Error::type_mismatch(expected, self.clone_type()))
     }
 
-    fn rt_err<T>(&self, error: RuntimeError) -> Result<T> {
+    fn rt_err<T>(&self, error: Error) -> Result<T> {
         self.loc.err(error)
+    }
+
+    fn rt_type_mismatch<T>(&self, expected: Type) -> Result<T> {
+        self.rt_err(Error::type_mismatch(expected, self.clone_type()))
     }
 }
 
@@ -68,6 +88,32 @@ struct Two {
 impl Two {
     fn new(expr1: Expression, expr2: Expression) -> Arc<Two> {
         Arc::new(Two { expr1, expr2 })
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct TwoInts {
+    expr1: Expression,
+    expr2: Expression,
+}
+
+impl TwoInts {
+    fn new(expr1: Expression, expr2: Expression) -> Result<Arc<TwoInts>> {
+        Error::merge(expr1.check_integer(), expr2.check_integer())?;
+        Ok(Arc::new(TwoInts { expr1, expr2 }))
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct TwoBools {
+    expr1: Expression,
+    expr2: Expression,
+}
+
+impl TwoBools {
+    fn new(expr1: Expression, expr2: Expression) -> Result<Arc<TwoBools>> {
+        Error::merge(expr1.check_boolean(), expr2.check_boolean())?;
+        Ok(Arc::new(TwoBools { expr1, expr2 }))
     }
 }
 
@@ -134,7 +180,7 @@ impl ExprBuilder {
     }
 
     fn val_integer(&self, value: Integer) -> Expression {
-        self.value(Value::Integer(value))
+        self.value(Value::integer(&self.loc, value))
     }
 
     fn local(&self, symbol: Symbol, tipo: Type) -> Expression {

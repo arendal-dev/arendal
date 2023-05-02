@@ -2,7 +2,7 @@ use phf::phf_map;
 use std::fmt::{self, Display, Write};
 use std::sync::Arc;
 
-use crate::error::{Loc, Result};
+use crate::error::{Error, Loc, Result};
 use crate::id::Id;
 use crate::keyword::Keyword;
 use crate::{literal, ArcStr};
@@ -39,19 +39,19 @@ pub struct Symbol {
 impl Symbol {
     pub fn new(loc: &Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
-            return loc.err(SymbolError::Empty);
+            return loc.err(Error::SymbolEmpty);
         }
         if let Some(k) = Keyword::parse(name.as_str()) {
-            return loc.err(SymbolError::Keyword(k));
+            return loc.err(Error::SymbolKeywordFound(k));
         }
         for (i, c) in name.char_indices() {
             if i == 0 {
                 if !c.is_ascii_alphabetic() || !c.is_ascii_lowercase() {
-                    return loc.err(SymbolError::InvalidInitial(c));
+                    return loc.err(Error::SymbolInvalidInitial(c));
                 }
             } else {
                 if !c.is_ascii_alphanumeric() {
-                    return loc.err(SymbolError::InvalidChar(i, c));
+                    return loc.err(Error::SymbolInvalidChar(i, c));
                 }
             }
         }
@@ -92,7 +92,7 @@ static T_SYMBOLS: phf::Map<&'static str, TSymbol> = phf_map! {
 impl TSymbol {
     pub fn new(loc: &Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
-            return loc.err(SymbolError::Empty);
+            return loc.err(Error::TSymbolEmpty);
         }
         if let Some(s) = T_SYMBOLS.get(&name) {
             Ok(s.clone())
@@ -100,11 +100,11 @@ impl TSymbol {
             for (i, c) in name.char_indices() {
                 if i == 0 {
                     if !c.is_ascii_alphabetic() || !c.is_ascii_uppercase() {
-                        return loc.err(SymbolError::InvalidTypeInitial(c));
+                        return loc.err(Error::TSymbolInvalidInitial(c));
                     }
                 } else {
                     if !c.is_ascii_alphanumeric() {
-                        return loc.err(SymbolError::InvalidChar(i, c));
+                        return loc.err(Error::SymbolInvalidChar(i, c));
                     }
                 }
             }
@@ -370,7 +370,7 @@ impl FQType {
                 }),
             }))
         } else {
-            loc.err(SymbolError::ExpectedTopLevelType(self.clone()))
+            loc.err(Error::TopLevelTypeExpected(self.clone()))
         }
     }
 
@@ -383,7 +383,7 @@ impl FQType {
                 }),
             }))
         } else {
-            loc.err(SymbolError::ExpectedTopLevelType(self.clone()))
+            loc.err(Error::TopLevelTypeExpected(self.clone()))
         }
     }
 
@@ -418,17 +418,4 @@ impl fmt::Debug for FQType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SymbolError {
-    Empty,
-    TypeEmpty,
-    Keyword(Keyword),
-    InvalidInitial(char),
-    InvalidTypeInitial(char),
-    InvalidChar(usize, char),
-    ExpectedTypeItem(Symbol),
-    ExpectedNonTypeItem(Symbol),
-    ExpectedTopLevelType(FQType),
 }

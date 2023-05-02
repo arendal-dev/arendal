@@ -1,12 +1,10 @@
 mod prelude;
 mod typed;
 
-use std::sync::Arc;
-
 use crate::{
     error::Result,
-    symbol::{FQSym, Path, Pkg, Symbol, TSymbol},
-    types::{Type, Types},
+    symbol::{Path, Pkg},
+    types::Types,
     value::{Value, Values},
 };
 
@@ -48,40 +46,5 @@ impl Default for Interactive {
 impl Interactive {
     pub fn run(&mut self, input: &str) -> Result<Value> {
         typed::run(&mut self.env, &self.path, input)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EnvError {
-    DuplicateModule(Pkg, Path),
-    DuplicateSymbol(FQSym),
-    DuplicateType(Type),
-    DuplicateVal(Symbol),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RuntimeError {
-    UknownVal(Symbol),
-    DivisionByZero,
-    NotImplemented,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeMismatch {
-    expected: Type,
-    actual: Type,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TypeCheckError {
-    UnknownType(TSymbol),
-    UnknownIdentifier(Symbol),
-    TypeMismatch(Arc<TypeMismatch>),
-    InvalidType, // placeholder, temporary error
-}
-
-impl TypeCheckError {
-    fn type_mismatch(expected: Type, actual: Type) -> Self {
-        TypeCheckError::TypeMismatch(Arc::new(TypeMismatch { expected, actual }))
     }
 }

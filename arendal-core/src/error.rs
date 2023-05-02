@@ -1,5 +1,12 @@
+use crate::{
+    keyword::Keyword,
+    parser::Enclosure,
+    symbol::{FQSym, FQType, Path, Pkg, Symbol, TSymbol},
+    types::Type,
+};
+
 use super::ArcStr;
-use std::fmt;
+use std::{fmt, sync::Arc};
 
 #[derive(Debug, Clone)]
 pub struct Loc {
@@ -19,12 +26,12 @@ impl Loc {
         }
     }
 
-    fn fmt(&self, f: &mut fmt::Formatter<'_>, error: &ErrorKind) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>, error: &Error) -> fmt::Result {
         write!(f, "{:?}", error)
     }
 
-    pub fn err<E: Into<ErrorKind>, T>(&self, error: E) -> Result<T> {
-        Err(Error::new(self.clone(), error.into()))
+    pub fn err<T>(&self, error: Error) -> Result<T> {
+        Err(ErrorVec::new(self.clone(), error.into()))
     }
 }
 
@@ -45,17 +52,15 @@ enum Inner {
 #[derive(Debug)]
 struct ErrorItem {
     loc: Loc,
-    error: ErrorKind,
+    error: Error,
 }
-
-type ErrorVec = Vec<ErrorItem>;
 
 #[derive(Debug)]
-pub struct Error {
-    errors: ErrorVec,
+pub struct ErrorVec {
+    errors: Vec<ErrorItem>,
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for ErrorVec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for e in self.errors.iter() {
             e.loc.fmt(f, &e.error)?
@@ -64,61 +69,39 @@ impl fmt::Display for Error {
     }
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, ErrorVec>;
 
-impl Error {
-    fn new(loc: Loc, error: ErrorKind) -> Self {
+impl ErrorVec {
+    fn new(loc: Loc, error: Error) -> Self {
         Self {
             errors: vec![ErrorItem { loc, error }],
         }
     }
 
-    pub fn merge<T1, T2>(r1: Result<T1>, r2: Result<T2>) -> Result<(T1, T2)> {
-        match (r1, r2) {
-            (Err(mut e1), Err(e2)) => {
-                e1.append(e2);
-                Err(e1)
-            }
-            (Err(e1), Ok(_)) => Err(e1),
-            (Ok(_), Err(e2)) => Err(e2),
-            (Ok(t1), Ok(t2)) => Ok((t1, t2)),
-        }
-    }
-
-    fn add(&mut self, loc: Loc, error: ErrorKind) {
+    fn add(&mut self, loc: Loc, error: Error) {
         self.errors.push(ErrorItem { loc, error });
     }
 
-    fn append(&mut self, mut other: Error) {
+    fn append(&mut self, mut other: ErrorVec) {
         self.errors.append(&mut other.errors);
     }
 
-    pub fn is<E: Into<ErrorKind>>(&self, error: E) -> bool {
-        self.errors.len() == 1 && self.errors[0].error == error.into()
-    }
-
-    pub fn contains<E: Into<ErrorKind>>(&self, error: E) -> bool {
-        let e = error.into();
-        for item in &self.errors {
-            if item.error == e {
-                return true;
-            }
-        }
-        false
+    pub fn contains(&self, error: &Error) -> bool {
+        self.errors.iter().map(|i| &i.error).any(|e| e == error)
     }
 }
 
 // Error accumulator and builder.
 #[derive(Debug, Default)]
 pub struct Errors {
-    errors: Option<Error>,
+    errors: Option<ErrorVec>,
 }
 
 impl Errors {
-    pub fn add<E: Into<ErrorKind>>(&mut self, loc: Loc, error: E) {
+    pub fn add(&mut self, loc: Loc, error: Error) {
         match &mut self.errors {
             Some(e) => e.add(loc, error.into()),
-            None => self.errors = Some(Error::new(loc, error.into())),
+            None => self.errors = Some(ErrorVec::new(loc, error.into())),
         }
     }
 
@@ -158,54 +141,65 @@ impl Errors {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ErrorKind {
-    Symbol(crate::symbol::SymbolError),
-    Parser(crate::parser::ParserError),
-    Types(crate::types::TypesError),
-    Value(crate::value::ValueError),
-    Env(crate::env::EnvError),
-    Runtime(crate::env::RuntimeError),
-    TypeCheck(crate::env::TypeCheckError),
+pub enum Error {
+    // Tokenizer
+    UnexpectedChar(char),
+    // Lexer
+    InvalidClose(Enclosure),
+    UnexpectedToken,
+    // Parser
+    ExpressionExpected,
+    LValueExpected,
+    AssignmentExpected,
+    EndOfItemExpected,
+    ParsingError, // placeholder, temporary error
+    // Symbols & type checking
+    SymbolEmpty,
+    TSymbolEmpty,
+    SymbolKeywordFound(Keyword),
+    SymbolInvalidInitial(char),
+    TSymbolInvalidInitial(char),
+    SymbolInvalidChar(usize, char),
+    SymbolExpected(TSymbol),
+    TSymbolExpected(Symbol),
+    TopLevelTypeExpected(FQType),
+    UnknownType(FQType),
+    DuplicateType(FQType),
+    UnknownSymbol(FQSym),
+    DuplicateSymbol(FQSym),
+    UnknownLocalType(TSymbol),
+    DuplicateLocalType(TSymbol),
+    UnknownLocalSymbol(Symbol),
+    DuplicateLocalSymbol(TSymbol),
+    // Type checking and runtime
+    TypeMismatch(Arc<TypeMismatch>),
+    SingletonExpected(Type),
+    InvalidType, // placeholder, temporary error
+    DuplicateModule(Pkg, Path),
+    DivisionByZero,
+    NotImplemented,
 }
 
-impl From<crate::symbol::SymbolError> for ErrorKind {
-    fn from(value: crate::symbol::SymbolError) -> Self {
-        ErrorKind::Symbol(value)
+impl Error {
+    pub fn merge<T1, T2>(r1: Result<T1>, r2: Result<T2>) -> Result<(T1, T2)> {
+        match (r1, r2) {
+            (Err(mut e1), Err(e2)) => {
+                e1.append(e2);
+                Err(e1)
+            }
+            (Err(e1), Ok(_)) => Err(e1),
+            (Ok(_), Err(e2)) => Err(e2),
+            (Ok(t1), Ok(t2)) => Ok((t1, t2)),
+        }
+    }
+
+    pub fn type_mismatch(expected: Type, actual: Type) -> Self {
+        Self::TypeMismatch(Arc::new(TypeMismatch { expected, actual }))
     }
 }
 
-impl From<crate::parser::ParserError> for ErrorKind {
-    fn from(value: crate::parser::ParserError) -> Self {
-        ErrorKind::Parser(value)
-    }
-}
-
-impl From<crate::types::TypesError> for ErrorKind {
-    fn from(value: crate::types::TypesError) -> Self {
-        ErrorKind::Types(value)
-    }
-}
-
-impl From<crate::value::ValueError> for ErrorKind {
-    fn from(value: crate::value::ValueError) -> Self {
-        ErrorKind::Value(value)
-    }
-}
-
-impl From<crate::env::EnvError> for ErrorKind {
-    fn from(value: crate::env::EnvError) -> Self {
-        ErrorKind::Env(value)
-    }
-}
-
-impl From<crate::env::RuntimeError> for ErrorKind {
-    fn from(value: crate::env::RuntimeError) -> Self {
-        ErrorKind::Runtime(value)
-    }
-}
-
-impl From<crate::env::TypeCheckError> for ErrorKind {
-    fn from(value: crate::env::TypeCheckError) -> Self {
-        ErrorKind::TypeCheck(value)
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeMismatch {
+    expected: Type,
+    actual: Type,
 }
