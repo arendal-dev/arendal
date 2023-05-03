@@ -66,6 +66,10 @@ impl Parser {
         self.peek_if_kind(kind).is_some()
     }
 
+    fn is_keyword(&self, keyword: Keyword) -> bool {
+        self.kind_equals(LexemeKind::Keyword(keyword))
+    }
+
     // Returns whether the current lexeme is EOI (end of item)
     // I.e., either end of the input or a newline separator
     fn is_eoi(&self) -> bool {
@@ -108,12 +112,20 @@ impl Parser {
         self.err(Error::ExpressionExpected)
     }
 
+    fn keyword_expected(&self, keyword: Keyword) -> Result<Parser> {
+        if self.is_keyword(keyword) {
+            Ok(self.advance())
+        } else {
+            self.err(Error::KeywordExpected(keyword))
+        }
+    }
+
     fn builder(&self) -> ExprBuilder {
         ExprBuilder::new(self.loc())
     }
 
     fn rule_moduleitem(&self) -> PResult<ModuleItem> {
-        let (expr, parser) = self.rule_toplevelexpr()?;
+        let (expr, parser) = self.rule_expression()?;
         if self.is_eoi() {
             parser.ok(ModuleItem::Expression(expr))
         } else {
@@ -121,11 +133,13 @@ impl Parser {
         }
     }
 
-    fn rule_toplevelexpr(&self) -> EResult {
-        if self.kind_equals(LexemeKind::Keyword(Keyword::Val)) {
+    fn rule_expression(&self) -> EResult {
+        if self.is_keyword(Keyword::Val) {
             self.advance().rule_assignment()
+        } else if self.is_keyword(Keyword::If) {
+            self.advance().rule_conditional()
         } else {
-            self.rule_expression()
+            self.rule_subexpr()
         }
     }
 
@@ -148,7 +162,21 @@ impl Parser {
         self.err(Error::LValueExpected)
     }
 
-    fn rule_expression(&self) -> EResult {
+    fn rule_conditional(&self) -> EResult {
+        let (expr, parser2) = self.rule_expression()?;
+        let (then, parser3) = parser2.keyword_expected(Keyword::Then)?.rule_expression()?;
+        let (otherwise, parser4) = if parser3.is_keyword(Keyword::Else) {
+            parser3
+                .advance()
+                .rule_expression()
+                .map(|(e, p)| (Some(e), p))?
+        } else {
+            (None, parser3)
+        };
+        parser4.ok(self.builder().conditional(expr, then, otherwise))
+    }
+
+    fn rule_subexpr(&self) -> EResult {
         self.rule_logterm()
     }
 
@@ -226,7 +254,7 @@ impl Parser {
                 LexemeKind::TypeId(id) => self.advance().ok(self.builder().tsymbol(id.clone())),
                 LexemeKind::Id(id) => self.advance().ok(self.builder().symbol(id.clone())),
                 LexemeKind::Open(Enclosure::Parens) => {
-                    let (expr, next) = self.advance().rule_expression()?;
+                    let (expr, next) = self.advance().rule_subexpr()?;
                     if !next.kind_equals(LexemeKind::Close(Enclosure::Parens)) {
                         next.err(Error::ParsingError)
                     } else {

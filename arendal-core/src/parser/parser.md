@@ -8,15 +8,16 @@ Definitions:
 ```
 module -> moduleitem*
 moduleitem -> toplevelexpr EOI
-toplevelexpr -> assignment | expression
+expression -> assignment | conditional | subexpr
 assignment -> "val" identifier "=" expression
-expression -> logterm
+conditional -> "if" expression "then" expression ("else" expression)?
+subexpr -> logterm
 logterm -> logfactor ( "||" logfactor )*
 logfactor -> equality ( "&&" equality )*
 equality -> comparison ( ("==" | "!=") comparison )*
 comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
-primary -> IntLiteral | TypeLiteral | identified | "(" expression ")" | "{" toplevelexpr* "}"
+primary -> IntLiteral | TypeLiteral | identified | "(" subexpr ")" | "{" toplevelexpr* "}"
 
 ```

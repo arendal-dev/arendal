@@ -55,6 +55,13 @@ pub struct BinaryExpr {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub struct Conditional {
+    pub expr: Expression,
+    pub then: Expression,
+    pub otherwise: Option<Expression>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct AssignmentExpr {
     pub symbol: Symbol,
     pub expr: Expression,
@@ -68,6 +75,7 @@ pub enum Expr {
     Unary(Box<UnaryExpr>),
     Binary(Box<BinaryExpr>),
     Block(Vec<Expression>),
+    Conditional(Box<Conditional>),
     Assignment(Box<AssignmentExpr>),
 }
 
@@ -121,6 +129,19 @@ impl ExprBuilder {
         } else {
             self.build(Expr::Block(exprs))
         }
+    }
+
+    pub fn conditional(
+        &self,
+        expr: Expression,
+        then: Expression,
+        otherwise: Option<Expression>,
+    ) -> Expression {
+        self.build(Expr::Conditional(Box::new(Conditional {
+            expr,
+            then,
+            otherwise,
+        })))
     }
 
     pub fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {

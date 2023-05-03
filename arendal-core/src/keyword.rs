@@ -5,11 +5,17 @@ use std::fmt;
 pub enum Keyword {
     Pkg,
     Val,
+    If,
+    Then,
+    Else,
 }
 
 static KEYWORDS: phf::Map<&'static str, Keyword> = phf_map! {
     "pkg" => Keyword::Pkg,
     "val" => Keyword::Val,
+    "if" => Keyword::If,
+    "then" => Keyword::Then,
+    "else" => Keyword::Else,
 };
 
 impl Keyword {
@@ -21,6 +27,9 @@ impl Keyword {
         match self {
             Self::Pkg => "pkg",
             Self::Val => "val",
+            Self::If => "if",
+            Self::Then => "then",
+            Self::Else => "else",
         }
     }
 }
