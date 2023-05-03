@@ -133,19 +133,6 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.checker.resolve_type(&self.input.loc, symbol)
     }
 
-    fn check_integer(&self, expr: &Expression) -> Result<()> {
-        if expr.borrow_type().is_integer() {
-            Ok(())
-        } else {
-            expr.type_mismatch(Type::Integer)
-        }
-    }
-
-    fn check_integers(&self, expr1: &Expression, expr2: &Expression) -> Result<()> {
-        self.check_integer(expr1)?;
-        self.check_integer(expr2)
-    }
-
     fn sub_expr(&mut self, input: &ast::Expression) -> Result<Expression> {
         ExprChecker {
             checker: self.checker,
