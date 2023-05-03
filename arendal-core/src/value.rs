@@ -78,19 +78,27 @@ impl Value {
         self.borrow_type().clone()
     }
 
-    pub fn as_integer(self) -> Option<Integer> {
+    pub fn as_integer(self) -> Result<Integer> {
         match self.value {
-            Val::Integer(v) => Some(v),
-            _ => None,
+            Val::Integer(v) => Ok(v),
+            _ => self.type_mismatch(Type::Integer),
         }
     }
 
-    pub fn as_boolean(self) -> Option<bool> {
+    pub fn as_boolean(self) -> Result<bool> {
         match self.value {
-            Val::True => Some(true),
-            Val::False => Some(false),
-            _ => None,
+            Val::True => Ok(true),
+            Val::False => Ok(false),
+            _ => self.type_mismatch(Type::Boolean),
         }
+    }
+
+    fn err<T>(&self, error: Error) -> Result<T> {
+        self.loc.err(error)
+    }
+
+    fn type_mismatch<T>(&self, expected: Type) -> Result<T> {
+        self.err(Error::type_mismatch(expected, self.clone_type()))
     }
 }
 

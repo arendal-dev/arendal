@@ -57,14 +57,6 @@ impl Expression {
     fn type_mismatch<T>(&self, expected: Type) -> Result<T> {
         self.err(Error::type_mismatch(expected, self.clone_type()))
     }
-
-    fn rt_err<T>(&self, error: Error) -> Result<T> {
-        self.loc.err(error)
-    }
-
-    fn rt_type_mismatch<T>(&self, expected: Type) -> Result<T> {
-        self.rt_err(Error::type_mismatch(expected, self.clone_type()))
-    }
 }
 
 impl fmt::Debug for Expression {
