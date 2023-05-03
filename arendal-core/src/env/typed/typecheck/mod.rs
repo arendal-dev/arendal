@@ -146,19 +146,6 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.check_integer(expr2)
     }
 
-    fn check_boolean(&self, expr: &Expression) -> Result<()> {
-        if expr.borrow_type().is_boolean() {
-            Ok(())
-        } else {
-            expr.type_mismatch(Type::Boolean)
-        }
-    }
-
-    fn check_booleans(&self, expr1: &Expression, expr2: &Expression) -> Result<()> {
-        self.check_boolean(expr1)?;
-        self.check_boolean(expr2)
-    }
-
     fn sub_expr(&mut self, input: &ast::Expression) -> Result<Expression> {
         ExprChecker {
             checker: self.checker,
@@ -186,12 +173,8 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             BinaryOp::Div => self
                 .check_integers(&expr1, &expr2)
                 .map(|()| self.builder().div(expr1, expr2)),
-            BinaryOp::And => self
-                .check_booleans(&expr1, &expr2)
-                .map(|()| self.builder().log_and(expr1, expr2)),
-            BinaryOp::Or => self
-                .check_booleans(&expr1, &expr2)
-                .map(|()| self.builder().log_or(expr1, expr2)),
+            BinaryOp::And => self.builder().log_and(expr1, expr2),
+            BinaryOp::Or => self.builder().log_or(expr1, expr2),
             _ => self.error(Error::InvalidType),
         }
     }

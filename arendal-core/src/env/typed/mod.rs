@@ -139,8 +139,8 @@ enum Expr {
     Sub(Arc<Two>),
     Mul(Arc<Two>),
     Div(Arc<Two>),
-    LogicalAnd(Arc<Two>),
-    LogicalOr(Arc<Two>),
+    LogicalAnd(Arc<TwoBools>),
+    LogicalOr(Arc<TwoBools>),
 }
 
 impl Expr {
@@ -211,12 +211,12 @@ impl ExprBuilder {
         self.build(Expr::Div(Two::new(expr1, expr2)))
     }
 
-    fn log_and(&self, expr1: Expression, expr2: Expression) -> Expression {
-        self.build(Expr::LogicalAnd(Two::new(expr1, expr2)))
+    fn log_and(&self, expr1: Expression, expr2: Expression) -> Result<Expression> {
+        Ok(self.build(Expr::LogicalAnd(TwoBools::new(expr1, expr2)?)))
     }
 
-    fn log_or(&self, expr1: Expression, expr2: Expression) -> Expression {
-        self.build(Expr::LogicalOr(Two::new(expr1, expr2)))
+    fn log_or(&self, expr1: Expression, expr2: Expression) -> Result<Expression> {
+        Ok(self.build(Expr::LogicalOr(TwoBools::new(expr1, expr2)?)))
     }
 }
 
