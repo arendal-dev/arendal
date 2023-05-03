@@ -161,18 +161,10 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         expr2: Expression,
     ) -> Result<Expression> {
         match op {
-            BinaryOp::Add => self
-                .check_integers(&expr1, &expr2)
-                .map(|()| self.builder().add(expr1, expr2)),
-            BinaryOp::Sub => self
-                .check_integers(&expr1, &expr2)
-                .map(|()| self.builder().sub(expr1, expr2)),
-            BinaryOp::Mul => self
-                .check_integers(&expr1, &expr2)
-                .map(|()| self.builder().mul(expr1, expr2)),
-            BinaryOp::Div => self
-                .check_integers(&expr1, &expr2)
-                .map(|()| self.builder().div(expr1, expr2)),
+            BinaryOp::Add => self.builder().int_add(expr1, expr2),
+            BinaryOp::Sub => self.builder().int_sub(expr1, expr2),
+            BinaryOp::Mul => self.builder().int_mul(expr1, expr2),
+            BinaryOp::Div => self.builder().int_div(expr1, expr2),
             BinaryOp::And => self.builder().log_and(expr1, expr2),
             BinaryOp::Or => self.builder().log_or(expr1, expr2),
             _ => self.error(Error::InvalidType),

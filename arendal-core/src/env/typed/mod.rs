@@ -80,18 +80,6 @@ struct Unary {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Two {
-    expr1: Expression,
-    expr2: Expression,
-}
-
-impl Two {
-    fn new(expr1: Expression, expr2: Expression) -> Arc<Two> {
-        Arc::new(Two { expr1, expr2 })
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
 struct TwoInts {
     expr1: Expression,
     expr2: Expression,
@@ -135,10 +123,10 @@ enum Expr {
     Local(Arc<Local>),
     Assignment(Arc<Assignment>),
     Unary(Arc<Unary>),
-    Add(Arc<Two>),
-    Sub(Arc<Two>),
-    Mul(Arc<Two>),
-    Div(Arc<Two>),
+    IntAdd(Arc<TwoInts>),
+    IntSub(Arc<TwoInts>),
+    IntMul(Arc<TwoInts>),
+    IntDiv(Arc<TwoInts>),
     LogicalAnd(Arc<TwoBools>),
     LogicalOr(Arc<TwoBools>),
 }
@@ -150,10 +138,10 @@ impl Expr {
             Self::Local(l) => &l.tipo,
             Self::Assignment(a) => a.expr.borrow_type(),
             Self::Unary(u) => u.expr.borrow_type(),
-            Self::Add(t) => t.expr1.borrow_type(),
-            Self::Sub(t) => t.expr1.borrow_type(),
-            Self::Mul(t) => t.expr1.borrow_type(),
-            Self::Div(t) => t.expr1.borrow_type(),
+            Self::IntAdd(t) => t.expr1.borrow_type(),
+            Self::IntSub(t) => t.expr1.borrow_type(),
+            Self::IntMul(t) => t.expr1.borrow_type(),
+            Self::IntDiv(t) => t.expr1.borrow_type(),
             Self::LogicalAnd(_) | Self::LogicalOr(_) => &Type::Boolean,
         }
     }
@@ -173,6 +161,10 @@ impl ExprBuilder {
             loc: self.loc.clone(),
             expr,
         }
+    }
+
+    fn ok(&self, expr: Expr) -> Result<Expression> {
+        Ok(self.build(expr))
     }
 
     fn value(&self, value: Value) -> Expression {
@@ -195,28 +187,28 @@ impl ExprBuilder {
         self.build(Expr::Unary(Arc::new(Unary { op, expr })))
     }
 
-    fn add(&self, expr1: Expression, expr2: Expression) -> Expression {
-        self.build(Expr::Add(Two::new(expr1, expr2)))
+    fn int_add(&self, expr1: Expression, expr2: Expression) -> Result<Expression> {
+        self.ok(Expr::IntAdd(TwoInts::new(expr1, expr2)?))
     }
 
-    fn sub(&self, expr1: Expression, expr2: Expression) -> Expression {
-        self.build(Expr::Sub(Two::new(expr1, expr2)))
+    fn int_sub(&self, expr1: Expression, expr2: Expression) -> Result<Expression> {
+        self.ok(Expr::IntSub(TwoInts::new(expr1, expr2)?))
     }
 
-    fn mul(&self, expr1: Expression, expr2: Expression) -> Expression {
-        self.build(Expr::Mul(Two::new(expr1, expr2)))
+    fn int_mul(&self, expr1: Expression, expr2: Expression) -> Result<Expression> {
+        self.ok(Expr::IntMul(TwoInts::new(expr1, expr2)?))
     }
 
-    fn div(&self, expr1: Expression, expr2: Expression) -> Expression {
-        self.build(Expr::Div(Two::new(expr1, expr2)))
+    fn int_div(&self, expr1: Expression, expr2: Expression) -> Result<Expression> {
+        self.ok(Expr::IntDiv(TwoInts::new(expr1, expr2)?))
     }
 
     fn log_and(&self, expr1: Expression, expr2: Expression) -> Result<Expression> {
-        Ok(self.build(Expr::LogicalAnd(TwoBools::new(expr1, expr2)?)))
+        self.ok(Expr::LogicalAnd(TwoBools::new(expr1, expr2)?))
     }
 
     fn log_or(&self, expr1: Expression, expr2: Expression) -> Result<Expression> {
-        Ok(self.build(Expr::LogicalOr(TwoBools::new(expr1, expr2)?)))
+        self.ok(Expr::LogicalOr(TwoBools::new(expr1, expr2)?))
     }
 }
 

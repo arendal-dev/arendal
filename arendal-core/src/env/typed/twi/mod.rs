@@ -78,16 +78,16 @@ impl<'a> Interpreter<'a> {
                 self.set_val(a.symbol.clone(), value.clone())?;
                 Ok(value)
             }
-            Expr::Add(t) => self
+            Expr::IntAdd(t) => self
                 .as_two_integers(&t.expr1, &t.expr2)
                 .map(|(v1, v2)| Value::integer(&expr.loc, v1 + v2)),
-            Expr::Sub(t) => self
+            Expr::IntSub(t) => self
                 .as_two_integers(&t.expr1, &t.expr2)
                 .map(|(v1, v2)| Value::integer(&expr.loc, v1 - v2)),
-            Expr::Mul(t) => self
+            Expr::IntMul(t) => self
                 .as_two_integers(&t.expr1, &t.expr2)
                 .map(|(v1, v2)| Value::integer(&expr.loc, v1 * v2)),
-            Expr::Div(t) => self.div(&expr.loc, &t.expr1, &t.expr2),
+            Expr::IntDiv(t) => self.div(&expr.loc, &t.expr1, &t.expr2),
             Expr::LogicalAnd(t) => self.and(&expr.loc, &t.expr1, &t.expr2),
             Expr::LogicalOr(t) => self.or(&expr.loc, &t.expr1, &t.expr2),
             _ => expr.rt_err(Error::NotImplemented),
