@@ -137,7 +137,7 @@ impl Parser {
         if self.is_keyword(Keyword::Val) {
             self.advance().rule_assignment()
         } else if self.is_keyword(Keyword::If) {
-            self.advance().rule_conditional()
+            self.rule_conditional()
         } else {
             self.rule_subexpr()
         }
@@ -163,16 +163,9 @@ impl Parser {
     }
 
     fn rule_conditional(&self) -> EResult {
-        let (expr, parser2) = self.rule_expression()?;
+        let (expr, parser2) = self.advance().rule_expression()?;
         let (then, parser3) = parser2.keyword_expected(Keyword::Then)?.rule_expression()?;
-        let (otherwise, parser4) = if parser3.is_keyword(Keyword::Else) {
-            parser3
-                .advance()
-                .rule_expression()
-                .map(|(e, p)| (Some(e), p))?
-        } else {
-            (None, parser3)
-        };
+        let (otherwise, parser4) = parser3.keyword_expected(Keyword::Else)?.rule_expression()?;
         parser4.ok(self.builder().conditional(expr, then, otherwise))
     }
 

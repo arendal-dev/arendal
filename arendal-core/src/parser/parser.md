@@ -10,7 +10,7 @@ module -> moduleitem*
 moduleitem -> toplevelexpr EOI
 expression -> assignment | conditional | subexpr
 assignment -> "val" identifier "=" expression
-conditional -> "if" expression "then" expression ("else" expression)?
+conditional -> "if" expression "then" expression "else" expression
 subexpr -> logterm
 logterm -> logfactor ( "||" logfactor )*
 logfactor -> equality ( "&&" equality )*

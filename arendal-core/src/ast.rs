@@ -58,7 +58,7 @@ pub struct BinaryExpr {
 pub struct Conditional {
     pub expr: Expression,
     pub then: Expression,
-    pub otherwise: Option<Expression>,
+    pub otherwise: Expression,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -135,7 +135,7 @@ impl ExprBuilder {
         &self,
         expr: Expression,
         then: Expression,
-        otherwise: Option<Expression>,
+        otherwise: Expression,
     ) -> Expression {
         self.build(Expr::Conditional(Box::new(Conditional {
             expr,
