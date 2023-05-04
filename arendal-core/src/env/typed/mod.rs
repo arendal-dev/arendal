@@ -98,6 +98,36 @@ impl TwoBools {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+struct Conditional {
+    expr: Expression,
+    then: Expression,
+    otherwise: Expression,
+}
+
+impl Conditional {
+    fn new(expr: Expression, then: Expression, otherwise: Expression) -> Result<Arc<Self>> {
+        Error::merge(expr.check_boolean(), Self::same_types(&then, &otherwise))?;
+        Ok(Arc::new(Self {
+            expr,
+            then,
+            otherwise,
+        }))
+    }
+
+    fn same_types(then: &Expression, otherwise: &Expression) -> Result<()> {
+        if then.borrow_type() == otherwise.borrow_type() {
+            Ok(())
+        } else {
+            otherwise.type_mismatch(then.clone_type())
+        }
+    }
+
+    fn borrow_type(&self) -> &Type {
+        self.then.borrow_type()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 struct Assignment {
     symbol: Symbol,
     expr: Expression,
@@ -113,6 +143,7 @@ struct Local {
 enum Expr {
     Value(Value),
     Local(Arc<Local>),
+    Conditional(Arc<Conditional>),
     Assignment(Arc<Assignment>),
     Unary(Arc<Unary>),
     IntAdd(Arc<TwoInts>),
@@ -128,6 +159,7 @@ impl Expr {
         match self {
             Self::Value(v) => v.borrow_type(),
             Self::Local(l) => &l.tipo,
+            Self::Conditional(c) => c.borrow_type(),
             Self::Assignment(a) => a.expr.borrow_type(),
             Self::Unary(u) => u.expr.borrow_type(),
             Self::IntAdd(t) => t.expr1.borrow_type(),
@@ -169,6 +201,15 @@ impl ExprBuilder {
 
     fn local(&self, symbol: Symbol, tipo: Type) -> Expression {
         self.build(Expr::Local(Arc::new(Local { symbol, tipo })))
+    }
+
+    fn conditional(
+        &self,
+        expr: Expression,
+        then: Expression,
+        otherwise: Expression,
+    ) -> Result<Expression> {
+        self.ok(Expr::Conditional(Conditional::new(expr, then, otherwise)?))
     }
 
     fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {

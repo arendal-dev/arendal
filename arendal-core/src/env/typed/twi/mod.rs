@@ -72,6 +72,13 @@ impl<'a> Interpreter<'a> {
                 Some(value) => Ok(value),
                 None => expr.err(Error::UnknownLocalSymbol(l.symbol.clone())),
             },
+            Expr::Conditional(c) => {
+                if self.expression(&c.expr)?.as_boolean()? {
+                    self.expression(&c.then)
+                } else {
+                    self.expression(&c.otherwise)
+                }
+            }
             Expr::Assignment(a) => {
                 let value = self.expression(&a.expr)?;
                 self.set_val(a.symbol.clone(), value.clone())?;

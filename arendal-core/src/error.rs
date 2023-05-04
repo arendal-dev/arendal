@@ -194,6 +194,14 @@ impl Error {
         }
     }
 
+    pub fn merge3<T1, T2, T3>(
+        r1: Result<T1>,
+        r2: Result<T2>,
+        r3: Result<T3>,
+    ) -> Result<(T1, T2, T3)> {
+        Self::merge(Self::merge(r1, r2), r3).map(|((t1, t2), t3)| (t1, t2, t3))
+    }
+
     pub fn type_mismatch(expected: Type, actual: Type) -> Self {
         Self::TypeMismatch(Arc::new(TypeMismatch { expected, actual }))
     }

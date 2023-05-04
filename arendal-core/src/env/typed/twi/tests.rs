@@ -86,3 +86,8 @@ fn parens2() {
 fn logical() {
     eval_ok("(True || False) && True", v_true());
 }
+
+#[test]
+fn conditional1() {
+    eval_i64("if True then 1 else 2", 1);
+}

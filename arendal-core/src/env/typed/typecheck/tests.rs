@@ -12,14 +12,18 @@ fn check_module(input: &str) -> Result<Module> {
 
 fn error(input: &str, error: &Error) {
     match check_module(input) {
-        Ok(_) => panic!("Expected error: {:?}", error),
+        Ok(_) => panic!("Expected Error: {:?}", error),
         Err(e) => assert!(
             e.contains(error),
-            "Expected error: {:?}\nActual: {:?}",
+            "Expected Error: {:?} - Actual Error: {:?}",
             error,
             e
         ),
     }
+}
+
+fn mismatch(input: &str, expected: Type, actual: Type) {
+    error(input, &Error::type_mismatch(expected, actual))
 }
 
 fn ok_expression(input: &str, t: Type) {
@@ -66,13 +70,25 @@ fn std_singleton() {
 
 #[test]
 fn mismatch1() {
-    error("1 + True", &Error::type_mismatch(Type::Integer, Type::True))
+    mismatch("1 + True", Type::Integer, Type::True)
 }
 
 #[test]
 fn mismatch2() {
-    error(
-        "1 && True",
-        &Error::type_mismatch(Type::Boolean, Type::Integer),
-    )
+    mismatch("1 && True", Type::Boolean, Type::Integer)
+}
+
+#[test]
+fn conditional1() {
+    ok_int("if True then 1 else 2");
+}
+
+#[test]
+fn conditional2() {
+    mismatch("if 0 then 1 else 2", Type::Boolean, Type::Integer);
+}
+
+#[test]
+fn conditional3() {
+    mismatch("if True then 1 else False", Type::Integer, Type::False);
 }

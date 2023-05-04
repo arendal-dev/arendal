@@ -114,6 +114,14 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                 let value = Value::singleton(&self.input.loc, &tipo)?;
                 Ok(self.builder().value(value))
             }
+            ast::Expr::Conditional(c) => {
+                let (expr, then, otherwise) = Error::merge3(
+                    self.sub_expr(&c.expr),
+                    self.sub_expr(&c.then),
+                    self.sub_expr(&c.otherwise),
+                )?;
+                self.builder().conditional(expr, then, otherwise)
+            }
             ast::Expr::Assignment(a) => {
                 let typed = self.sub_expr(&a.expr)?;
                 self.checker.set_val(
