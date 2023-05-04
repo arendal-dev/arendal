@@ -18,6 +18,6 @@ equality -> comparison ( ("==" | "!=") comparison )*
 comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
-primary -> IntLiteral | TypeLiteral | identified | "(" subexpr ")" | "{" toplevelexpr* "}"
+primary -> IntLiteral | TypeLiteral | identified | "(" subexpr ")" | "{" ( toplevelexpr (EOI toplevelexpr)* )?   "}" 
 
 ```

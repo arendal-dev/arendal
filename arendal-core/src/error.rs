@@ -153,6 +153,7 @@ pub enum Error {
     AssignmentExpected,
     EndOfItemExpected,
     KeywordExpected(Keyword),
+    CloseExpected(Enclosure),
     ParsingError, // placeholder, temporary error
     // Symbols & type checking
     SymbolEmpty,

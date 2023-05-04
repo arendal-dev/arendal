@@ -10,7 +10,7 @@ pub enum Enclosure {
 use crate::ast::{BinaryOp, ExprBuilder, Expression, Module, ModuleItem};
 use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
-use crate::symbol::Symbol;
+use crate::symbol::{Symbol, TSymbol};
 use std::rc::Rc;
 
 use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
@@ -249,9 +249,32 @@ impl Parser {
                 LexemeKind::Open(Enclosure::Parens) => {
                     let (expr, next) = self.advance().rule_subexpr()?;
                     if !next.kind_equals(LexemeKind::Close(Enclosure::Parens)) {
-                        next.err(Error::ParsingError)
+                        next.err(Error::CloseExpected(Enclosure::Parens))
                     } else {
                         next.advance().ok(expr)
+                    }
+                }
+                LexemeKind::Open(Enclosure::Curly) => {
+                    let mut parser = self.advance();
+                    if parser.kind_equals(LexemeKind::Close(Enclosure::Curly)) {
+                        parser.advance().ok(self.builder().tsymbol(TSymbol::None))
+                    } else {
+                        let mut expr;
+                        let mut exprs: Vec<Expression> = Vec::default();
+                        loop {
+                            if parser.is_done() {
+                                return parser.err(Error::CloseExpected(Enclosure::Curly));
+                            }
+                            (expr, parser) = parser.rule_expression()?;
+                            exprs.push(expr);
+                            if parser.kind_equals(LexemeKind::Close(Enclosure::Curly)) {
+                                parser = parser.advance();
+                                break;
+                            } else if !parser.is_eoi() {
+                                return parser.err(Error::EndOfItemExpected);
+                            }
+                        }
+                        parser.ok(self.builder().block(exprs))
                     }
                 }
                 _ => self.expression_expected(),

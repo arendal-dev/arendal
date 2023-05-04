@@ -3,7 +3,7 @@ use crate::ast::{ExprBuilder, Expression};
 use crate::error::Loc;
 use crate::symbol::{Symbol, TSymbol};
 
-use super::{parse, Error};
+use super::{parse, Enclosure, Error};
 
 const B: ExprBuilder = ExprBuilder::none();
 
@@ -43,10 +43,6 @@ fn sym(symbol: &str) -> Symbol {
     Symbol::new(&Loc::none(), symbol.into()).unwrap()
 }
 
-fn tsym(symbol: &str) -> TSymbol {
-    TSymbol::new(&Loc::none(), symbol.into()).unwrap()
-}
-
 fn x() -> Symbol {
     sym("x")
 }
@@ -65,6 +61,10 @@ fn e_x() -> Expression {
 
 fn e_y() -> Expression {
     B.symbol(y())
+}
+
+fn e_none() -> Expression {
+    B.tsymbol(TSymbol::None)
 }
 
 fn e_true() -> Expression {
@@ -181,4 +181,13 @@ fn logical_ops() {
         "True || False && True",
         or(e_true(), and(e_false(), e_true())),
     );
+}
+
+#[test]
+fn blocks() {
+    check_expression("{ }", e_none());
+    check_expression("{ 1 }", e_i64(1));
+    check_expression("{ 1\n2 }", B.block(vec![e_i64(1), e_i64(2)]));
+    expect_error("{ 1 2 }", &Error::EndOfItemExpected);
+    expect_error("{ 1\n 2 ", &Error::CloseExpected(Enclosure::Curly))
 }
