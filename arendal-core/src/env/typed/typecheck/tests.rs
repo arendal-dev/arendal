@@ -87,5 +87,5 @@ fn conditionals() {
 
 #[test]
 fn blocks() {
-    ok_int("{ val x = 1\n x+2 }")
+    ok_int("{ let x = 1\n x+2 }")
 }

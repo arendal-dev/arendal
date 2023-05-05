@@ -134,7 +134,7 @@ impl Parser {
     }
 
     fn rule_expression(&self) -> EResult {
-        if self.is_keyword(Keyword::Val) {
+        if self.is_keyword(Keyword::Let) {
             self.advance().rule_assignment()
         } else if self.is_keyword(Keyword::If) {
             self.rule_conditional()

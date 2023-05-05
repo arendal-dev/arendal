@@ -148,13 +148,9 @@ fn add_id() {
 }
 
 #[test]
-fn assignment1() {
-    check_expression("val x = 1", B.assignment(x(), e_i64(1)));
-}
-
-#[test]
-fn assignment2() {
-    check_expression("val x = y + 2", B.assignment(x(), add(e_y(), e_i64(2))));
+fn assignment() {
+    check_expression("let x = 1", B.assignment(x(), e_i64(1)));
+    check_expression("let x = y + 2", B.assignment(x(), add(e_y(), e_i64(2))));
 }
 
 #[test]
@@ -189,7 +185,7 @@ fn blocks() {
     check_expression("{ 1 }", e_i64(1));
     check_expression("{ 1\n2 }", B.block(vec![e_i64(1), e_i64(2)]));
     check_expression(
-        "{ val x = 1\n x+2 }",
+        "{ let x = 1\n x+2 }",
         B.block(vec![B.assignment(x(), e_i64(1)), add(e_x(), e_i64(2))]),
     );
     expect_error("{ 1 2 }", &Error::EndOfItemExpected);

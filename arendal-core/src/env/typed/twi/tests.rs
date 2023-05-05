@@ -94,5 +94,5 @@ fn conditional1() {
 
 #[test]
 fn block() {
-    eval_i64("val x = 1\n{ val y = x + 1\n y + 2\n}", 4);
+    eval_i64("let x = 1\n{ let y = x + 1\n y + 2\n}", 4);
 }

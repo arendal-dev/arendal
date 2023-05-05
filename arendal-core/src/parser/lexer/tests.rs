@@ -219,8 +219,8 @@ fn enclosures_mixed_ok() {
 
 #[test]
 fn assignment() {
-    TestCase::new("val x = True")
-        .keyword(Separator::NewLine, Keyword::Val)
+    TestCase::new("let x = True")
+        .keyword(Separator::NewLine, Keyword::Let)
         .id(Separator::Whitespace, "x")
         .token(Separator::Whitespace, LexemeKind::Assignment)
         .type_id(Separator::Whitespace, "True")
