@@ -188,6 +188,10 @@ fn blocks() {
     check_expression("{ }", e_none());
     check_expression("{ 1 }", e_i64(1));
     check_expression("{ 1\n2 }", B.block(vec![e_i64(1), e_i64(2)]));
+    check_expression(
+        "{ val x = 1\n x+2 }",
+        B.block(vec![B.assignment(x(), e_i64(1)), add(e_x(), e_i64(2))]),
+    );
     expect_error("{ 1 2 }", &Error::EndOfItemExpected);
     expect_error("{ 1\n 2 ", &Error::CloseExpected(Enclosure::Curly))
 }

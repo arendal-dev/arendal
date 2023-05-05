@@ -79,16 +79,13 @@ fn mismatch2() {
 }
 
 #[test]
-fn conditional1() {
+fn conditionals() {
     ok_int("if True then 1 else 2");
-}
-
-#[test]
-fn conditional2() {
     mismatch("if 0 then 1 else 2", Type::Boolean, Type::Integer);
+    mismatch("if True then 1 else False", Type::Integer, Type::False);
 }
 
 #[test]
-fn conditional3() {
-    mismatch("if True then 1 else False", Type::Integer, Type::False);
+fn blocks() {
+    ok_int("{ val x = 1\n x+2 }")
 }

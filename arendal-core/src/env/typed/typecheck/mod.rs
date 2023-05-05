@@ -133,6 +133,12 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             }
             ast::Expr::Binary(b) => Error::merge(self.sub_expr(&b.expr1), self.sub_expr(&b.expr2))
                 .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
+            ast::Expr::Block(v) => {
+                self.checker.scopes.push(Scope::default());
+                let result = self.check_block(v);
+                self.checker.scopes.pop();
+                result
+            }
             _ => self.error(Error::InvalidType),
         }
     }
@@ -164,6 +170,14 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             BinaryOp::Or => self.builder().log_or(expr1, expr2),
             _ => self.error(Error::InvalidType),
         }
+    }
+
+    fn check_block(&mut self, exprs: &Vec<ast::Expression>) -> Result<Expression> {
+        let mut checked = Vec::default();
+        for e in exprs {
+            checked.push(self.sub_expr(e)?);
+        }
+        self.builder().block(checked)
     }
 
     fn builder(&self) -> ExprBuilder {
