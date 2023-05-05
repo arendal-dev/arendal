@@ -1,4 +1,4 @@
-use super::{Expr, Expression, Module, TwoInts};
+use super::{Expr, Expression, Expressions, Module, TwoInts};
 use crate::error::{Error, Loc, Result};
 use crate::symbol::Symbol;
 use crate::value::Value;
@@ -58,8 +58,12 @@ impl<'a> Interpreter<'a> {
     }
 
     fn run(mut self) -> Result<Value> {
+        self.expressions(&Loc::none(), &self.module.expressions)
+    }
+
+    fn expressions(&mut self, loc: &Loc, exprs: &Expressions) -> Result<Value> {
         let mut value = Value::v_none(&Loc::none());
-        for e in &self.module.expressions {
+        for e in exprs {
             value = self.expression(e)?;
         }
         Ok(value)
@@ -96,6 +100,12 @@ impl<'a> Interpreter<'a> {
             Expr::IntDiv(t) => self.div(&expr.loc, t),
             Expr::LogicalAnd(t) => self.and(&expr.loc, &t.expr1, &t.expr2),
             Expr::LogicalOr(t) => self.or(&expr.loc, &t.expr1, &t.expr2),
+            Expr::Block(exprs) => {
+                self.scopes.push(Scope::default());
+                let value = self.expressions(&expr.loc, exprs);
+                self.scopes.pop();
+                value
+            }
             _ => expr.err(Error::NotImplemented),
         }
     }

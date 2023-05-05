@@ -152,7 +152,7 @@ enum Expr {
     IntDiv(Arc<TwoInts>),
     LogicalAnd(Arc<TwoBools>),
     LogicalOr(Arc<TwoBools>),
-    Block(Vec<Expression>),
+    Block(Expressions),
 }
 
 impl Expr {
@@ -168,13 +168,7 @@ impl Expr {
             Self::IntMul(t) => t.expr1.borrow_type(),
             Self::IntDiv(t) => t.expr1.borrow_type(),
             Self::LogicalAnd(_) | Self::LogicalOr(_) => &Type::Boolean,
-            Self::Block(v) => {
-                if v.is_empty() {
-                    &Type::None
-                } else {
-                    v.last().unwrap().borrow_type()
-                }
-            }
+            Self::Block(exprs) => exprs.borrow_type(),
         }
     }
 }
@@ -260,12 +254,12 @@ impl ExprBuilder {
         if exprs.is_empty() {
             Ok(self.v_none())
         } else {
-            self.ok(Expr::Block(exprs))
+            self.ok(Expr::Block(Expressions::new(exprs)))
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Expressions {
     expressions: Vec<Expression>,
 }
@@ -277,6 +271,14 @@ impl Expressions {
 
     pub fn iter(&self) -> Iter<'_, Expression> {
         self.expressions.iter()
+    }
+
+    fn borrow_type(&self) -> &Type {
+        if self.expressions.is_empty() {
+            &Type::None
+        } else {
+            self.expressions.last().unwrap().borrow_type()
+        }
     }
 }
 

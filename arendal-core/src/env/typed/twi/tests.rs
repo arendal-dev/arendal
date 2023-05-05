@@ -91,3 +91,8 @@ fn logical() {
 fn conditional1() {
     eval_i64("if True then 1 else 2", 1);
 }
+
+#[test]
+fn block() {
+    eval_i64("val x = 1\n{ val y = x + 1\n y + 2\n}", 4);
+}
