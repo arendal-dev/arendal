@@ -1,4 +1,5 @@
 use std::fmt;
+use std::sync::Arc;
 
 use im::HashMap;
 
@@ -31,6 +32,13 @@ pub enum Type {
     Boolean,
     Integer,
     Singleton(Singleton),
+    Tuple(Arc<Tuple>),
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct Tuple {
+    symbol: FQType,
+    types: Vec<FQType>,
 }
 
 impl Type {
@@ -42,6 +50,7 @@ impl Type {
             Self::Boolean => FQType::Boolean,
             Self::Integer => FQType::Integer,
             Self::Singleton(s) => s.symbol.clone(),
+            Self::Tuple(t) => t.symbol.clone(),
         }
     }
 
