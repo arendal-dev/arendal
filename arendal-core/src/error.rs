@@ -1,6 +1,6 @@
 use crate::{
+    ast::parser::Enclosure,
     keyword::Keyword,
-    parser::Enclosure,
     symbol::{FQSym, FQType, Path, Pkg, Symbol, TSymbol},
     types::Type,
 };

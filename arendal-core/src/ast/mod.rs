@@ -1,3 +1,5 @@
+pub mod parser;
+
 use std::cmp::{Eq, PartialEq};
 use std::fmt;
 use std::fmt::Debug;

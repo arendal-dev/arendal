@@ -3,7 +3,6 @@ pub mod env;
 pub mod error;
 pub mod id;
 pub mod keyword;
-pub mod parser;
 pub mod symbol;
 pub mod types;
 pub mod value;

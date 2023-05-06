@@ -14,7 +14,7 @@ use std::sync::Arc;
 use super::Env;
 
 pub(super) fn run(env: &mut Env, path: &Path, input: &str) -> Result<Value> {
-    let parsed = crate::parser::parse(input)?;
+    let parsed = crate::ast::parser::parse(input)?;
     let checked = typecheck::check(&env, &path, &parsed)?;
     twi::interpret(env, &checked)
 }
