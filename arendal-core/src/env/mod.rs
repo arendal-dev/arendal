@@ -1,5 +1,5 @@
 mod prelude;
-mod typed;
+mod tst;
 
 use im::HashMap;
 
@@ -187,6 +187,6 @@ impl Default for Interactive {
 
 impl Interactive {
     pub fn run(&mut self, input: &str) -> Result<Value> {
-        typed::run(&mut self.env, &self.path, input)
+        tst::run(&mut self.env, &self.path, input)
     }
 }
