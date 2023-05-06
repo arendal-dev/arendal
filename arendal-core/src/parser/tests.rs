@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOp, Module, ModuleItem};
+use crate::ast::{BinaryOp, Module, ModuleItem, TypeDefinition, TypeDfnBuilder};
 use crate::ast::{ExprBuilder, Expression};
 use crate::error::Loc;
 use crate::symbol::{Symbol, TSymbol};
@@ -41,6 +41,10 @@ fn expect_error(input: &str, expected: &Error) {
 
 fn sym(symbol: &str) -> Symbol {
     Symbol::new(&Loc::none(), symbol.into()).unwrap()
+}
+
+fn tsym(symbol: &str) -> TSymbol {
+    TSymbol::new(&Loc::none(), symbol.into()).unwrap()
 }
 
 fn x() -> Symbol {
@@ -97,6 +101,17 @@ fn and(expr1: Expression, expr2: Expression) -> Expression {
 
 fn or(expr1: Expression, expr2: Expression) -> Expression {
     B.binary(BinaryOp::Or, expr1, expr2)
+}
+
+fn check_type(input: &str, expected: TypeDefinition) {
+    check_module(
+        input,
+        Module::new(vec![ModuleItem::TypeDefinition(expected)]),
+    )
+}
+
+fn singleton(symbol: &str) -> TypeDefinition {
+    TypeDfnBuilder::new(Loc::none(), tsym(symbol)).singleton()
 }
 
 #[test]
@@ -190,4 +205,9 @@ fn blocks() {
     );
     expect_error("{ 1 2 }", &Error::EndOfItemExpected);
     expect_error("{ 1\n 2 ", &Error::CloseExpected(Enclosure::Curly))
+}
+
+#[test]
+fn typedef_singleton() {
+    check_type("type Red", singleton("Red"));
 }

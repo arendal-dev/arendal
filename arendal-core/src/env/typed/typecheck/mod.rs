@@ -43,6 +43,7 @@ impl<'a> TypeChecker<'a> {
                     .check()?;
                     expressions.push(checked);
                 }
+                _ => todo!(),
             }
         }
         Ok(Module {

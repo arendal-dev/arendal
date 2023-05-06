@@ -87,8 +87,8 @@ pub(super) enum LexemeKind {
     Open(Enclosure),
     Close(Enclosure),
     Underscore,
-    Id(Symbol),
-    TypeId(TSymbol),
+    Symbol(Symbol),
+    TSymbol(TSymbol),
     Keyword(Keyword),
 }
 
@@ -230,13 +230,13 @@ impl Lexer {
         if let Some(k) = Keyword::parse(word) {
             self.add_lexeme(LexemeKind::Keyword(k), 1);
         } else if let Ok(name) = TSymbol::new(&loc, word.as_str().into()) {
-            self.add_lexeme(LexemeKind::TypeId(name), 1);
+            self.add_lexeme(LexemeKind::TSymbol(name), 1);
         } else {
             if let Some(symbol) = self
                 .errors
                 .add_result(Symbol::new(&loc, word.as_str().into()))
             {
-                self.add_lexeme(LexemeKind::Id(symbol), 1);
+                self.add_lexeme(LexemeKind::Symbol(symbol), 1);
             }
         }
     }

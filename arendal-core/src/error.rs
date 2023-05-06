@@ -154,6 +154,7 @@ pub enum Error {
     EndOfItemExpected,
     KeywordExpected(Keyword),
     CloseExpected(Enclosure),
+    TSymbolAfterTypeExpected,
     ParsingError, // placeholder, temporary error
     // Symbols & type checking
     SymbolEmpty,

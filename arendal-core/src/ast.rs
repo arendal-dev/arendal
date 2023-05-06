@@ -150,8 +150,44 @@ impl ExprBuilder {
 }
 
 #[derive(Debug, PartialEq, Eq)]
+pub struct TypeDefinition {
+    pub loc: Loc,
+    pub symbol: TSymbol,
+    pub dfn: TypeDfn,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum TypeDfn {
+    Singleton,
+}
+
+pub struct TypeDfnBuilder {
+    loc: Loc,
+    symbol: TSymbol,
+}
+
+impl TypeDfnBuilder {
+    pub const fn new(loc: Loc, symbol: TSymbol) -> Self {
+        TypeDfnBuilder { loc, symbol }
+    }
+
+    fn build(self, dfn: TypeDfn) -> TypeDefinition {
+        TypeDefinition {
+            loc: self.loc,
+            symbol: self.symbol,
+            dfn,
+        }
+    }
+
+    pub fn singleton(self) -> TypeDefinition {
+        self.build(TypeDfn::Singleton)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum ModuleItem {
     Expression(Expression),
+    TypeDefinition(TypeDefinition),
 }
 
 #[derive(Debug, PartialEq, Eq)]

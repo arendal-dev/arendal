@@ -7,7 +7,9 @@ pub enum Enclosure {
     Curly,
 }
 
-use crate::ast::{BinaryOp, ExprBuilder, Expression, Module, ModuleItem};
+use crate::ast::{
+    BinaryOp, ExprBuilder, Expression, Module, ModuleItem, TypeDefinition, TypeDfnBuilder,
+};
 use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::{Symbol, TSymbol};
@@ -23,6 +25,7 @@ pub fn parse(input: &str) -> Result<Module> {
 
 type PResult<T> = Result<(T, Parser)>;
 type EResult = PResult<Expression>;
+type TResult = PResult<TypeDefinition>;
 
 #[derive(Clone)]
 struct Parser {
@@ -55,6 +58,10 @@ impl Parser {
     // Returns the lexeme at the current index, if any
     fn peek(&self) -> Option<&Lexeme> {
         self.input.get(self.index)
+    }
+
+    fn peek_kind(&self) -> Option<&LexemeKind> {
+        self.peek().map(|l| &l.kind)
     }
 
     // Returns the lexeme at the current index, if its kind equals the provided one.
@@ -120,17 +127,35 @@ impl Parser {
         }
     }
 
+    fn item_if_eoi(&self, item: ModuleItem) -> PResult<ModuleItem> {
+        if self.is_eoi() {
+            self.ok(item)
+        } else {
+            self.err(Error::EndOfItemExpected)
+        }
+    }
+
     fn builder(&self) -> ExprBuilder {
         ExprBuilder::new(self.loc())
     }
 
     fn rule_moduleitem(&self) -> PResult<ModuleItem> {
-        let (expr, parser) = self.rule_expression()?;
-        if self.is_eoi() {
-            parser.ok(ModuleItem::Expression(expr))
+        if self.is_keyword(Keyword::Type) {
+            let (dfn, parser) = self.advance().rule_typedef()?;
+            parser.item_if_eoi(ModuleItem::TypeDefinition(dfn))
         } else {
-            parser.err(Error::EndOfItemExpected)
+            let (expr, parser) = self.rule_expression()?;
+            parser.item_if_eoi(ModuleItem::Expression(expr))
         }
+    }
+
+    fn rule_typedef(&self) -> TResult {
+        let symbol = match self.peek_kind() {
+            Some(LexemeKind::TSymbol(symbol)) => Ok(symbol.clone()),
+            _ => self.err(Error::TSymbolAfterTypeExpected),
+        }?;
+        self.advance()
+            .ok(TypeDfnBuilder::new(self.loc(), symbol).singleton())
     }
 
     fn rule_expression(&self) -> EResult {
@@ -155,7 +180,7 @@ impl Parser {
 
     fn get_lvalue(&self) -> PResult<Symbol> {
         if let Some(lexeme) = self.peek() {
-            if let LexemeKind::Id(id) = &lexeme.kind {
+            if let LexemeKind::Symbol(id) = &lexeme.kind {
                 return self.advance().ok(id.clone());
             }
         }
@@ -244,8 +269,8 @@ impl Parser {
         if let Some(lexeme) = self.peek() {
             match &lexeme.kind {
                 LexemeKind::Integer(n) => self.advance().ok(self.builder().lit_integer(n.clone())),
-                LexemeKind::TypeId(id) => self.advance().ok(self.builder().tsymbol(id.clone())),
-                LexemeKind::Id(id) => self.advance().ok(self.builder().symbol(id.clone())),
+                LexemeKind::TSymbol(id) => self.advance().ok(self.builder().tsymbol(id.clone())),
+                LexemeKind::Symbol(id) => self.advance().ok(self.builder().symbol(id.clone())),
                 LexemeKind::Open(Enclosure::Parens) => {
                     let (expr, next) = self.advance().rule_subexpr()?;
                     if !next.kind_equals(LexemeKind::Close(Enclosure::Parens)) {

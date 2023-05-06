@@ -8,6 +8,7 @@ pub enum Keyword {
     If,
     Then,
     Else,
+    Type,
 }
 
 static KEYWORDS: phf::Map<&'static str, Keyword> = phf_map! {
@@ -16,6 +17,7 @@ static KEYWORDS: phf::Map<&'static str, Keyword> = phf_map! {
     "if" => Keyword::If,
     "then" => Keyword::Then,
     "else" => Keyword::Else,
+    "type" => Keyword::Type,
 };
 
 impl Keyword {
@@ -30,6 +32,7 @@ impl Keyword {
             Self::If => "if",
             Self::Then => "then",
             Self::Else => "else",
+            Self::Type => "type",
         }
     }
 }
