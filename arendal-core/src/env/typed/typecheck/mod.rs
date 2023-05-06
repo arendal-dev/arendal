@@ -4,11 +4,10 @@ use crate::ast::{self, BinaryOp};
 use crate::error::{Error, Loc, Result};
 use crate::symbol::{FQType, Path, Pkg, Symbol, TSymbol};
 use crate::types::Type;
-use crate::value::Value;
 
 use crate::env::Env;
 
-use super::{ExprBuilder, Expression, Expressions, Module};
+use super::{ExprBuilder, Expression, Expressions, Module, Value};
 
 type Scope = HashMap<Symbol, Type>;
 

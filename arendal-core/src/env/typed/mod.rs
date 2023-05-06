@@ -5,13 +5,12 @@ use crate::ast::UnaryOp;
 use crate::error::{Error, Loc, Result};
 use crate::symbol::{Path, Symbol};
 use crate::types::Type;
-use crate::value::Value;
 use crate::Integer;
 use std::fmt;
 use std::slice::Iter;
 use std::sync::Arc;
 
-use super::Env;
+use super::{Env, Value};
 
 pub(super) fn run(env: &mut Env, path: &Path, input: &str) -> Result<Value> {
     let parsed = crate::ast::parser::parse(input)?;

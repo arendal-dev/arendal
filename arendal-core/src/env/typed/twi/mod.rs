@@ -1,12 +1,9 @@
-use super::{Expr, Expression, Expressions, Module, TwoInts};
+use super::{Env, Expr, Expression, Expressions, Module, TwoInts, Value};
 use crate::error::{Error, Loc, Result};
 use crate::symbol::Symbol;
-use crate::value::Value;
 use crate::visibility::Visibility;
 use crate::Integer;
 use std::collections::HashMap;
-
-use crate::env::Env;
 
 type Scope = HashMap<Symbol, Value>;
 

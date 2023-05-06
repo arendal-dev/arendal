@@ -1,4 +1,4 @@
-use core::{error::Loc, value::Value};
+use core::{env::Value, error::Loc};
 
 fn eval_ok(input: &str, result: Value) {
     if let Ok(v) = super::REPL::new().eval(input) {
