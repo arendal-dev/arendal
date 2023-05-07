@@ -259,6 +259,36 @@ impl ExprBuilder {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeDefinition {
+    pub loc: Loc,
+    pub tipo: Type,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct TypeDefinitions {
+    types: Vec<TypeDefinition>,
+}
+
+impl TypeDefinitions {
+    pub fn new(types: Vec<TypeDefinition>) -> Self {
+        Self { types }
+    }
+
+    pub fn iter(&self) -> Iter<'_, TypeDefinition> {
+        self.types.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a TypeDefinitions {
+    type Item = &'a TypeDefinition;
+    type IntoIter = Iter<'a, TypeDefinition>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Expressions {
     expressions: Vec<Expression>,
 }
@@ -293,5 +323,6 @@ impl<'a> IntoIterator for &'a Expressions {
 #[derive(Debug)]
 pub(super) struct Module {
     path: Path,
+    types: TypeDefinitions,
     expressions: Expressions,
 }

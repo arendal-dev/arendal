@@ -116,15 +116,13 @@ impl Types {
         self.types.get(symbol)
     }
 
-    pub fn singleton(&mut self, loc: &Loc, visibility: Visibility, symbol: FQType) -> Result<Type> {
+    pub fn singleton(&self, loc: &Loc, symbol: FQType) -> Result<Type> {
         if self.types.contains_key(&symbol) {
             loc.err(Error::DuplicateType(symbol))
         } else {
             let tipo = Type::Singleton(Singleton {
                 symbol: symbol.clone(),
             });
-            self.types
-                .insert(symbol, Visible::new(visibility, tipo.clone()));
             Ok(tipo)
         }
     }

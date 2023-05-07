@@ -3,11 +3,12 @@ use im::HashMap;
 use crate::ast::{self, BinaryOp};
 use crate::error::{Error, Loc, Result};
 use crate::symbol::{FQType, Path, Pkg, Symbol, TSymbol};
-use crate::types::Type;
+use crate::types::{Type, Types};
 
 use crate::env::Env;
+use crate::visibility::Visibility;
 
-use super::{ExprBuilder, Expression, Expressions, Module, Value};
+use super::{ExprBuilder, Expression, Expressions, Module, TypeDefinition, TypeDefinitions, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
@@ -16,9 +17,34 @@ pub(super) fn check(env: &Env, path: &Path, input: &ast::Module) -> Result<Modul
         env,
         path,
         scopes: vec![Scope::default()],
-        types: HashMap::default(),
+        types: LocalTypes::default(),
     }
     .module(input)
+}
+
+#[derive(Debug, Default)]
+struct LocalTypes {
+    types: HashMap<TSymbol, Type>,
+}
+
+impl LocalTypes {
+    fn get(&self, symbol: &TSymbol) -> Option<&Type> {
+        self.types.get(symbol)
+    }
+
+    fn check_available(&self, dfn: &ast::TypeDefinition) -> Result<()> {
+        if self.types.contains_key(&dfn.symbol) {
+            dfn.loc.err(Error::DuplicateLocalType(dfn.symbol.clone()))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn insert_complete(&mut self, dfn: &ast::TypeDefinition, tipo: Type) -> Result<()> {
+        self.check_available(dfn)?;
+        self.types.insert(dfn.symbol.clone(), tipo);
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -26,29 +52,48 @@ struct TypeChecker<'a> {
     env: &'a Env,
     path: &'a Path,
     scopes: Vec<Scope>,
-    types: HashMap<TSymbol, Type>,
+    types: LocalTypes,
 }
 
 impl<'a> TypeChecker<'a> {
     fn module(&mut self, input: &ast::Module) -> Result<Module> {
-        let mut expressions: Vec<Expression> = Vec::default();
-        for item in input {
-            match item {
-                ast::ModuleItem::Expression(e) => {
-                    let checked = ExprChecker {
-                        checker: self,
-                        input: e,
-                    }
-                    .check()?;
-                    expressions.push(checked);
-                }
-                _ => todo!(),
-            }
-        }
         Ok(Module {
             path: self.path.clone(),
-            expressions: Expressions::new(expressions),
+            types: self.check_types(input)?,
+            expressions: self.check_expressions(input)?,
         })
+    }
+
+    fn check_types(&mut self, input: &ast::Module) -> Result<TypeDefinitions> {
+        let mut types: Vec<TypeDefinition> = Vec::default();
+        for item in input {
+            if let ast::ModuleItem::TypeDefinition(t) = item {
+                match t.dfn {
+                    ast::TypeDfn::Singleton => self.types.insert_complete(
+                        t,
+                        self.env
+                            .types
+                            .singleton(&t.loc, self.path.fq_type(t.symbol.clone()))?,
+                    )?,
+                }
+            }
+        }
+        Ok(TypeDefinitions::new(types))
+    }
+
+    fn check_expressions(&mut self, input: &ast::Module) -> Result<Expressions> {
+        let mut expressions: Vec<Expression> = Vec::default();
+        for item in input {
+            if let ast::ModuleItem::Expression(e) = item {
+                let checked = ExprChecker {
+                    checker: self,
+                    input: e,
+                }
+                .check()?;
+                expressions.push(checked);
+            }
+        }
+        Ok(Expressions::new(expressions))
     }
 
     fn set_val(&mut self, loc: Loc, symbol: Symbol, tipo: Type) -> Result<()> {
