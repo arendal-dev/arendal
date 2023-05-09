@@ -5,6 +5,8 @@ use std::fmt;
 use std::fmt::Debug;
 use std::slice::Iter;
 
+use im::HashMap;
+
 use super::Integer;
 use crate::error::Loc;
 use crate::symbol::{Symbol, TSymbol};
@@ -210,6 +212,38 @@ impl Module {
 impl<'a> IntoIterator for &'a Module {
     type Item = &'a ModuleItem;
     type IntoIter = Iter<'a, ModuleItem>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+pub type Path = Vec<Symbol>;
+
+#[derive(Debug)]
+pub struct Package {
+    modules: HashMap<Path, Module>,
+}
+
+impl Package {
+    fn new() -> Self {
+        Package {
+            modules: Default::default(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.modules.is_empty()
+    }
+
+    pub fn iter(&self) -> im::hashmap::Iter<'_, Path, Module> {
+        self.modules.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Package {
+    type Item = (&'a Path, &'a Module);
+    type IntoIter = im::hashmap::Iter<'a, Path, Module>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
