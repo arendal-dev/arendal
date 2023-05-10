@@ -67,16 +67,14 @@ impl<'a> TypeChecker<'a> {
 
     fn check_types(&mut self, input: &ast::Module) -> Result<TypeDefinitions> {
         let mut types: Vec<TypeDefinition> = Vec::default();
-        for item in input {
-            if let ast::ModuleItem::TypeDefinition(t) = item {
-                match t.dfn {
-                    ast::TypeDfn::Singleton => self.types.insert_complete(
-                        t,
-                        self.env
-                            .types
-                            .singleton(&t.loc, self.path.fq_type(t.symbol.clone()))?,
-                    )?,
-                }
+        for t in &input.types {
+            match t.dfn {
+                ast::TypeDfn::Singleton => self.types.insert_complete(
+                    t,
+                    self.env
+                        .types
+                        .singleton(&t.loc, self.path.fq_type(t.symbol.clone()))?,
+                )?,
             }
         }
         Ok(TypeDefinitions::new(types))
@@ -84,10 +82,8 @@ impl<'a> TypeChecker<'a> {
 
     fn check_expressions(&mut self, input: &ast::Module) -> Result<Expressions> {
         let mut expressions: Vec<Expression> = Vec::default();
-        for item in input {
-            if let ast::ModuleItem::Expression(e) = item {
-                expressions.push(expr::check(self, e)?);
-            }
+        for e in &input.expressions {
+            expressions.push(expr::check(self, e)?);
         }
         Ok(Expressions::new(expressions))
     }

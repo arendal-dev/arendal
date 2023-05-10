@@ -3,7 +3,6 @@ pub mod parser;
 use std::cmp::{Eq, PartialEq};
 use std::fmt;
 use std::fmt::Debug;
-use std::slice::Iter;
 
 use im::HashMap;
 
@@ -194,27 +193,19 @@ pub enum ModuleItem {
     TypeDefinition(TypeDefinition),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Module {
-    items: Vec<ModuleItem>,
+    pub(crate) types: Vec<TypeDefinition>,
+    pub(crate) expressions: Vec<Expression>,
 }
 
 impl Module {
-    pub fn new(items: Vec<ModuleItem>) -> Self {
-        Self { items }
+    fn add_type(&mut self, tipo: TypeDefinition) {
+        self.types.push(tipo)
     }
 
-    pub fn iter(&self) -> Iter<'_, ModuleItem> {
-        self.items.iter()
-    }
-}
-
-impl<'a> IntoIterator for &'a Module {
-    type Item = &'a ModuleItem;
-    type IntoIter = Iter<'a, ModuleItem>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+    fn add_expression(&mut self, expr: Expression) {
+        self.expressions.push(expr)
     }
 }
 

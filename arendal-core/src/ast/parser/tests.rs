@@ -16,15 +16,15 @@ fn check_module(input: &str, expected: Module) {
 }
 
 fn check_expression(input: &str, expected: Expression) {
-    check_module(input, Module::new(vec![ModuleItem::Expression(expected)]))
+    let mut module = Module::default();
+    module.add_expression(expected);
+    check_module(input, module)
 }
 
 fn check_expressions(input: &str, expected: Vec<Expression>) {
-    let items = expected
-        .into_iter()
-        .map(|e| ModuleItem::Expression(e))
-        .collect();
-    check_module(input, Module::new(items))
+    let mut module = Module::default();
+    module.expressions = expected;
+    check_module(input, module)
 }
 
 fn expect_error(input: &str, expected: &Error) {
@@ -104,10 +104,9 @@ fn or(expr1: Expression, expr2: Expression) -> Expression {
 }
 
 fn check_type(input: &str, expected: TypeDefinition) {
-    check_module(
-        input,
-        Module::new(vec![ModuleItem::TypeDefinition(expected)]),
-    )
+    let mut module = Module::default();
+    module.add_type(expected);
+    check_module(input, module)
 }
 
 fn singleton(symbol: &str) -> TypeDefinition {

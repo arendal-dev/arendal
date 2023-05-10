@@ -7,9 +7,7 @@ pub enum Enclosure {
     Curly,
 }
 
-use crate::ast::{
-    BinaryOp, ExprBuilder, Expression, Module, ModuleItem, TypeDefinition, TypeDfnBuilder,
-};
+use crate::ast::{BinaryOp, ExprBuilder, Expression, Module, TypeDefinition, TypeDfnBuilder};
 use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::{Symbol, TSymbol};
@@ -87,14 +85,12 @@ impl Parser {
     }
 
     fn parse(self) -> Result<Module> {
-        let mut items = Vec::default();
+        let mut module = Module::default();
         let mut parser = self;
         while !parser.is_done() {
-            let item: ModuleItem;
-            (item, parser) = parser.rule_moduleitem()?;
-            items.push(item)
+            (_, parser) = parser.rule_moduleitem(&mut module)?;
         }
-        Ok(Module::new(items))
+        Ok(module)
     }
 
     fn ok<T>(&self, value: T) -> PResult<T> {
@@ -127,9 +123,12 @@ impl Parser {
         }
     }
 
-    fn item_if_eoi(&self, item: ModuleItem) -> PResult<ModuleItem> {
+    fn expect_eoi<O>(&self, o: O) -> PResult<()>
+    where
+        O: FnOnce() -> (),
+    {
         if self.is_eoi() {
-            self.ok(item)
+            self.ok(o())
         } else {
             self.err(Error::EndOfItemExpected)
         }
@@ -139,13 +138,13 @@ impl Parser {
         ExprBuilder::new(self.loc())
     }
 
-    fn rule_moduleitem(&self) -> PResult<ModuleItem> {
+    fn rule_moduleitem(&self, module: &mut Module) -> PResult<()> {
         if self.is_keyword(Keyword::Type) {
             let (dfn, parser) = self.advance().rule_typedef()?;
-            parser.item_if_eoi(ModuleItem::TypeDefinition(dfn))
+            parser.expect_eoi(|| module.add_type(dfn))
         } else {
             let (expr, parser) = self.rule_expression()?;
-            parser.item_if_eoi(ModuleItem::Expression(expr))
+            parser.expect_eoi(|| module.add_expression(expr))
         }
     }
 
