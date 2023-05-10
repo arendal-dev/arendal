@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOp, Module, ModuleItem, TypeDefinition, TypeDfnBuilder};
+use crate::ast::{BinaryOp, Module, TypeDefinition, TypeDfnBuilder};
 use crate::ast::{ExprBuilder, Expression};
 use crate::error::Loc;
 use crate::symbol::{Symbol, TSymbol};
@@ -40,11 +40,11 @@ fn expect_error(input: &str, expected: &Error) {
 }
 
 fn sym(symbol: &str) -> Symbol {
-    Symbol::new(&Loc::none(), symbol.into()).unwrap()
+    Symbol::new(&Loc::None, symbol.into()).unwrap()
 }
 
 fn tsym(symbol: &str) -> TSymbol {
-    TSymbol::new(&Loc::none(), symbol.into()).unwrap()
+    TSymbol::new(&Loc::None, symbol.into()).unwrap()
 }
 
 fn x() -> Symbol {
@@ -110,7 +110,7 @@ fn check_type(input: &str, expected: TypeDefinition) {
 }
 
 fn singleton(symbol: &str) -> TypeDefinition {
-    TypeDfnBuilder::new(Loc::none(), tsym(symbol)).singleton()
+    TypeDfnBuilder::new(Loc::None, tsym(symbol)).singleton()
 }
 
 #[test]

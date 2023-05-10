@@ -9,19 +9,19 @@ fn eval_ok(input: &str, result: Value) {
 }
 
 fn v_none() -> Value {
-    Value::v_none(&Loc::none())
+    Value::v_none(&Loc::None)
 }
 
 fn v_true() -> Value {
-    Value::v_true(&Loc::none())
+    Value::v_true(&Loc::None)
 }
 
 fn v_false() -> Value {
-    Value::v_true(&Loc::none())
+    Value::v_true(&Loc::None)
 }
 
 fn v_i64(value: i64) -> Value {
-    Value::integer(&Loc::none(), value.into())
+    Value::integer(&Loc::None, value.into())
 }
 
 fn eval_i64(input: &str, result: i64) {

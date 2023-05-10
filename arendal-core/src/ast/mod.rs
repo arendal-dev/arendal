@@ -92,7 +92,7 @@ impl ExprBuilder {
     }
 
     pub const fn none() -> Self {
-        Self::new(Loc::none())
+        Self::new(Loc::None)
     }
 
     fn build(&self, expr: Expr) -> Expression {

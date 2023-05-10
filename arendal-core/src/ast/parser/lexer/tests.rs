@@ -62,14 +62,14 @@ impl TestCase {
     fn id(self, separator: Separator, name: &str) -> Self {
         self.token(
             separator,
-            LexemeKind::Symbol(Symbol::new(&Loc::none(), name.into()).unwrap()),
+            LexemeKind::Symbol(Symbol::new(&Loc::None, name.into()).unwrap()),
         )
     }
 
     fn type_id(self, separator: Separator, name: &str) -> Self {
         self.token(
             separator,
-            LexemeKind::TSymbol(TSymbol::new(&Loc::none(), name.into()).unwrap()),
+            LexemeKind::TSymbol(TSymbol::new(&Loc::None, name.into()).unwrap()),
         )
     }
 

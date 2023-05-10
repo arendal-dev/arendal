@@ -55,11 +55,11 @@ impl<'a> Interpreter<'a> {
     }
 
     fn run(mut self) -> Result<Value> {
-        self.expressions(&Loc::none(), &self.module.expressions)
+        self.expressions(&Loc::None, &self.module.expressions)
     }
 
     fn expressions(&mut self, loc: &Loc, exprs: &Vec<Expression>) -> Result<Value> {
-        let mut value = Value::v_none(&Loc::none());
+        let mut value = Value::v_none(&Loc::None);
         for e in exprs {
             value = self.expression(e)?;
         }

@@ -8,22 +8,21 @@ use crate::{
 use super::ArcStr;
 use std::{fmt, sync::Arc};
 
+#[derive(Debug)]
+pub struct Input {
+    input: ArcStr,
+    pos: usize,
+}
+
 #[derive(Debug, Clone)]
-pub struct Loc {
-    _inner: Inner,
+pub enum Loc {
+    None,
+    Input(Arc<Input>),
 }
 
 impl Loc {
     pub fn input(input: ArcStr, pos: usize) -> Self {
-        Loc {
-            _inner: Inner::Input(input, pos),
-        }
-    }
-
-    pub const fn none() -> Self {
-        Loc {
-            _inner: Inner::None,
-        }
+        Loc::Input(Arc::new(Input { input, pos }))
     }
 
     fn fmt(&self, f: &mut fmt::Formatter<'_>, error: &Error) -> fmt::Result {
