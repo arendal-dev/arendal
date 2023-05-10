@@ -1,4 +1,4 @@
-use super::{Env, Expr, Expression, Expressions, Module, TwoInts, Value};
+use super::{Env, Expr, Expression, Module, TwoInts, Value};
 use crate::error::{Error, Loc, Result};
 use crate::symbol::Symbol;
 use crate::visibility::Visibility;
@@ -58,7 +58,7 @@ impl<'a> Interpreter<'a> {
         self.expressions(&Loc::none(), &self.module.expressions)
     }
 
-    fn expressions(&mut self, loc: &Loc, exprs: &Expressions) -> Result<Value> {
+    fn expressions(&mut self, loc: &Loc, exprs: &Vec<Expression>) -> Result<Value> {
         let mut value = Value::v_none(&Loc::none());
         for e in exprs {
             value = self.expression(e)?;

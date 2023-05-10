@@ -9,7 +9,7 @@ use crate::types::Type;
 
 use crate::env::Env;
 
-use super::{ExprBuilder, Expression, Expressions, Module, TypeDefinition, TypeDefinitions, Value};
+use super::{ExprBuilder, Expression, Module, TypeDefinition, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
@@ -65,7 +65,7 @@ impl<'a> TypeChecker<'a> {
         })
     }
 
-    fn check_types(&mut self, input: &ast::Module) -> Result<TypeDefinitions> {
+    fn check_types(&mut self, input: &ast::Module) -> Result<Vec<TypeDefinition>> {
         let mut types: Vec<TypeDefinition> = Vec::default();
         for t in &input.types {
             match t.dfn {
@@ -77,15 +77,15 @@ impl<'a> TypeChecker<'a> {
                 )?,
             }
         }
-        Ok(TypeDefinitions::new(types))
+        Ok(types)
     }
 
-    fn check_expressions(&mut self, input: &ast::Module) -> Result<Expressions> {
+    fn check_expressions(&mut self, input: &ast::Module) -> Result<Vec<Expression>> {
         let mut expressions: Vec<Expression> = Vec::default();
         for e in &input.expressions {
             expressions.push(expr::check(self, e)?);
         }
-        Ok(Expressions::new(expressions))
+        Ok(expressions)
     }
 
     fn set_val(&mut self, loc: Loc, symbol: Symbol, tipo: Type) -> Result<()> {
