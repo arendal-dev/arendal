@@ -7,15 +7,18 @@ use crate::symbol::{Path, Symbol};
 use crate::types::Type;
 use crate::Integer;
 use std::fmt;
-use std::slice::Iter;
 use std::sync::Arc;
 
 use super::{Env, Value};
 
 pub(super) fn run(env: &mut Env, path: &Path, input: &str) -> Result<Value> {
-    let parsed = crate::ast::parser::parse(input)?;
-    let checked = typecheck::check(&env, &path, &parsed)?;
-    twi::interpret(env, &checked)
+    let package = crate::ast::parser::parse(input)?;
+    if let Some(module) = package.modules.get(path) {
+        let checked = typecheck::check(&env, &path, &module)?;
+        twi::interpret(env, &checked)
+    } else {
+        Ok(Value::v_none(&Loc::None))
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]

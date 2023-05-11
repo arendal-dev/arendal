@@ -8,7 +8,7 @@ use im::HashMap;
 
 use super::Integer;
 use crate::error::Loc;
-use crate::symbol::{Symbol, TSymbol};
+use crate::symbol::{Path, Symbol, TSymbol};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -32,7 +32,7 @@ pub enum BinaryOp {
     Or,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Expression {
     pub loc: Loc,
     pub expr: Expr,
@@ -44,33 +44,33 @@ impl fmt::Debug for Expression {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
     pub expr: Expression,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BinaryExpr {
     pub op: BinaryOp,
     pub expr1: Expression,
     pub expr2: Expression,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Conditional {
     pub expr: Expression,
     pub then: Expression,
     pub otherwise: Expression,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssignmentExpr {
     pub symbol: Symbol,
     pub expr: Expression,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     LitInteger(Integer),
     Symbol(Symbol),
@@ -152,14 +152,14 @@ impl ExprBuilder {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeDefinition {
     pub loc: Loc,
     pub symbol: TSymbol,
     pub dfn: TypeDfn,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeDfn {
     Singleton,
 }
@@ -193,7 +193,7 @@ pub enum ModuleItem {
     TypeDefinition(TypeDefinition),
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Module {
     pub(crate) types: Vec<TypeDefinition>,
     pub(crate) expressions: Vec<Expression>,
@@ -209,34 +209,13 @@ impl Module {
     }
 }
 
-pub type Path = Vec<Symbol>;
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Package {
-    modules: HashMap<Path, Module>,
+    pub(crate) modules: HashMap<Path, Module>,
 }
 
 impl Package {
-    fn new() -> Self {
-        Package {
-            modules: Default::default(),
-        }
-    }
-
     pub fn is_empty(&self) -> bool {
         self.modules.is_empty()
-    }
-
-    pub fn iter(&self) -> im::hashmap::Iter<'_, Path, Module> {
-        self.modules.iter()
-    }
-}
-
-impl<'a> IntoIterator for &'a Package {
-    type Item = (&'a Path, &'a Module);
-    type IntoIter = im::hashmap::Iter<'a, Path, Module>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
     }
 }

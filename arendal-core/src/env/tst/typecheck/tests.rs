@@ -7,7 +7,7 @@ fn check_module(input: &str) -> Result<Module> {
     let parsed = crate::ast::parser::parse(input)?;
     let env = Env::default();
     let path = Pkg::Local.empty();
-    super::check(&env, &path, &parsed)
+    super::check(&env, &path, parsed.modules.get(&path).unwrap())
 }
 
 fn error(input: &str, error: &Error) {

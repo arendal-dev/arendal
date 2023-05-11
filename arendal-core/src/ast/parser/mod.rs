@@ -7,16 +7,23 @@ pub enum Enclosure {
     Curly,
 }
 
-use crate::ast::{BinaryOp, ExprBuilder, Expression, Module, TypeDefinition, TypeDfnBuilder};
+use super::{BinaryOp, ExprBuilder, Expression, Module, Package, TypeDefinition, TypeDfnBuilder};
 use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
-use crate::symbol::{Symbol, TSymbol};
+use crate::symbol::{Pkg, Symbol, TSymbol};
 use std::rc::Rc;
 
 use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
 
-// Parses the input as a module
-pub fn parse(input: &str) -> Result<Module> {
+// Parses the input as a package
+pub fn parse(input: &str) -> Result<Package> {
+    let module = parse_module(input)?;
+    let mut package = Package::default();
+    package.modules.insert(Pkg::Local.empty(), module);
+    Ok(package)
+}
+
+fn parse_module(input: &str) -> Result<Module> {
     let lexemes = lex(input)?;
     Parser::new(lexemes).parse()
 }
