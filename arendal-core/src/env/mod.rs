@@ -159,13 +159,9 @@ struct Types {
 
 impl Default for Types {
     fn default() -> Self {
-        let mut types = TypeMap::default();
-        types.insert(FQType::None, Visible::exported(Type::None));
-        types.insert(FQType::True, Visible::exported(Type::True));
-        types.insert(FQType::False, Visible::exported(Type::False));
-        types.insert(FQType::Boolean, Visible::exported(Type::Boolean));
-        types.insert(FQType::Integer, Visible::exported(Type::Integer));
-        Types { types }
+        Types {
+            types: prelude::load_types(),
+        }
     }
 }
 

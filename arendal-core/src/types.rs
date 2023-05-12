@@ -1,11 +1,8 @@
 use std::fmt;
 use std::sync::Arc;
 
-use im::HashMap;
-
 use crate::error::{Error, Loc, Result};
 use crate::symbol::FQType;
-use crate::visibility::{Visibility, Visible};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Singleton {
