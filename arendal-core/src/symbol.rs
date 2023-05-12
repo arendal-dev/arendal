@@ -179,7 +179,7 @@ impl fmt::Debug for Pkg {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Path {
-    pkg: Pkg,
+    pub pkg: Pkg,
     path: Arc<Vec<Symbol>>,
 }
 

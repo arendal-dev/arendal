@@ -186,21 +186,6 @@ struct Env {
     values: Values,
 }
 
-#[derive(Debug)]
-struct Package {
-    id: Pkg,
-    env: Env,
-}
-
-impl Default for Package {
-    fn default() -> Self {
-        Self {
-            id: Pkg::Local,
-            env: Default::default(),
-        }
-    }
-}
-
 pub struct Interactive {
     env: Env,
     path: Path,

@@ -3,7 +3,7 @@ mod typecheck;
 
 use crate::ast::UnaryOp;
 use crate::error::{Error, Loc, Result};
-use crate::symbol::{Path, Symbol};
+use crate::symbol::{Path, Pkg, Symbol};
 use crate::types::Type;
 use crate::Integer;
 use std::fmt;
@@ -274,8 +274,8 @@ pub struct TypeDefinition {
 }
 
 #[derive(Debug)]
-pub(super) struct Module {
-    path: Path,
+pub(super) struct Package {
+    pkg: Pkg,
     types: Vec<TypeDefinition>,
     expressions: Vec<Expression>,
 }

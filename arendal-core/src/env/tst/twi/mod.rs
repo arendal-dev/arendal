@@ -1,16 +1,17 @@
-use super::{Env, Expr, Expression, Module, TwoInts, Value};
+use super::{Env, Expr, Expression, Package, TwoInts, Value};
 use crate::error::{Error, Loc, Result};
-use crate::symbol::Symbol;
+use crate::symbol::{Path, Symbol};
 use crate::visibility::Visibility;
 use crate::Integer;
 use std::collections::HashMap;
 
 type Scope = HashMap<Symbol, Value>;
 
-pub(super) fn interpret(env: &mut Env, module: &Module) -> Result<Value> {
+pub(super) fn interpret(env: &mut Env, package: &Package) -> Result<Value> {
     Interpreter {
         env,
-        module,
+        package: package,
+        path: package.pkg.empty(),
         scopes: Default::default(),
     }
     .run()
@@ -19,7 +20,8 @@ pub(super) fn interpret(env: &mut Env, module: &Module) -> Result<Value> {
 #[derive(Debug)]
 struct Interpreter<'a> {
     env: &'a mut Env,
-    module: &'a Module,
+    package: &'a Package,
+    path: Path,
     scopes: Vec<Scope>,
 }
 
@@ -31,7 +33,7 @@ impl<'a> Interpreter<'a> {
         } else {
             self.env
                 .values
-                .set(self.module.path.fq_sym(symbol), Visibility::Module, value)
+                .set(self.path.fq_sym(symbol), Visibility::Module, value)
         }
     }
 
@@ -44,18 +46,14 @@ impl<'a> Interpreter<'a> {
             }
             i = i - 1;
         }
-        if let Some(vv) = self
-            .env
-            .values
-            .get(&self.module.path.fq_sym(symbol.clone()))
-        {
+        if let Some(vv) = self.env.values.get(&self.path.fq_sym(symbol.clone())) {
             return Some(vv.unwrap());
         }
         None
     }
 
     fn run(mut self) -> Result<Value> {
-        self.expressions(&Loc::None, &self.module.expressions)
+        self.expressions(&Loc::None, &self.package.expressions)
     }
 
     fn expressions(&mut self, loc: &Loc, exprs: &Vec<Expression>) -> Result<Value> {

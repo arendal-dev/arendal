@@ -9,11 +9,11 @@ use crate::types::Type;
 
 use crate::env::Env;
 
-use super::{ExprBuilder, Expression, Module, TypeDefinition, Value};
+use super::{ExprBuilder, Expression, Package, TypeDefinition, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
-pub(super) fn check(env: &Env, path: &Path, input: &ast::Module) -> Result<Module> {
+pub(super) fn check(env: &Env, path: &Path, input: &ast::Module) -> Result<Package> {
     TypeChecker {
         env,
         path,
@@ -57,9 +57,9 @@ struct TypeChecker<'a> {
 }
 
 impl<'a> TypeChecker<'a> {
-    fn module(&mut self, input: &ast::Module) -> Result<Module> {
-        Ok(Module {
-            path: self.path.clone(),
+    fn module(&mut self, input: &ast::Module) -> Result<Package> {
+        Ok(Package {
+            pkg: self.path.pkg.clone(),
             types: self.check_types(input)?,
             expressions: self.check_expressions(input)?,
         })
