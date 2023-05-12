@@ -5,8 +5,8 @@ use im::HashMap;
 
 use crate::{
     error::{Error, Loc, Result},
-    symbol::{FQSym, Path, Pkg},
-    types::{Type, Types},
+    symbol::{FQSym, FQType, Path, Pkg},
+    types::Type,
     visibility::{Visibility, Visible},
     Integer,
 };
@@ -146,6 +146,40 @@ impl Values {
         } else {
             self.values.insert(symbol, Visible::new(visibility, value));
             Ok(())
+        }
+    }
+}
+
+type TypeMap = HashMap<FQType, Visible<Type>>;
+
+#[derive(Debug, Clone)]
+struct Types {
+    types: TypeMap,
+}
+
+impl Default for Types {
+    fn default() -> Self {
+        let mut types = TypeMap::default();
+        types.insert(FQType::None, Visible::exported(Type::None));
+        types.insert(FQType::True, Visible::exported(Type::True));
+        types.insert(FQType::False, Visible::exported(Type::False));
+        types.insert(FQType::Boolean, Visible::exported(Type::Boolean));
+        types.insert(FQType::Integer, Visible::exported(Type::Integer));
+        Types { types }
+    }
+}
+
+impl Types {
+    pub(crate) fn get(&self, symbol: &FQType) -> Option<&Visible<Type>> {
+        self.types.get(symbol)
+    }
+
+    // temporary
+    pub fn singleton(&self, loc: &Loc, symbol: FQType) -> Result<Type> {
+        if self.types.contains_key(&symbol) {
+            loc.err(Error::DuplicateType(symbol))
+        } else {
+            Type::singleton(loc, symbol)
         }
     }
 }

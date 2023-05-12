@@ -71,6 +71,17 @@ impl Type {
             _ => false,
         }
     }
+
+    pub fn singleton(loc: &Loc, symbol: FQType) -> Result<Type> {
+        if symbol.is_known() {
+            loc.err(Error::DuplicateType(symbol))
+        } else {
+            let tipo = Type::Singleton(Singleton {
+                symbol: symbol.clone(),
+            });
+            Ok(tipo)
+        }
+    }
 }
 
 impl fmt::Display for Type {
@@ -82,39 +93,5 @@ impl fmt::Display for Type {
 impl fmt::Debug for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self, f)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct Types {
-    types: HashMap<FQType, Visible<Type>>,
-}
-
-impl Default for Types {
-    fn default() -> Self {
-        let mut types: HashMap<FQType, Visible<Type>> = Default::default();
-        types.insert(FQType::None, Visible::exported(Type::None));
-        types.insert(FQType::True, Visible::exported(Type::True));
-        types.insert(FQType::False, Visible::exported(Type::False));
-        types.insert(FQType::Boolean, Visible::exported(Type::Boolean));
-        types.insert(FQType::Integer, Visible::exported(Type::Integer));
-        Types { types }
-    }
-}
-
-impl Types {
-    pub(crate) fn get(&self, symbol: &FQType) -> Option<&Visible<Type>> {
-        self.types.get(symbol)
-    }
-
-    pub fn singleton(&self, loc: &Loc, symbol: FQType) -> Result<Type> {
-        if self.types.contains_key(&symbol) {
-            loc.err(Error::DuplicateType(symbol))
-        } else {
-            let tipo = Type::Singleton(Singleton {
-                symbol: symbol.clone(),
-            });
-            Ok(tipo)
-        }
     }
 }
