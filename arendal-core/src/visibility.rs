@@ -16,6 +16,18 @@ impl<T> Visible<T> {
         Visible { visibility, it }
     }
 
+    pub fn module(it: T) -> Self {
+        Self::new(Visibility::Module, it)
+    }
+
+    pub fn package(it: T) -> Self {
+        Self::new(Visibility::Package, it)
+    }
+
+    pub fn exported(it: T) -> Self {
+        Self::new(Visibility::Exported, it)
+    }
+
     pub fn unwrap(self) -> T {
         self.it
     }
