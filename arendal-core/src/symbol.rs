@@ -144,20 +144,15 @@ pub enum Pkg {
 }
 
 impl Pkg {
-    pub fn empty(&self) -> Path {
-        Path::new(self.clone(), Vec::default())
-    }
-
-    pub fn single(&self, symbol: Symbol) -> Path {
-        Path::new(self.clone(), vec![symbol])
-    }
-
-    pub fn path(&self, mut symbols: Vec<Symbol>) -> Path {
-        match symbols.len() {
-            0 => self.empty(),
-            1 => self.single(symbols.pop().unwrap()),
-            _ => Path::new(self.clone(), symbols),
+    pub fn path(&self, path: Path) -> FQPath {
+        FQPath {
+            pkg: self.clone(),
+            path,
         }
+    }
+
+    pub fn empty(&self) -> FQPath {
+        self.path(Path::empty())
     }
 }
 
@@ -179,18 +174,51 @@ impl fmt::Debug for Pkg {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Path {
-    pub pkg: Pkg,
     path: Arc<Vec<Symbol>>,
 }
 
 impl Path {
-    fn new(pkg: Pkg, path: Vec<Symbol>) -> Self {
-        Path {
-            pkg,
+    pub fn new(path: Vec<Symbol>) -> Self {
+        Self {
             path: Arc::new(path),
         }
     }
 
+    pub fn empty() -> Self {
+        Self::new(Vec::default())
+    }
+
+    pub fn single(symbol: Symbol) -> Self {
+        Self::new(vec![symbol])
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.path.is_empty()
+    }
+}
+
+impl fmt::Display for Path {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for s in self.path.iter() {
+            s.fmt(f)?
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for Path {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        debug(f, "Path", self)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct FQPath {
+    pub(crate) pkg: Pkg,
+    pub(crate) path: Path,
+}
+
+impl FQPath {
     pub fn is_empty(&self) -> bool {
         self.path.is_empty()
     }
@@ -209,25 +237,22 @@ impl Path {
     }
 }
 
-impl fmt::Display for Path {
+impl fmt::Display for FQPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.pkg.fmt(f)?;
-        for s in self.path.iter() {
-            s.fmt(f)?
-        }
-        Ok(())
+        self.path.fmt(f)
     }
 }
 
-impl fmt::Debug for Path {
+impl fmt::Debug for FQPath {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        debug(f, "Path", self)
+        debug(f, "FQPath", self)
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct TLData<T> {
-    path: Path,
+    path: FQPath,
     symbol: T,
 }
 
@@ -322,7 +347,7 @@ pub enum FQType {
 }
 
 impl FQType {
-    fn get_known(path: &Path, symbol: &TSymbol) -> Option<Self> {
+    fn get_known(path: &FQPath, symbol: &TSymbol) -> Option<Self> {
         if path.pkg == Pkg::Std && path.is_empty() {
             match symbol {
                 TSymbol::None => Some(Self::None),
@@ -344,7 +369,7 @@ impl FQType {
         }
     }
 
-    fn top_level(path: Path, symbol: TSymbol) -> Self {
+    fn top_level(path: FQPath, symbol: TSymbol) -> Self {
         if let Some(fq) = Self::get_known(&path, &symbol) {
             fq
         } else {

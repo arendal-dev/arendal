@@ -7,7 +7,7 @@ use super::Value;
 fn eval_module(input: &str) -> Result<Value> {
     let mut env = Env::default();
     let path = Pkg::Local.empty();
-    super::super::run(&mut env, &path, input)
+    super::super::run(&mut env, input)
 }
 
 fn eval_ok(input: &str, result: Value) {

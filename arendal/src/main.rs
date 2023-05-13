@@ -1,4 +1,4 @@
-use core::env::{Interactive, Value};
+use core::env::{Env, Value};
 use core::error::Result;
 
 use rustyline::error::ReadlineError;
@@ -10,13 +10,13 @@ fn main() -> rustyline::Result<()> {
 }
 
 struct REPL {
-    interactive: Interactive,
+    env: Env,
 }
 
 impl REPL {
     fn new() -> Self {
         REPL {
-            interactive: Interactive::default(),
+            env: Env::default(),
         }
     }
 
@@ -37,7 +37,7 @@ impl REPL {
     }
 
     fn eval(&mut self, input: &str) -> Result<Value> {
-        self.interactive.run(input)
+        self.env.run(input)
     }
 
     fn eval_and_print(&mut self, input: &str) {

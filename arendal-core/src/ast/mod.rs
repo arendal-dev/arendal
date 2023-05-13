@@ -8,7 +8,7 @@ use im::HashMap;
 
 use super::Integer;
 use crate::error::Loc;
-use crate::symbol::{Path, Symbol, TSymbol};
+use crate::symbol::{Path, Pkg, Symbol, TSymbol};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -209,8 +209,9 @@ impl Module {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Package {
+    pub(crate) pkg: Pkg,
     pub(crate) modules: HashMap<Path, Module>,
 }
 

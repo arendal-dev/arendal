@@ -11,10 +11,10 @@ use std::sync::Arc;
 
 use super::{Env, Value};
 
-pub(super) fn run(env: &mut Env, path: &Path, input: &str) -> Result<Value> {
+pub(super) fn run(env: &mut Env, input: &str) -> Result<Value> {
     let package = crate::ast::parser::parse(input)?;
-    if let Some(module) = package.modules.get(path) {
-        let checked = typecheck::check(&env, &path, &module)?;
+    if let Some(module) = package.modules.get(&Path::empty()) {
+        let checked = typecheck::check(&env, &Pkg::Local.empty(), &module)?;
         twi::interpret(env, &checked)
     } else {
         Ok(Value::v_none(&Loc::None))

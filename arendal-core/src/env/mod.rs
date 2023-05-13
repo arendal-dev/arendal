@@ -5,7 +5,7 @@ use im::HashMap;
 
 use crate::{
     error::{Error, Loc, Result},
-    symbol::{FQSym, FQType, Path, Pkg},
+    symbol::{FQPath, FQSym, FQType, Pkg},
     types::Type,
     visibility::{Visibility, Visible},
     Integer,
@@ -181,27 +181,13 @@ impl Types {
 }
 
 #[derive(Debug, Clone, Default)]
-struct Env {
+pub struct Env {
     types: Types,
     values: Values,
 }
 
-pub struct Interactive {
-    env: Env,
-    path: Path,
-}
-
-impl Default for Interactive {
-    fn default() -> Self {
-        Interactive {
-            env: Env::default(),
-            path: Pkg::Local.empty(),
-        }
-    }
-}
-
-impl Interactive {
+impl Env {
     pub fn run(&mut self, input: &str) -> Result<Value> {
-        tst::run(&mut self.env, &self.path, input)
+        tst::run(self, input)
     }
 }

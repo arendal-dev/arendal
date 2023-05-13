@@ -10,7 +10,7 @@ pub enum Enclosure {
 use super::{BinaryOp, ExprBuilder, Expression, Module, Package, TypeDefinition, TypeDfnBuilder};
 use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
-use crate::symbol::{Pkg, Symbol, TSymbol};
+use crate::symbol::{Path, Pkg, Symbol, TSymbol};
 use std::rc::Rc;
 
 use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
@@ -18,8 +18,11 @@ use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
 // Parses the input as a package
 pub fn parse(input: &str) -> Result<Package> {
     let module = parse_module(input)?;
-    let mut package = Package::default();
-    package.modules.insert(Pkg::Local.empty(), module);
+    let mut package = Package {
+        pkg: Pkg::Local,
+        modules: Default::default(),
+    };
+    package.modules.insert(Path::empty(), module);
     Ok(package)
 }
 

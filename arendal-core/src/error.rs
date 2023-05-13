@@ -1,7 +1,7 @@
 use crate::{
     ast::parser::Enclosure,
     keyword::Keyword,
-    symbol::{FQSym, FQType, Path, Pkg, Symbol, TSymbol},
+    symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
     types::Type,
 };
 
@@ -177,7 +177,7 @@ pub enum Error {
     TypeMismatch(Arc<TypeMismatch>),
     SingletonExpected(Type),
     InvalidType, // placeholder, temporary error
-    DuplicateModule(Pkg, Path),
+    DuplicateModule(Pkg, FQPath),
     DivisionByZero,
     NotImplemented,
 }

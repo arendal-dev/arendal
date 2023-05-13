@@ -1,6 +1,6 @@
 use super::{Env, Expr, Expression, Package, TwoInts, Value};
 use crate::error::{Error, Loc, Result};
-use crate::symbol::{Path, Symbol};
+use crate::symbol::{FQPath, Symbol};
 use crate::visibility::Visibility;
 use crate::Integer;
 use std::collections::HashMap;
@@ -21,7 +21,7 @@ pub(super) fn interpret(env: &mut Env, package: &Package) -> Result<Value> {
 struct Interpreter<'a> {
     env: &'a mut Env,
     package: &'a Package,
-    path: Path,
+    path: FQPath,
     scopes: Vec<Scope>,
 }
 

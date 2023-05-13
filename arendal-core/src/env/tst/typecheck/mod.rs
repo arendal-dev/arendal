@@ -4,7 +4,7 @@ use im::HashMap;
 
 use crate::ast;
 use crate::error::{Error, Loc, Result};
-use crate::symbol::{FQType, Path, Pkg, Symbol, TSymbol};
+use crate::symbol::{FQPath, FQType, Pkg, Symbol, TSymbol};
 use crate::types::Type;
 
 use crate::env::Env;
@@ -13,7 +13,7 @@ use super::{ExprBuilder, Expression, Package, TypeDefinition, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
-pub(super) fn check(env: &Env, path: &Path, input: &ast::Module) -> Result<Package> {
+pub(super) fn check(env: &Env, path: &FQPath, input: &ast::Module) -> Result<Package> {
     TypeChecker {
         env,
         path,
@@ -51,7 +51,7 @@ impl LocalTypes {
 #[derive(Debug)]
 struct TypeChecker<'a> {
     env: &'a Env,
-    path: &'a Path,
+    path: &'a FQPath,
     scopes: Vec<Scope>,
     types: LocalTypes,
 }
