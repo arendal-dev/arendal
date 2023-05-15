@@ -5,12 +5,12 @@ use crate::error::{Error, Result};
 use crate::symbol::{Symbol, TSymbol};
 use crate::types::Type;
 
-use super::{ExprBuilder, Expression, TypeChecker, Value};
+use super::{ExprBuilder, Expression, ModuleChecker, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
 pub(super) fn check<'a>(
-    checker: &mut TypeChecker<'a>,
+    checker: &mut ModuleChecker<'a>,
     input: &ast::Expression,
 ) -> Result<Expression> {
     ExprChecker { checker, input }.check()
@@ -18,7 +18,7 @@ pub(super) fn check<'a>(
 
 #[derive(Debug)]
 struct ExprChecker<'a, 'b> {
-    checker: &'b mut TypeChecker<'a>,
+    checker: &'b mut ModuleChecker<'a>,
     input: &'b ast::Expression,
 }
 

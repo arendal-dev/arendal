@@ -1,10 +1,13 @@
 mod twi;
 mod typecheck;
 
+use im::HashMap;
+
 use crate::ast::UnaryOp;
 use crate::error::{Error, Loc, Result};
-use crate::symbol::{Path, Pkg, Symbol};
+use crate::symbol::{FQType, Path, Pkg, Symbol};
 use crate::types::Type;
+use crate::visibility::Visibility;
 use crate::Integer;
 use std::fmt;
 use std::sync::Arc;
@@ -13,12 +16,8 @@ use super::{Env, Value};
 
 pub(super) fn run(env: &mut Env, input: &str) -> Result<Value> {
     let package = crate::ast::parser::parse(input)?;
-    if let Some(module) = package.modules.get(&Path::empty()) {
-        let checked = typecheck::check(&env, &Pkg::Local.empty(), &module)?;
-        twi::interpret(env, &checked)
-    } else {
-        Ok(Value::v_none(&Loc::None))
-    }
+    let checked = typecheck::check(&env, &package)?;
+    twi::interpret(env, &checked)
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -269,13 +268,16 @@ impl ExprBuilder {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeDefinition {
-    pub loc: Loc,
-    pub tipo: Type,
+    loc: Loc,
+    visibility: Visibility,
+    tipo: Type,
 }
+
+type TypeDefMap = HashMap<FQType, TypeDefinition>;
 
 #[derive(Debug)]
 pub(super) struct Package {
     pkg: Pkg,
-    types: Vec<TypeDefinition>,
+    types: TypeDefMap,
     expressions: Vec<Expression>,
 }

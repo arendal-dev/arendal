@@ -170,6 +170,10 @@ impl Types {
         self.types.get(symbol)
     }
 
+    fn contains(&self, symbol: &FQType) -> bool {
+        self.types.contains_key(symbol)
+    }
+
     // temporary
     pub fn singleton(&self, loc: &Loc, symbol: FQType) -> Result<Type> {
         if self.types.contains_key(&symbol) {

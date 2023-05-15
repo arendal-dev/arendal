@@ -134,7 +134,7 @@ impl Lexer {
         self.separator = Separator::NewLine;
         while let Some(t) = self.peek() {
             self.lexeme_start = self.index;
-            let loc = t.loc;
+            let loc = &t.loc;
             match t.kind {
                 TokenKind::Tabs(_) | TokenKind::Spaces(_) => {
                     self.advance_whitespace();
@@ -197,7 +197,7 @@ impl Lexer {
         }
     }
 
-    fn add_close(&mut self, loc: Loc, e: Enclosure) {
+    fn add_close(&mut self, loc: &Loc, e: Enclosure) {
         match self.enclosures.pop() {
             Some(last) => {
                 if e == last {
@@ -226,22 +226,22 @@ impl Lexer {
         self.add_lexeme(LexemeKind::Integer(digits.parse().unwrap()), 1);
     }
 
-    fn add_word(&mut self, loc: Loc, word: &Substr) {
+    fn add_word(&mut self, loc: &Loc, word: &Substr) {
         if let Some(k) = Keyword::parse(word) {
             self.add_lexeme(LexemeKind::Keyword(k), 1);
-        } else if let Ok(name) = TSymbol::new(&loc, word.as_str().into()) {
+        } else if let Ok(name) = TSymbol::new(loc, word.as_str().into()) {
             self.add_lexeme(LexemeKind::TSymbol(name), 1);
         } else {
             if let Some(symbol) = self
                 .errors
-                .add_result(Symbol::new(&loc, word.as_str().into()))
+                .add_result(Symbol::new(loc, word.as_str().into()))
             {
                 self.add_lexeme(LexemeKind::Symbol(symbol), 1);
             }
         }
     }
 
-    fn add_error(&mut self, loc: Loc, error: Error, tokens: usize) {
+    fn add_error(&mut self, loc: &Loc, error: Error, tokens: usize) {
         self.errors.add(loc, error);
         self.advance(tokens)
     }

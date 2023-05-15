@@ -29,8 +29,15 @@ impl Loc {
         write!(f, "{:?}", error)
     }
 
+    fn item(&self, error: Error) -> ErrorItem {
+        ErrorItem {
+            loc: self.clone(),
+            error,
+        }
+    }
+
     pub fn err<T>(&self, error: Error) -> Result<T> {
-        Err(ErrorVec::new(self.clone(), error.into()))
+        Err(ErrorVec::new(self.item(error)))
     }
 }
 
@@ -71,14 +78,12 @@ impl fmt::Display for ErrorVec {
 pub type Result<T> = std::result::Result<T, ErrorVec>;
 
 impl ErrorVec {
-    fn new(loc: Loc, error: Error) -> Self {
-        Self {
-            errors: vec![ErrorItem { loc, error }],
-        }
+    fn new(item: ErrorItem) -> Self {
+        Self { errors: vec![item] }
     }
 
-    fn add(&mut self, loc: Loc, error: Error) {
-        self.errors.push(ErrorItem { loc, error });
+    fn add(&mut self, item: ErrorItem) {
+        self.errors.push(item);
     }
 
     fn append(&mut self, mut other: ErrorVec) {
@@ -97,10 +102,10 @@ pub struct Errors {
 }
 
 impl Errors {
-    pub fn add(&mut self, loc: Loc, error: Error) {
+    pub fn add(&mut self, loc: &Loc, error: Error) {
         match &mut self.errors {
-            Some(e) => e.add(loc, error.into()),
-            None => self.errors = Some(ErrorVec::new(loc, error.into())),
+            Some(e) => e.add(loc.item(error)),
+            None => self.errors = Some(ErrorVec::new(loc.item(error))),
         }
     }
 
@@ -130,10 +135,10 @@ impl Errors {
 
     pub fn to_lazy_result<T, F>(self, supplier: F) -> Result<T>
     where
-        F: FnOnce(()) -> T,
+        F: FnOnce() -> T,
     {
         match self.errors {
-            None => Ok(supplier(())),
+            None => Ok(supplier()),
             Some(e) => Err(e),
         }
     }
