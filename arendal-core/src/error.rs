@@ -29,15 +29,20 @@ impl Loc {
         write!(f, "{:?}", error)
     }
 
-    fn item(&self, error: Error) -> ErrorItem {
-        ErrorItem {
-            loc: self.clone(),
-            error,
-        }
+    pub fn to_error(self, error: Error) -> ErrorItem {
+        ErrorItem { loc: self, error }
+    }
+
+    pub fn error(&self, error: Error) -> ErrorItem {
+        self.clone().to_error(error)
+    }
+
+    pub fn to_err<T>(self, error: Error) -> Result<T> {
+        Err(ErrorVec::new(self.to_error(error)))
     }
 
     pub fn err<T>(&self, error: Error) -> Result<T> {
-        Err(ErrorVec::new(self.item(error)))
+        self.clone().to_err(error)
     }
 }
 
@@ -49,14 +54,8 @@ impl PartialEq for Loc {
 
 impl Eq for Loc {}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Inner {
-    None,
-    Input(ArcStr, usize),
-}
-
 #[derive(Debug)]
-struct ErrorItem {
+pub struct ErrorItem {
     loc: Loc,
     error: Error,
 }
@@ -102,10 +101,10 @@ pub struct Errors {
 }
 
 impl Errors {
-    pub fn add(&mut self, loc: &Loc, error: Error) {
+    pub fn add(&mut self, error: ErrorItem) {
         match &mut self.errors {
-            Some(e) => e.add(loc.item(error)),
-            None => self.errors = Some(ErrorVec::new(loc.item(error))),
+            Some(e) => e.add(error),
+            None => self.errors = Some(ErrorVec::new(error)),
         }
     }
 
