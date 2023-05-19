@@ -44,6 +44,14 @@ impl Loc {
     pub fn err<T>(&self, error: Error) -> Result<T> {
         self.clone().to_err(error)
     }
+
+    pub fn to_wrap<T>(self, it: T) -> L<T> {
+        L { loc: self, it }
+    }
+
+    pub fn wrap<T>(&self, it: T) -> L<T> {
+        self.clone().to_wrap(it)
+    }
 }
 
 impl PartialEq for Loc {
@@ -53,6 +61,22 @@ impl PartialEq for Loc {
 }
 
 impl Eq for Loc {}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct L<T> {
+    loc: Loc,
+    it: T,
+}
+
+impl<T> L<T> {
+    pub fn error(&self, error: Error) -> ErrorItem {
+        self.loc.error(error)
+    }
+
+    pub fn err<R>(&self, error: Error) -> Result<R> {
+        self.loc.err(error)
+    }
+}
 
 #[derive(Debug)]
 pub struct ErrorItem {
