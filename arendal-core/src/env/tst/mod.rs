@@ -5,7 +5,7 @@ use im::HashMap;
 
 use crate::ast::UnaryOp;
 use crate::error::{Error, Loc, Result};
-use crate::symbol::{FQType, Path, Pkg, Symbol};
+use crate::symbol::{FQType, Pkg, Symbol};
 use crate::types::Type;
 use crate::visibility::Visibility;
 use crate::Integer;

@@ -1,6 +1,6 @@
 use super::{
     Enclosure, Keyword, Lexeme, LexemeKind, Lexemes, Loc, Result, Separator, Symbol, TSymbol,
-    Token, TokenKind,
+    Token, L,
 };
 use crate::ArcStr;
 
@@ -34,10 +34,7 @@ impl TestCase {
     fn token(mut self, separator: Separator, kind: LexemeKind) -> Self {
         self.lexemes.push(Lexeme::new(
             separator,
-            Token {
-                loc: Loc::input(self.input.clone(), 0),
-                kind: TokenKind::Assignment,
-            },
+            Loc::input(self.input.clone(), 0).to_wrap(Token::Assignment),
             kind,
         ));
         self

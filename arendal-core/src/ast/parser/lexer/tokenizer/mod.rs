@@ -1,32 +1,12 @@
-use std::fmt;
-
 use super::Enclosure;
-use crate::error::{Error, Errors, Loc, Result};
+use crate::error::{Error, Errors, Loc, Result, L};
 use crate::{ArcStr, Substr};
 
 pub(super) fn tokenize(input: &str) -> Result<Tokens> {
     Tokenizer::new(ArcStr::from(input)).tokenize()
 }
 
-pub(super) type Tokens = Vec<Token>;
-
-#[derive(Clone, PartialEq, Eq)]
-pub(super) struct Token {
-    pub(super) loc: Loc, // Starting position of the token
-    pub(super) kind: TokenKind,
-}
-
-impl Token {
-    pub fn is_whitespace(&self) -> bool {
-        self.kind.is_whitespace()
-    }
-}
-
-impl fmt::Debug for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}@{:?}", self.kind, self.loc)
-    }
-}
+pub(super) type Tokens = Vec<L<Token>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum NewLine {
@@ -48,7 +28,7 @@ impl NewLine {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) enum TokenKind {
+pub(super) enum Token {
     Spaces(usize),
     Tabs(usize),
     EndOfLine(NewLine),
@@ -76,26 +56,26 @@ pub(super) enum TokenKind {
     Word(Substr),
 }
 
-impl TokenKind {
-    fn is_whitespace(&self) -> bool {
+impl Token {
+    pub fn is_whitespace(&self) -> bool {
         matches!(
             self,
-            TokenKind::Spaces(_) | TokenKind::Tabs(_) | TokenKind::EndOfLine(_)
+            Token::Spaces(_) | Token::Tabs(_) | Token::EndOfLine(_)
         )
     }
 
     fn chars(&self) -> usize {
         match self {
-            TokenKind::Spaces(n) => *n,
-            TokenKind::Tabs(n) => *n,
-            TokenKind::EndOfLine(nl) => nl.chars(),
-            TokenKind::Digits(s) => s.chars().count(),
-            TokenKind::Word(s) => s.chars().count(),
-            TokenKind::NotEquals => 2,
-            TokenKind::LogicalAnd => 2,
-            TokenKind::LogicalOr => 2,
-            TokenKind::GreaterOrEq => 2,
-            TokenKind::LessOrEq => 2,
+            Token::Spaces(n) => *n,
+            Token::Tabs(n) => *n,
+            Token::EndOfLine(nl) => nl.chars(),
+            Token::Digits(s) => s.chars().count(),
+            Token::Word(s) => s.chars().count(),
+            Token::NotEquals => 2,
+            Token::LogicalAnd => 2,
+            Token::LogicalOr => 2,
+            Token::GreaterOrEq => 2,
+            Token::LessOrEq => 2,
             _ => 1,
         }
     }
@@ -103,16 +83,16 @@ impl TokenKind {
     #[cfg(test)]
     fn bytes(&self) -> usize {
         match self {
-            TokenKind::Spaces(n) => *n,
-            TokenKind::Tabs(n) => *n,
-            TokenKind::EndOfLine(nl) => nl.bytes(),
-            TokenKind::Digits(s) => s.len(),
-            TokenKind::Word(s) => s.len(),
-            TokenKind::NotEquals => 2,
-            TokenKind::LogicalAnd => 2,
-            TokenKind::LogicalOr => 2,
-            TokenKind::GreaterOrEq => 2,
-            TokenKind::LessOrEq => 2,
+            Token::Spaces(n) => *n,
+            Token::Tabs(n) => *n,
+            Token::EndOfLine(nl) => nl.bytes(),
+            Token::Digits(s) => s.len(),
+            Token::Word(s) => s.len(),
+            Token::NotEquals => 2,
+            Token::LogicalAnd => 2,
+            Token::LogicalOr => 2,
+            Token::GreaterOrEq => 2,
+            Token::LessOrEq => 2,
             _ => 1,
         }
     }
@@ -223,35 +203,35 @@ impl Tokenizer {
 
     fn add_known_first_char(&mut self, c: char) -> bool {
         match c {
-            '\n' => self.add_token(TokenKind::EndOfLine(NewLine::LF)),
-            '\r' => self.add_token_if_next('\n', TokenKind::EndOfLine(NewLine::CRLF)),
-            ' ' => self.add_token(TokenKind::Spaces(self.count_while(' '))),
-            '\t' => self.add_token(TokenKind::Tabs(self.count_while('\t'))),
-            '+' => self.add_token(TokenKind::Plus),
-            '-' => self.add_token(TokenKind::Minus),
-            '*' => self.add_token(TokenKind::Star),
-            '/' => self.add_token(TokenKind::Slash),
-            '.' => self.add_token(TokenKind::Dot),
-            '>' => self.add_token_if_next_or_else('=', TokenKind::GreaterOrEq, TokenKind::Greater),
-            '<' => self.add_token_if_next_or_else('=', TokenKind::LessOrEq, TokenKind::Less),
-            '!' => self.add_token_if_next_or_else('=', TokenKind::NotEquals, TokenKind::Bang),
-            '=' => self.add_token_if_next_or_else('=', TokenKind::Equals, TokenKind::Assignment),
-            '&' => self.add_token_if_next_or_else('&', TokenKind::LogicalAnd, TokenKind::Ampersand),
-            '|' => self.add_token_if_next_or_else('|', TokenKind::LogicalOr, TokenKind::Pipe),
-            '(' => self.add_token(TokenKind::Open(Enclosure::Parens)),
-            ')' => self.add_token(TokenKind::Close(Enclosure::Parens)),
-            '{' => self.add_token(TokenKind::Open(Enclosure::Curly)),
-            '}' => self.add_token(TokenKind::Close(Enclosure::Curly)),
-            '[' => self.add_token(TokenKind::Open(Enclosure::Square)),
-            ']' => self.add_token(TokenKind::Close(Enclosure::Square)),
-            '_' => self.add_token(TokenKind::Underscore),
+            '\n' => self.add_token(Token::EndOfLine(NewLine::LF)),
+            '\r' => self.add_token_if_next('\n', Token::EndOfLine(NewLine::CRLF)),
+            ' ' => self.add_token(Token::Spaces(self.count_while(' '))),
+            '\t' => self.add_token(Token::Tabs(self.count_while('\t'))),
+            '+' => self.add_token(Token::Plus),
+            '-' => self.add_token(Token::Minus),
+            '*' => self.add_token(Token::Star),
+            '/' => self.add_token(Token::Slash),
+            '.' => self.add_token(Token::Dot),
+            '>' => self.add_token_if_next_or_else('=', Token::GreaterOrEq, Token::Greater),
+            '<' => self.add_token_if_next_or_else('=', Token::LessOrEq, Token::Less),
+            '!' => self.add_token_if_next_or_else('=', Token::NotEquals, Token::Bang),
+            '=' => self.add_token_if_next_or_else('=', Token::Equals, Token::Assignment),
+            '&' => self.add_token_if_next_or_else('&', Token::LogicalAnd, Token::Ampersand),
+            '|' => self.add_token_if_next_or_else('|', Token::LogicalOr, Token::Pipe),
+            '(' => self.add_token(Token::Open(Enclosure::Parens)),
+            ')' => self.add_token(Token::Close(Enclosure::Parens)),
+            '{' => self.add_token(Token::Open(Enclosure::Curly)),
+            '}' => self.add_token(Token::Close(Enclosure::Curly)),
+            '[' => self.add_token(Token::Open(Enclosure::Square)),
+            ']' => self.add_token(Token::Close(Enclosure::Square)),
+            '_' => self.add_token(Token::Underscore),
             _ => false,
         }
     }
 
     fn add_digits(&mut self, c: char) -> bool {
         if c.is_ascii_digit() {
-            self.add_token(TokenKind::Digits(self.substr_while(|n| n.is_ascii_digit())))
+            self.add_token(Token::Digits(self.substr_while(|n| n.is_ascii_digit())))
         } else {
             false
         }
@@ -260,7 +240,7 @@ impl Tokenizer {
     fn add_word(&mut self, c: char) -> bool {
         if c.is_ascii_alphabetic() {
             let word = self.substr_while(|n| n.is_ascii_alphanumeric());
-            self.add_token(TokenKind::Word(word))
+            self.add_token(Token::Word(word))
         } else {
             false
         }
@@ -268,27 +248,24 @@ impl Tokenizer {
 
     // Creates a token of the provided type consuming the needed chars.
     // Returns true to allow being the tail call of other add_ methods.
-    fn add_token(&mut self, kind: TokenKind) -> bool {
-        let chars = kind.chars();
-        self.tokens.push(Token {
-            loc: self.loc(),
-            kind,
-        });
+    fn add_token(&mut self, token: Token) -> bool {
+        let chars = token.chars();
+        self.tokens.push(self.loc().to_wrap(token));
         self.consume_chars(chars);
         true
     }
 
-    fn add_token_if_next(&mut self, c: char, kind: TokenKind) -> bool {
+    fn add_token_if_next(&mut self, c: char, token: Token) -> bool {
         if let Some(next) = self.peek_ahead(1) {
             if next == c {
-                return self.add_token(kind);
+                return self.add_token(token);
             }
         }
         false
     }
 
-    fn add_token_if_next_or_else(&mut self, c: char, kind2: TokenKind, kind1: TokenKind) -> bool {
-        self.add_token_if_next(c, kind2) || self.add_token(kind1)
+    fn add_token_if_next_or_else(&mut self, c: char, token2: Token, token1: Token) -> bool {
+        self.add_token_if_next(c, token2) || self.add_token(token1)
     }
 }
 

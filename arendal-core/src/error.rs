@@ -6,7 +6,10 @@ use crate::{
 };
 
 use super::ArcStr;
-use std::{fmt, sync::Arc};
+use std::{
+    fmt::{self, Write},
+    sync::Arc,
+};
 
 #[derive(Debug)]
 pub struct Input {
@@ -54,10 +57,10 @@ impl PartialEq for Loc {
 
 impl Eq for Loc {}
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct L<T> {
-    loc: Loc,
-    it: T,
+    pub loc: Loc,
+    pub it: T,
 }
 
 impl<T> L<T> {
@@ -67,6 +70,14 @@ impl<T> L<T> {
 
     pub fn err<R>(&self, error: Error) -> Result<R> {
         self.loc.err(error)
+    }
+}
+
+impl<T: fmt::Debug> fmt::Debug for L<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.loc, f)?;
+        f.write_char('@')?;
+        self.it.fmt(f)
     }
 }
 

@@ -1,4 +1,4 @@
-use super::{ArcStr, Enclosure, Loc, NewLine, Token, TokenKind, Tokens};
+use super::{ArcStr, Enclosure, Loc, NewLine, Token, Tokens};
 use NewLine::*;
 
 struct TestCase {
@@ -17,34 +17,32 @@ impl TestCase {
         }
     }
 
-    fn token(mut self, kind: TokenKind) -> Self {
-        let bytes = kind.bytes();
-        self.tokens.push(Token {
-            loc: Loc::input(self.input.clone(), self.index),
-            kind,
-        });
+    fn token(mut self, token: Token) -> Self {
+        let bytes = token.bytes();
+        self.tokens
+            .push(Loc::input(self.input.clone(), self.index).to_wrap(token));
         self.index += bytes;
         self
     }
 
     fn newline(self, nl: NewLine) -> Self {
-        self.token(TokenKind::EndOfLine(nl))
+        self.token(Token::EndOfLine(nl))
     }
 
     fn spaces(self, n: usize) -> Self {
-        self.token(TokenKind::Spaces(n))
+        self.token(Token::Spaces(n))
     }
 
     fn tabs(self, n: usize) -> Self {
-        self.token(TokenKind::Tabs(n))
+        self.token(Token::Tabs(n))
     }
 
     fn digits(self, digits: &str) -> Self {
-        self.token(TokenKind::Digits(ArcStr::from(digits).substr(0..)))
+        self.token(Token::Digits(ArcStr::from(digits).substr(0..)))
     }
 
     fn word(self, word: &str) -> Self {
-        self.token(TokenKind::Word(ArcStr::from(word).substr(0..)))
+        self.token(Token::Word(ArcStr::from(word).substr(0..)))
     }
 
     fn ok(&self) {
@@ -83,31 +81,31 @@ fn crlf() {
 #[test]
 fn singles() {
     TestCase::new("+-*./><!()={}[]_")
-        .token(TokenKind::Plus)
-        .token(TokenKind::Minus)
-        .token(TokenKind::Star)
-        .token(TokenKind::Dot)
-        .token(TokenKind::Slash)
-        .token(TokenKind::Greater)
-        .token(TokenKind::Less)
-        .token(TokenKind::Bang)
-        .token(TokenKind::Open(Enclosure::Parens))
-        .token(TokenKind::Close(Enclosure::Parens))
-        .token(TokenKind::Assignment)
-        .token(TokenKind::Open(Enclosure::Curly))
-        .token(TokenKind::Close(Enclosure::Curly))
-        .token(TokenKind::Open(Enclosure::Square))
-        .token(TokenKind::Close(Enclosure::Square))
-        .token(TokenKind::Underscore)
+        .token(Token::Plus)
+        .token(Token::Minus)
+        .token(Token::Star)
+        .token(Token::Dot)
+        .token(Token::Slash)
+        .token(Token::Greater)
+        .token(Token::Less)
+        .token(Token::Bang)
+        .token(Token::Open(Enclosure::Parens))
+        .token(Token::Close(Enclosure::Parens))
+        .token(Token::Assignment)
+        .token(Token::Open(Enclosure::Curly))
+        .token(Token::Close(Enclosure::Curly))
+        .token(Token::Open(Enclosure::Square))
+        .token(Token::Close(Enclosure::Square))
+        .token(Token::Underscore)
         .ok();
 }
 
 #[test]
 fn bang() {
     TestCase::new("!a!=b")
-        .token(TokenKind::Bang)
+        .token(Token::Bang)
         .word("a")
-        .token(TokenKind::NotEquals)
+        .token(Token::NotEquals)
         .word("b")
         .ok();
 }
@@ -151,7 +149,7 @@ fn sum() {
     TestCase::new("1 + 3")
         .digits("1")
         .spaces(1)
-        .token(TokenKind::Plus)
+        .token(Token::Plus)
         .spaces(1)
         .digits("3")
         .ok();

@@ -4,7 +4,7 @@ use im::HashMap;
 
 use crate::ast;
 use crate::error::{Error, Errors, Loc, Result};
-use crate::symbol::{FQPath, FQType, Path, Pkg, Symbol, TSymbol};
+use crate::symbol::{FQPath, FQType, Pkg, Symbol, TSymbol};
 use crate::types::Type;
 
 use crate::env::Env;

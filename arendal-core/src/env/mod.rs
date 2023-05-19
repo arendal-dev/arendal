@@ -5,7 +5,7 @@ use im::HashMap;
 
 use crate::{
     error::{Error, Loc, Result},
-    symbol::{FQPath, FQSym, FQType, Pkg},
+    symbol::{FQSym, FQType},
     types::Type,
     visibility::{Visibility, Visible},
     Integer,
