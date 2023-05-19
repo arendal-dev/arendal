@@ -46,7 +46,7 @@ impl<'a> TypesChecker<'a> {
             let fq = path.fq_type(t.symbol.clone());
             let maybe = if self.types.contains_key(&fq) || self.env.types.contains(&fq) {
                 self.errors
-                    .add(t.loc.error(Error::DuplicateType(fq.clone())));
+                    .add(t.loc.wrap(Error::DuplicateType(fq.clone())));
                 None
             } else {
                 match t.dfn {

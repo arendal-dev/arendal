@@ -214,7 +214,7 @@ impl Tokenizer {
         let mut errors: Errors = Default::default();
         while let Some(c) = self.peek() {
             if !self.add_known_first_char(c) && !self.add_digits(c) && !self.add_word(c) {
-                errors.add(self.loc().to_error(Error::UnexpectedChar(c)));
+                errors.add(self.loc().to_wrap(Error::UnexpectedChar(c)));
                 self.consume();
             }
         }

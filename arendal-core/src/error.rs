@@ -29,16 +29,8 @@ impl Loc {
         write!(f, "{:?}", error)
     }
 
-    pub fn to_error(self, error: Error) -> ErrorItem {
-        ErrorItem { loc: self, error }
-    }
-
-    pub fn error(&self, error: Error) -> ErrorItem {
-        self.clone().to_error(error)
-    }
-
     pub fn to_err<T>(self, error: Error) -> Result<T> {
-        Err(ErrorVec::new(self.to_error(error)))
+        Err(ErrorVec::new(self.to_wrap(error)))
     }
 
     pub fn err<T>(&self, error: Error) -> Result<T> {
@@ -69,8 +61,8 @@ pub struct L<T> {
 }
 
 impl<T> L<T> {
-    pub fn error(&self, error: Error) -> ErrorItem {
-        self.loc.error(error)
+    pub fn error(&self, error: Error) -> L<Error> {
+        self.loc.wrap(error)
     }
 
     pub fn err<R>(&self, error: Error) -> Result<R> {
@@ -79,20 +71,14 @@ impl<T> L<T> {
 }
 
 #[derive(Debug)]
-pub struct ErrorItem {
-    loc: Loc,
-    error: Error,
-}
-
-#[derive(Debug)]
 pub struct ErrorVec {
-    errors: Vec<ErrorItem>,
+    errors: Vec<L<Error>>,
 }
 
 impl fmt::Display for ErrorVec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for e in self.errors.iter() {
-            e.loc.fmt(f, &e.error)?
+            e.loc.fmt(f, &e.it)?
         }
         Ok(())
     }
@@ -101,11 +87,11 @@ impl fmt::Display for ErrorVec {
 pub type Result<T> = std::result::Result<T, ErrorVec>;
 
 impl ErrorVec {
-    fn new(item: ErrorItem) -> Self {
+    fn new(item: L<Error>) -> Self {
         Self { errors: vec![item] }
     }
 
-    fn add(&mut self, item: ErrorItem) {
+    fn add(&mut self, item: L<Error>) {
         self.errors.push(item);
     }
 
@@ -114,7 +100,7 @@ impl ErrorVec {
     }
 
     pub fn contains(&self, error: &Error) -> bool {
-        self.errors.iter().map(|i| &i.error).any(|e| e == error)
+        self.errors.iter().map(|i| &i.it).any(|e| e == error)
     }
 }
 
@@ -125,7 +111,7 @@ pub struct Errors {
 }
 
 impl Errors {
-    pub fn add(&mut self, error: ErrorItem) {
+    pub fn add(&mut self, error: L<Error>) {
         match &mut self.errors {
             Some(e) => e.add(error),
             None => self.errors = Some(ErrorVec::new(error)),

@@ -242,7 +242,7 @@ impl Lexer {
     }
 
     fn add_error(&mut self, loc: &Loc, error: Error, tokens: usize) {
-        self.errors.add(loc.error(error));
+        self.errors.add(loc.wrap(error));
         self.advance(tokens)
     }
 }
