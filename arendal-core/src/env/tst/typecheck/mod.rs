@@ -3,14 +3,14 @@ mod expr;
 use im::HashMap;
 
 use crate::ast;
-use crate::error::{Error, Errors, Loc, Result};
+use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{FQPath, FQType, Pkg, Symbol, TSymbol};
 use crate::types::Type;
 
 use crate::env::Env;
 use crate::visibility::Visibility;
 
-use super::{ExprBuilder, Expression, Package, TypeDefMap, TypeDefinition, Value};
+use super::{Expr, ExprBuilder, Package, TypeDefMap, TypeDefinition, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
@@ -136,12 +136,12 @@ struct ModuleChecker<'a> {
 }
 
 impl<'a> ModuleChecker<'a> {
-    fn check(mut self) -> Result<Vec<Expression>> {
+    fn check(mut self) -> Result<Vec<L<Expr>>> {
         self.check_expressions()
     }
 
-    fn check_expressions(&mut self) -> Result<Vec<Expression>> {
-        let mut expressions: Vec<Expression> = Vec::default();
+    fn check_expressions(&mut self) -> Result<Vec<L<Expr>>> {
+        let mut expressions: Vec<L<Expr>> = Vec::default();
         for e in &self.input.expressions {
             expressions.push(expr::check(self, e)?);
         }

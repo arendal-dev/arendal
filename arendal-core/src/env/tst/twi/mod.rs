@@ -1,5 +1,5 @@
-use super::{Env, Expr, Expression, Package, TwoInts, Value};
-use crate::error::{Error, Loc, Result};
+use super::{Env, Expr, Package, TwoInts, Value};
+use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQPath, Symbol};
 use crate::visibility::Visibility;
 use crate::Integer;
@@ -56,7 +56,7 @@ impl<'a> Interpreter<'a> {
         self.expressions(&Loc::None, &self.package.expressions)
     }
 
-    fn expressions(&mut self, loc: &Loc, exprs: &Vec<Expression>) -> Result<Value> {
+    fn expressions(&mut self, loc: &Loc, exprs: &Vec<L<Expr>>) -> Result<Value> {
         let mut value = Value::v_none(&Loc::None);
         for e in exprs {
             value = self.expression(e)?;
@@ -64,8 +64,8 @@ impl<'a> Interpreter<'a> {
         Ok(value)
     }
 
-    fn expression(&mut self, expr: &Expression) -> Result<Value> {
-        match &expr.expr {
+    fn expression(&mut self, expr: &L<Expr>) -> Result<Value> {
+        match &expr.it {
             Expr::Value(v) => Ok(v.clone()),
             Expr::Local(l) => match self.get_val(&l.symbol) {
                 Some(value) => Ok(value),
@@ -112,7 +112,7 @@ impl<'a> Interpreter<'a> {
         )
     }
 
-    fn eval_bool(&mut self, expr: &Expression) -> Result<bool> {
+    fn eval_bool(&mut self, expr: &L<Expr>) -> Result<bool> {
         self.expression(expr)?.as_boolean()
     }
 
@@ -126,7 +126,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn and(&mut self, loc: &Loc, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+    fn and(&mut self, loc: &Loc, expr1: &L<Expr>, expr2: &L<Expr>) -> Result<Value> {
         if self.eval_bool(expr1)? {
             Ok(Value::boolean(loc, self.eval_bool(expr2)?))
         } else {
@@ -134,7 +134,7 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn or(&mut self, loc: &Loc, expr1: &Expression, expr2: &Expression) -> Result<Value> {
+    fn or(&mut self, loc: &Loc, expr1: &L<Expr>, expr2: &L<Expr>) -> Result<Value> {
         if self.eval_bool(expr1)? {
             Ok(Value::v_true(loc)) // short-circuit
         } else {

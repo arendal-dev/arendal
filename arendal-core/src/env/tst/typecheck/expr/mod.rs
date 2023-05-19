@@ -5,14 +5,11 @@ use crate::error::{Error, Result, L};
 use crate::symbol::{Symbol, TSymbol};
 use crate::types::Type;
 
-use super::{ExprBuilder, Expression, ModuleChecker, Value};
+use super::{Expr, ExprBuilder, ModuleChecker, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
-pub(super) fn check<'a>(
-    checker: &mut ModuleChecker<'a>,
-    input: &L<ast::Expr>,
-) -> Result<Expression> {
+pub(super) fn check<'a>(checker: &mut ModuleChecker<'a>, input: &L<ast::Expr>) -> Result<L<Expr>> {
     ExprChecker { checker, input }.check()
 }
 
@@ -23,7 +20,7 @@ struct ExprChecker<'a, 'b> {
 }
 
 impl<'a, 'b> ExprChecker<'a, 'b> {
-    fn check(mut self) -> Result<Expression> {
+    fn check(mut self) -> Result<L<Expr>> {
         match &self.input.it {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
             ast::Expr::Symbol(id) => match self.checker.get_val(&id) {
@@ -68,7 +65,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.checker.resolve_type(&self.input.loc, symbol)
     }
 
-    fn sub_expr(&mut self, input: &L<ast::Expr>) -> Result<Expression> {
+    fn sub_expr(&mut self, input: &L<ast::Expr>) -> Result<L<Expr>> {
         ExprChecker {
             checker: self.checker,
             input,
@@ -76,12 +73,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         .check()
     }
 
-    fn check_binary(
-        self,
-        op: BinaryOp,
-        expr1: Expression,
-        expr2: Expression,
-    ) -> Result<Expression> {
+    fn check_binary(self, op: BinaryOp, expr1: L<Expr>, expr2: L<Expr>) -> Result<L<Expr>> {
         match op {
             BinaryOp::Add => self.builder().int_add(expr1, expr2),
             BinaryOp::Sub => self.builder().int_sub(expr1, expr2),
@@ -93,7 +85,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_block(&mut self, exprs: &Vec<L<ast::Expr>>) -> Result<Expression> {
+    fn check_block(&mut self, exprs: &Vec<L<ast::Expr>>) -> Result<L<Expr>> {
         let mut checked = Vec::default();
         for e in exprs {
             checked.push(self.sub_expr(e)?);
@@ -106,7 +98,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
     }
 
     // Creates and returns an error
-    fn error(self, error: Error) -> Result<Expression> {
+    fn error(self, error: Error) -> Result<L<Expr>> {
         self.input.loc.err(error)
     }
 }
