@@ -1,5 +1,5 @@
 use crate::env::Env;
-use crate::error::{Loc, Result};
+use crate::error::Result;
 use crate::symbol::Pkg;
 
 use super::Value;
@@ -17,20 +17,8 @@ fn eval_ok(input: &str, result: Value) {
     }
 }
 
-fn v_none() -> Value {
-    Value::v_none(&Loc::None)
-}
-
-fn v_true() -> Value {
-    Value::v_true(&Loc::None)
-}
-
-fn v_false() -> Value {
-    Value::v_true(&Loc::None)
-}
-
 fn v_i64(value: i64) -> Value {
-    Value::integer(&Loc::None, value.into())
+    Value::Integer(value.into())
 }
 
 fn eval_i64(input: &str, result: i64) {
@@ -39,12 +27,12 @@ fn eval_i64(input: &str, result: i64) {
 
 #[test]
 fn empty1() {
-    eval_ok("", v_none());
+    eval_ok("", Value::None);
 }
 
 #[test]
 fn empty2() {
-    eval_ok(" \t\n", v_none());
+    eval_ok(" \t\n", Value::None);
 }
 
 #[test]
@@ -84,7 +72,7 @@ fn parens2() {
 
 #[test]
 fn logical() {
-    eval_ok("(True || False) && True", v_true());
+    eval_ok("(True || False) && True", Value::True);
 }
 
 #[test]

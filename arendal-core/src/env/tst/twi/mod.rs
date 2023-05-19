@@ -26,14 +26,14 @@ struct Interpreter<'a> {
 }
 
 impl<'a> Interpreter<'a> {
-    fn set_val(&mut self, symbol: Symbol, value: Value) -> Result<()> {
+    fn set_val(&mut self, loc: &Loc, symbol: Symbol, value: Value) -> Result<()> {
         if !self.scopes.is_empty() {
             self.scopes.last_mut().unwrap().insert(symbol, value);
             Ok(())
         } else {
             self.env
                 .values
-                .set(self.path.fq_sym(symbol), Visibility::Module, value)
+                .set(loc, self.path.fq_sym(symbol), Visibility::Module, value)
         }
     }
 
@@ -57,7 +57,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn expressions(&mut self, loc: &Loc, exprs: &Vec<L<Expr>>) -> Result<Value> {
-        let mut value = Value::v_none(&Loc::None);
+        let mut value = Value::None;
         for e in exprs {
             value = self.expression(e)?;
         }
@@ -72,7 +72,7 @@ impl<'a> Interpreter<'a> {
                 None => expr.err(Error::UnknownLocalSymbol(l.symbol.clone())),
             },
             Expr::Conditional(c) => {
-                if self.expression(&c.expr)?.as_boolean()? {
+                if self.expression(&c.expr)?.as_boolean(&expr.loc)? {
                     self.expression(&c.then)
                 } else {
                     self.expression(&c.otherwise)
@@ -80,18 +80,18 @@ impl<'a> Interpreter<'a> {
             }
             Expr::Assignment(a) => {
                 let value = self.expression(&a.expr)?;
-                self.set_val(a.symbol.clone(), value.clone())?;
+                self.set_val(&expr.loc, a.symbol.clone(), value.clone())?;
                 Ok(value)
             }
             Expr::IntAdd(t) => self
-                .eval_two_ints(t)
-                .map(|(v1, v2)| Value::integer(&expr.loc, v1 + v2)),
+                .eval_two_ints(&expr.loc, t)
+                .map(|(v1, v2)| Value::Integer(v1 + v2)),
             Expr::IntSub(t) => self
-                .eval_two_ints(t)
-                .map(|(v1, v2)| Value::integer(&expr.loc, v1 - v2)),
+                .eval_two_ints(&expr.loc, t)
+                .map(|(v1, v2)| Value::Integer(v1 - v2)),
             Expr::IntMul(t) => self
-                .eval_two_ints(t)
-                .map(|(v1, v2)| Value::integer(&expr.loc, v1 * v2)),
+                .eval_two_ints(&expr.loc, t)
+                .map(|(v1, v2)| Value::Integer(v1 * v2)),
             Expr::IntDiv(t) => self.div(&expr.loc, t),
             Expr::LogicalAnd(t) => self.and(&expr.loc, &t.expr1, &t.expr2),
             Expr::LogicalOr(t) => self.or(&expr.loc, &t.expr1, &t.expr2),
@@ -105,40 +105,40 @@ impl<'a> Interpreter<'a> {
         }
     }
 
-    fn eval_two_ints(&mut self, t: &TwoInts) -> Result<(Integer, Integer)> {
+    fn eval_two_ints(&mut self, loc: &Loc, t: &TwoInts) -> Result<(Integer, Integer)> {
         Error::merge(
-            self.expression(&t.expr1)?.as_integer(),
-            self.expression(&t.expr2)?.as_integer(),
+            self.expression(&t.expr1)?.as_integer(loc),
+            self.expression(&t.expr2)?.as_integer(loc),
         )
     }
 
-    fn eval_bool(&mut self, expr: &L<Expr>) -> Result<bool> {
-        self.expression(expr)?.as_boolean()
+    fn eval_bool(&mut self, loc: &Loc, expr: &L<Expr>) -> Result<bool> {
+        self.expression(expr)?.as_boolean(loc)
     }
 
     fn div(&mut self, loc: &Loc, t: &TwoInts) -> Result<Value> {
-        let (v1, v2) = self.eval_two_ints(t)?;
+        let (v1, v2) = self.eval_two_ints(loc, t)?;
         // We only have integers for now
         if v2.is_zero() {
             loc.err(Error::DivisionByZero)
         } else {
-            Ok(Value::integer(loc, v1 / v2))
+            Ok(Value::Integer(v1 / v2))
         }
     }
 
     fn and(&mut self, loc: &Loc, expr1: &L<Expr>, expr2: &L<Expr>) -> Result<Value> {
-        if self.eval_bool(expr1)? {
-            Ok(Value::boolean(loc, self.eval_bool(expr2)?))
+        if self.eval_bool(loc, expr1)? {
+            Ok(Value::boolean(self.eval_bool(loc, expr2)?))
         } else {
-            Ok(Value::v_false(loc)) // short-circuit
+            Ok(Value::False) // short-circuit
         }
     }
 
     fn or(&mut self, loc: &Loc, expr1: &L<Expr>, expr2: &L<Expr>) -> Result<Value> {
-        if self.eval_bool(expr1)? {
-            Ok(Value::v_true(loc)) // short-circuit
+        if self.eval_bool(loc, expr1)? {
+            Ok(Value::True) // short-circuit
         } else {
-            Ok(Value::boolean(loc, self.eval_bool(expr2)?))
+            Ok(Value::boolean(self.eval_bool(loc, expr2)?))
         }
     }
 }

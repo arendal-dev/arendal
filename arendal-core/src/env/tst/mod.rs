@@ -192,11 +192,11 @@ impl ExprBuilder {
     }
 
     fn v_none(&self) -> L<Expr> {
-        self.value(Value::v_none(&self.loc))
+        self.value(Value::None)
     }
 
     fn val_integer(&self, value: Integer) -> L<Expr> {
-        self.value(Value::integer(&self.loc, value))
+        self.value(Value::Integer(value))
     }
 
     fn local(&self, symbol: Symbol, tipo: Type) -> L<Expr> {

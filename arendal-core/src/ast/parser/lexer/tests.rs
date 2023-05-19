@@ -1,6 +1,5 @@
 use super::{
-    Enclosure, Keyword, Lexeme, LexemeKind, Lexemes, Loc, Result, Separator, Symbol, TSymbol,
-    Token, L,
+    Enclosure, Keyword, Lexeme, LexemeKind, Lexemes, Loc, Result, Separator, Symbol, TSymbol, Token,
 };
 use crate::ArcStr;
 
