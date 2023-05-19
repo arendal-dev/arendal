@@ -7,8 +7,8 @@ pub enum Enclosure {
     Curly,
 }
 
-use super::{BinaryOp, ExprBuilder, Expression, Module, Package, TypeDefinition, TypeDfnBuilder};
-use crate::error::{Error, Loc, Result};
+use super::{BinaryOp, Expr, ExprBuilder, Module, Package, TypeDefinition, TypeDfnBuilder};
+use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};
 use std::rc::Rc;
@@ -32,7 +32,7 @@ fn parse_module(input: &str) -> Result<Module> {
 }
 
 type PResult<T> = Result<(T, Parser)>;
-type EResult = PResult<Expression>;
+type EResult = PResult<L<Expr>>;
 type TResult = PResult<TypeDefinition>;
 
 #[derive(Clone)]
@@ -294,7 +294,7 @@ impl Parser {
                         parser.advance().ok(self.builder().tsymbol(TSymbol::None))
                     } else {
                         let mut expr;
-                        let mut exprs: Vec<Expression> = Vec::default();
+                        let mut exprs: Vec<L<Expr>> = Vec::default();
                         loop {
                             if parser.is_done() {
                                 return parser.err(Error::CloseExpected(Enclosure::Curly));

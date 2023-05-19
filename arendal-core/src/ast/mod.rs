@@ -1,13 +1,11 @@
 pub mod parser;
 
 use std::cmp::{Eq, PartialEq};
-use std::fmt;
-use std::fmt::Debug;
 
 use im::HashMap;
 
 use super::Integer;
-use crate::error::Loc;
+use crate::error::{Loc, L};
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,42 +30,30 @@ pub enum BinaryOp {
     Or,
 }
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct Expression {
-    pub loc: Loc,
-    pub expr: Expr,
-}
-
-impl fmt::Debug for Expression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.expr.fmt(f)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnaryExpr {
     pub op: UnaryOp,
-    pub expr: Expression,
+    pub expr: L<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BinaryExpr {
     pub op: BinaryOp,
-    pub expr1: Expression,
-    pub expr2: Expression,
+    pub expr1: L<Expr>,
+    pub expr2: L<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Conditional {
-    pub expr: Expression,
-    pub then: Expression,
-    pub otherwise: Expression,
+    pub expr: L<Expr>,
+    pub then: L<Expr>,
+    pub otherwise: L<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AssignmentExpr {
     pub symbol: Symbol,
-    pub expr: Expression,
+    pub expr: L<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,7 +63,7 @@ pub enum Expr {
     TSymbol(TSymbol),
     Unary(Box<UnaryExpr>),
     Binary(Box<BinaryExpr>),
-    Block(Vec<Expression>),
+    Block(Vec<L<Expr>>),
     Conditional(Box<Conditional>),
     Assignment(Box<AssignmentExpr>),
 }
@@ -95,34 +81,31 @@ impl ExprBuilder {
         Self::new(Loc::None)
     }
 
-    fn build(&self, expr: Expr) -> Expression {
-        Expression {
-            loc: self.loc.clone(),
-            expr,
-        }
+    fn build(&self, expr: Expr) -> L<Expr> {
+        self.loc.wrap(expr)
     }
 
-    pub fn lit_integer(&self, value: Integer) -> Expression {
+    pub fn lit_integer(&self, value: Integer) -> L<Expr> {
         self.build(Expr::LitInteger(value))
     }
 
-    pub fn symbol(&self, symbol: Symbol) -> Expression {
+    pub fn symbol(&self, symbol: Symbol) -> L<Expr> {
         self.build(Expr::Symbol(symbol))
     }
 
-    pub fn tsymbol(&self, symbol: TSymbol) -> Expression {
+    pub fn tsymbol(&self, symbol: TSymbol) -> L<Expr> {
         self.build(Expr::TSymbol(symbol))
     }
 
-    pub fn unary(&self, op: UnaryOp, expr: Expression) -> Expression {
+    pub fn unary(&self, op: UnaryOp, expr: L<Expr>) -> L<Expr> {
         self.build(Expr::Unary(Box::new(UnaryExpr { op, expr })))
     }
 
-    pub fn binary(&self, op: BinaryOp, expr1: Expression, expr2: Expression) -> Expression {
+    pub fn binary(&self, op: BinaryOp, expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
         self.build(Expr::Binary(Box::new(BinaryExpr { op, expr1, expr2 })))
     }
 
-    pub fn block(&self, mut exprs: Vec<Expression>) -> Expression {
+    pub fn block(&self, mut exprs: Vec<L<Expr>>) -> L<Expr> {
         assert!(
             !exprs.is_empty(),
             "Blocks need to contain at least one expression"
@@ -134,12 +117,7 @@ impl ExprBuilder {
         }
     }
 
-    pub fn conditional(
-        &self,
-        expr: Expression,
-        then: Expression,
-        otherwise: Expression,
-    ) -> Expression {
+    pub fn conditional(&self, expr: L<Expr>, then: L<Expr>, otherwise: L<Expr>) -> L<Expr> {
         self.build(Expr::Conditional(Box::new(Conditional {
             expr,
             then,
@@ -147,7 +125,7 @@ impl ExprBuilder {
         })))
     }
 
-    pub fn assignment(&self, symbol: Symbol, expr: Expression) -> Expression {
+    pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Expr> {
         self.build(Expr::Assignment(Box::new(AssignmentExpr { symbol, expr })))
     }
 }
@@ -189,14 +167,14 @@ impl TypeDfnBuilder {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ModuleItem {
-    Expression(Expression),
+    Expression(L<Expr>),
     TypeDefinition(TypeDefinition),
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Module {
     pub(crate) types: Vec<TypeDefinition>,
-    pub(crate) expressions: Vec<Expression>,
+    pub(crate) expressions: Vec<L<Expr>>,
 }
 
 impl Module {
@@ -204,7 +182,7 @@ impl Module {
         self.types.push(tipo)
     }
 
-    fn add_expression(&mut self, expr: Expression) {
+    fn add_expression(&mut self, expr: L<Expr>) {
         self.expressions.push(expr)
     }
 }

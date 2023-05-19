@@ -1,6 +1,6 @@
-use crate::ast::{BinaryOp, Module, TypeDefinition, TypeDfnBuilder};
-use crate::ast::{ExprBuilder, Expression};
-use crate::error::Loc;
+use crate::ast::ExprBuilder;
+use crate::ast::{BinaryOp, Expr, Module, TypeDefinition, TypeDfnBuilder};
+use crate::error::{Loc, L};
 use crate::symbol::{Symbol, TSymbol};
 
 use super::{parse, Enclosure, Error};
@@ -13,13 +13,13 @@ fn check_module(input: &str, expected: Module) {
     assert_eq!(module, &expected, "Left=Actual; Right=Expected")
 }
 
-fn check_expression(input: &str, expected: Expression) {
+fn check_expression(input: &str, expected: L<Expr>) {
     let mut module = Module::default();
     module.add_expression(expected);
     check_module(input, module)
 }
 
-fn check_expressions(input: &str, expected: Vec<Expression>) {
+fn check_expressions(input: &str, expected: Vec<L<Expr>>) {
     let mut module = Module::default();
     module.expressions = expected;
     check_module(input, module)
@@ -53,51 +53,51 @@ fn y() -> Symbol {
     sym("y")
 }
 
-fn e_i64(value: i64) -> Expression {
+fn e_i64(value: i64) -> L<Expr> {
     B.lit_integer(value.into())
 }
 
-fn e_x() -> Expression {
+fn e_x() -> L<Expr> {
     B.symbol(x())
 }
 
-fn e_y() -> Expression {
+fn e_y() -> L<Expr> {
     B.symbol(y())
 }
 
-fn e_none() -> Expression {
+fn e_none() -> L<Expr> {
     B.tsymbol(TSymbol::None)
 }
 
-fn e_true() -> Expression {
+fn e_true() -> L<Expr> {
     B.tsymbol(TSymbol::True)
 }
 
-fn e_false() -> Expression {
+fn e_false() -> L<Expr> {
     B.tsymbol(TSymbol::False)
 }
 
-fn add(expr1: Expression, expr2: Expression) -> Expression {
+fn add(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
     B.binary(BinaryOp::Add, expr1, expr2)
 }
 
-fn add_i64(value1: i64, value2: i64) -> Expression {
+fn add_i64(value1: i64, value2: i64) -> L<Expr> {
     add(e_i64(value1), e_i64(value2))
 }
 
-fn sub(expr1: Expression, expr2: Expression) -> Expression {
+fn sub(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
     B.binary(BinaryOp::Sub, expr1, expr2)
 }
 
-fn sub_i64(value1: i64, value2: i64) -> Expression {
+fn sub_i64(value1: i64, value2: i64) -> L<Expr> {
     sub(e_i64(value1), e_i64(value2))
 }
 
-fn and(expr1: Expression, expr2: Expression) -> Expression {
+fn and(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
     B.binary(BinaryOp::And, expr1, expr2)
 }
 
-fn or(expr1: Expression, expr2: Expression) -> Expression {
+fn or(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
     B.binary(BinaryOp::Or, expr1, expr2)
 }
 

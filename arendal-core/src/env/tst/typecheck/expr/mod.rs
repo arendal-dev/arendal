@@ -1,7 +1,7 @@
 use im::HashMap;
 
 use crate::ast::{self, BinaryOp};
-use crate::error::{Error, Result};
+use crate::error::{Error, Result, L};
 use crate::symbol::{Symbol, TSymbol};
 use crate::types::Type;
 
@@ -11,7 +11,7 @@ type Scope = HashMap<Symbol, Type>;
 
 pub(super) fn check<'a>(
     checker: &mut ModuleChecker<'a>,
-    input: &ast::Expression,
+    input: &L<ast::Expr>,
 ) -> Result<Expression> {
     ExprChecker { checker, input }.check()
 }
@@ -19,12 +19,12 @@ pub(super) fn check<'a>(
 #[derive(Debug)]
 struct ExprChecker<'a, 'b> {
     checker: &'b mut ModuleChecker<'a>,
-    input: &'b ast::Expression,
+    input: &'b L<ast::Expr>,
 }
 
 impl<'a, 'b> ExprChecker<'a, 'b> {
     fn check(mut self) -> Result<Expression> {
-        match &self.input.expr {
+        match &self.input.it {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
             ast::Expr::Symbol(id) => match self.checker.get_val(&id) {
                 Some(tipo) => Ok(self.builder().local(id.clone(), tipo.clone())),
@@ -68,7 +68,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.checker.resolve_type(&self.input.loc, symbol)
     }
 
-    fn sub_expr(&mut self, input: &ast::Expression) -> Result<Expression> {
+    fn sub_expr(&mut self, input: &L<ast::Expr>) -> Result<Expression> {
         ExprChecker {
             checker: self.checker,
             input,
@@ -93,7 +93,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_block(&mut self, exprs: &Vec<ast::Expression>) -> Result<Expression> {
+    fn check_block(&mut self, exprs: &Vec<L<ast::Expr>>) -> Result<Expression> {
         let mut checked = Vec::default();
         for e in exprs {
             checked.push(self.sub_expr(e)?);
