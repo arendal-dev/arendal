@@ -69,31 +69,6 @@ impl<'a> TypesChecker<'a> {
     }
 }
 
-#[derive(Debug, Default)]
-struct LocalTypes {
-    types: HashMap<TSymbol, Type>,
-}
-
-impl LocalTypes {
-    fn get(&self, symbol: &TSymbol) -> Option<&Type> {
-        self.types.get(symbol)
-    }
-
-    fn check_available(&self, dfn: &ast::TypeDefinition) -> Result<()> {
-        if self.types.contains_key(&dfn.symbol) {
-            dfn.loc.err(Error::DuplicateLocalType(dfn.symbol.clone()))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn insert_complete(&mut self, dfn: &ast::TypeDefinition, tipo: Type) -> Result<()> {
-        self.check_available(dfn)?;
-        self.types.insert(dfn.symbol.clone(), tipo);
-        Ok(())
-    }
-}
-
 #[derive(Debug)]
 struct PackageChecker<'a> {
     env: &'a Env,
