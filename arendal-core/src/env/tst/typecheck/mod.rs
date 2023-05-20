@@ -1,4 +1,5 @@
 mod expr;
+mod types;
 
 use im::HashMap;
 
@@ -8,65 +9,14 @@ use crate::symbol::{FQPath, FQType, Pkg, Symbol, TSymbol};
 use crate::types::Type;
 
 use crate::env::Env;
-use crate::visibility::Visibility;
 
 use super::{Expr, ExprBuilder, Package, TypeDefMap, TypeDefinition, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
-    let types = TypesChecker {
-        env,
-        input,
-        types: TypeDefMap::default(),
-        errors: Errors::default(),
-    }
-    .check()?;
+    let types = types::check(env, input)?;
     PackageChecker { env, input, types }.check()
-}
-
-#[derive(Debug)]
-struct TypesChecker<'a> {
-    env: &'a Env,
-    input: &'a ast::Package,
-    types: TypeDefMap,
-    errors: Errors,
-}
-
-impl<'a> TypesChecker<'a> {
-    fn check(mut self) -> Result<TypeDefMap> {
-        for (path, module) in &self.input.modules {
-            self.check_module(self.input.pkg.path(path.clone()), module)
-        }
-        Ok(self.types)
-    }
-
-    fn check_module(&mut self, path: FQPath, module: &ast::Module) {
-        for t in &module.types {
-            let fq = path.fq_type(t.symbol.clone());
-            let maybe = if self.types.contains_key(&fq) || self.env.types.contains(&fq) {
-                self.errors
-                    .add(t.loc.wrap(Error::DuplicateType(fq.clone())));
-                None
-            } else {
-                match t.dfn {
-                    ast::TypeDfn::Singleton => {
-                        self.errors.add_result(Type::singleton(&t.loc, fq.clone()))
-                    }
-                }
-            };
-            if let Some(tipo) = maybe {
-                self.types.insert(
-                    fq,
-                    TypeDefinition {
-                        loc: t.loc.clone(),
-                        visibility: Visibility::Module,
-                        tipo,
-                    },
-                );
-            }
-        }
-    }
 }
 
 #[derive(Debug)]
