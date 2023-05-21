@@ -23,12 +23,12 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
     fn check(mut self) -> Result<L<Expr>> {
         match &self.input.it {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
-            ast::Expr::Symbol(id) => match self.checker.get_val(&id) {
-                Some(tipo) => Ok(self.builder().local(id.clone(), tipo.clone())),
-                None => self.error(Error::UnknownLocalSymbol(id.clone())),
+            ast::Expr::Symbol(q) => match self.checker.get_val(&q.symbol) {
+                Some(tipo) => Ok(self.builder().local(q.symbol.clone(), tipo.clone())),
+                None => self.error(Error::UnknownLocalSymbol(q.symbol.clone())),
             },
-            ast::Expr::TSymbol(s) => {
-                let tipo = self.resolve_type(&s)?;
+            ast::Expr::TSymbol(q) => {
+                let tipo = self.resolve_type(&q.symbol)?;
                 let value = Value::singleton(&self.input.loc, &tipo)?;
                 Ok(self.builder().value(value))
             }

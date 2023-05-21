@@ -22,6 +22,8 @@ equality -> comparison ( ("==" | "!=") comparison )*
 comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
-primary -> IntLiteral | TypeSymbol | symbol | "(" subexpr ")" | "{" ( toplevelexpr (EOI toplevelexpr)* )?   "}" 
+primary -> IntLiteral | TypeSymbol | Symbol | "(" subexpr ")" | "{" ( toplevelexpr (EOI toplevelexpr)* )?   "}" 
+qsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
+qtsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
 
 ```

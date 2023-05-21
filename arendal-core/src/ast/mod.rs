@@ -8,6 +8,18 @@ use super::Integer;
 use crate::error::{Loc, L};
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Segment {
+    Symbol(Symbol),
+    Type(TSymbol),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Q<T> {
+    pub segments: Vec<Segment>,
+    pub symbol: T,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
     Minus,
@@ -59,8 +71,8 @@ pub struct AssignmentExpr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     LitInteger(Integer),
-    Symbol(Symbol),
-    TSymbol(TSymbol),
+    Symbol(Q<Symbol>),
+    TSymbol(Q<TSymbol>),
     Unary(Box<UnaryExpr>),
     Binary(Box<BinaryExpr>),
     Block(Vec<L<Expr>>),
@@ -89,12 +101,12 @@ impl ExprBuilder {
         self.build(Expr::LitInteger(value))
     }
 
-    pub fn symbol(&self, symbol: Symbol) -> L<Expr> {
-        self.build(Expr::Symbol(symbol))
+    pub fn symbol(&self, segments: Vec<Segment>, symbol: Symbol) -> L<Expr> {
+        self.build(Expr::Symbol(Q { segments, symbol }))
     }
 
-    pub fn tsymbol(&self, symbol: TSymbol) -> L<Expr> {
-        self.build(Expr::TSymbol(symbol))
+    pub fn tsymbol(&self, segments: Vec<Segment>, symbol: TSymbol) -> L<Expr> {
+        self.build(Expr::TSymbol(Q { segments, symbol }))
     }
 
     pub fn unary(&self, op: UnaryOp, expr: L<Expr>) -> L<Expr> {

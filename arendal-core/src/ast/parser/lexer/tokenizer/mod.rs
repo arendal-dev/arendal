@@ -49,6 +49,8 @@ pub(super) enum Token {
     LogicalAnd,
     Pipe,
     LogicalOr,
+    Colon,
+    DoubleColon,
     Open(Enclosure),
     Close(Enclosure),
     Underscore,
@@ -66,21 +68,13 @@ impl Token {
 
     fn chars(&self) -> usize {
         match self {
-            Token::Spaces(n) => *n,
-            Token::Tabs(n) => *n,
             Token::EndOfLine(nl) => nl.chars(),
             Token::Digits(s) => s.chars().count(),
             Token::Word(s) => s.chars().count(),
-            Token::NotEquals => 2,
-            Token::LogicalAnd => 2,
-            Token::LogicalOr => 2,
-            Token::GreaterOrEq => 2,
-            Token::LessOrEq => 2,
-            _ => 1,
+            _ => self.bytes(),
         }
     }
 
-    #[cfg(test)]
     fn bytes(&self) -> usize {
         match self {
             Token::Spaces(n) => *n,
@@ -93,6 +87,7 @@ impl Token {
             Token::LogicalOr => 2,
             Token::GreaterOrEq => 2,
             Token::LessOrEq => 2,
+            Token::DoubleColon => 2,
             _ => 1,
         }
     }
@@ -225,6 +220,7 @@ impl Tokenizer {
             '[' => self.add_token(Token::Open(Enclosure::Square)),
             ']' => self.add_token(Token::Close(Enclosure::Square)),
             '_' => self.add_token(Token::Underscore),
+            ':' => self.add_token_if_next_or_else(':', Token::DoubleColon, Token::Colon),
             _ => false,
         }
     }

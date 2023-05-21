@@ -80,7 +80,7 @@ fn crlf() {
 
 #[test]
 fn singles() {
-    TestCase::new("+-*./><!()={}[]_")
+    TestCase::new("+-*./><!()={}[]_:")
         .token(Token::Plus)
         .token(Token::Minus)
         .token(Token::Star)
@@ -97,6 +97,7 @@ fn singles() {
         .token(Token::Open(Enclosure::Square))
         .token(Token::Close(Enclosure::Square))
         .token(Token::Underscore)
+        .token(Token::Colon)
         .ok();
 }
 
@@ -152,5 +153,16 @@ fn sum() {
         .token(Token::Plus)
         .spaces(1)
         .digits("3")
+        .ok();
+}
+
+#[test]
+fn path() {
+    TestCase::new("a::b::C")
+        .word("a")
+        .token(Token::DoubleColon)
+        .word("b")
+        .token(Token::DoubleColon)
+        .word("C")
         .ok();
 }

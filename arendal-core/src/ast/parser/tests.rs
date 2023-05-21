@@ -1,5 +1,5 @@
-use crate::ast::ExprBuilder;
 use crate::ast::{BinaryOp, Expr, Module, TypeDefinition, TypeDfnBuilder};
+use crate::ast::{ExprBuilder, Segment, Q};
 use crate::error::{Loc, L};
 use crate::symbol::{Symbol, TSymbol};
 
@@ -25,6 +25,14 @@ fn check_expressions(input: &str, expected: Vec<L<Expr>>) {
     check_module(input, module)
 }
 
+fn check_qsymbol(input: &str, segments: Vec<Segment>, symbol: Symbol) {
+    check_expression(input, B.symbol(segments, symbol));
+}
+
+fn check_qtype(input: &str, segments: Vec<Segment>, symbol: TSymbol) {
+    check_expression(input, B.tsymbol(segments, symbol));
+}
+
 fn expect_error(input: &str, expected: &Error) {
     match parse(input) {
         Ok(_) => panic!("Parsed correctly but expected {:?}", expected),
@@ -41,8 +49,16 @@ fn sym(symbol: &str) -> Symbol {
     Symbol::new(&Loc::None, symbol.into()).unwrap()
 }
 
+fn ssym(symbol: &str) -> Segment {
+    Segment::Symbol(sym(symbol))
+}
+
 fn tsym(symbol: &str) -> TSymbol {
     TSymbol::new(&Loc::None, symbol.into()).unwrap()
+}
+
+fn stsym(symbol: &str) -> Segment {
+    Segment::Type(tsym(symbol))
 }
 
 fn x() -> Symbol {
@@ -58,23 +74,23 @@ fn e_i64(value: i64) -> L<Expr> {
 }
 
 fn e_x() -> L<Expr> {
-    B.symbol(x())
+    B.symbol(Vec::default(), x())
 }
 
 fn e_y() -> L<Expr> {
-    B.symbol(y())
+    B.symbol(Vec::default(), y())
 }
 
 fn e_none() -> L<Expr> {
-    B.tsymbol(TSymbol::None)
+    B.tsymbol(Vec::default(), TSymbol::None)
 }
 
 fn e_true() -> L<Expr> {
-    B.tsymbol(TSymbol::True)
+    B.tsymbol(Vec::default(), TSymbol::True)
 }
 
 fn e_false() -> L<Expr> {
-    B.tsymbol(TSymbol::False)
+    B.tsymbol(Vec::default(), TSymbol::False)
 }
 
 fn add(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
@@ -202,6 +218,15 @@ fn blocks() {
     );
     expect_error("{ 1 2 }", &Error::EndOfItemExpected);
     expect_error("{ 1\n 2 ", &Error::CloseExpected(Enclosure::Curly))
+}
+
+#[test]
+fn qsymbols() {
+    check_qsymbol("x", Vec::default(), x());
+    check_qsymbol("x::y", vec![ssym("x")], y());
+    check_qsymbol("x::z::y", vec![ssym("x"), ssym("z")], y());
+    check_qtype("x::y::A", vec![ssym("x"), ssym("y")], tsym("A"));
+    check_qtype("x::Y::A", vec![ssym("x"), stsym("Y")], tsym("A"));
 }
 
 #[test]

@@ -7,7 +7,10 @@ pub enum Enclosure {
     Curly,
 }
 
-use super::{BinaryOp, Expr, ExprBuilder, Module, Package, TypeDefinition, TypeDfnBuilder};
+use super::{
+    BinaryOp, Expr, ExprBuilder, Module, Package, Segment, TypeDefinition, TypeDfnBuilder,
+};
+use crate::ast::Q;
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};
@@ -278,8 +281,8 @@ impl Parser {
         if let Some(lexeme) = self.peek() {
             match &lexeme.kind {
                 LexemeKind::Integer(n) => self.advance().ok(self.builder().lit_integer(n.clone())),
-                LexemeKind::TSymbol(id) => self.advance().ok(self.builder().tsymbol(id.clone())),
-                LexemeKind::Symbol(id) => self.advance().ok(self.builder().symbol(id.clone())),
+                LexemeKind::TSymbol(symbol) => self.rule_q(Segment::Type(symbol.clone())),
+                LexemeKind::Symbol(symbol) => self.rule_q(Segment::Symbol(symbol.clone())),
                 LexemeKind::Open(Enclosure::Parens) => {
                     let (expr, next) = self.advance().rule_subexpr()?;
                     if !next.kind_equals(LexemeKind::Close(Enclosure::Parens)) {
@@ -291,7 +294,9 @@ impl Parser {
                 LexemeKind::Open(Enclosure::Curly) => {
                     let mut parser = self.advance();
                     if parser.kind_equals(LexemeKind::Close(Enclosure::Curly)) {
-                        parser.advance().ok(self.builder().tsymbol(TSymbol::None))
+                        parser
+                            .advance()
+                            .ok(self.builder().tsymbol(Vec::default(), TSymbol::None))
                     } else {
                         let mut expr;
                         let mut exprs: Vec<L<Expr>> = Vec::default();
@@ -315,6 +320,53 @@ impl Parser {
             }
         } else {
             self.expression_expected()
+        }
+    }
+
+    fn rule_q(&self, segment: Segment) -> EResult {
+        let segments = Vec::default();
+        self.rule_q_add(self, segments, segment)
+    }
+
+    fn rule_q_peek(&self, initial: &Parser, segments: Vec<Segment>) -> EResult {
+        if let Some(lex) = self.peek() {
+            if lex.kind == LexemeKind::PathSeparator {
+                if lex.separator == Separator::Nothing {
+                    let parser = self.advance();
+                    match parser.peek_kind() {
+                        Some(LexemeKind::Symbol(s)) => {
+                            parser.rule_q_add(initial, segments, Segment::Symbol(s.clone()))
+                        }
+                        Some(LexemeKind::TSymbol(s)) => {
+                            parser.rule_q_add(initial, segments, Segment::Type(s.clone()))
+                        }
+                        _ => parser.err(Error::ParsingError),
+                    }
+                } else {
+                    self.err(Error::ParsingError)
+                }
+            } else {
+                self.rule_q_close(initial, segments)
+            }
+        } else {
+            self.rule_q_close(initial, segments)
+        }
+    }
+
+    fn rule_q_add(
+        &self,
+        initial: &Parser,
+        mut segments: Vec<Segment>,
+        segment: Segment,
+    ) -> EResult {
+        segments.push(segment);
+        self.advance().rule_q_peek(initial, segments)
+    }
+
+    fn rule_q_close(&self, initial: &Parser, mut segments: Vec<Segment>) -> EResult {
+        match segments.pop().unwrap() {
+            Segment::Symbol(symbol) => self.ok(initial.builder().symbol(segments, symbol)),
+            Segment::Type(symbol) => self.ok(initial.builder().tsymbol(segments, symbol)),
         }
     }
 }

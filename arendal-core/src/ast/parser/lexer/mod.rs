@@ -83,6 +83,7 @@ pub(super) enum LexemeKind {
     NotEquals,
     LogicalAnd,
     LogicalOr,
+    PathSeparator,
     Integer(Integer),
     Open(Enclosure),
     Close(Enclosure),
@@ -160,6 +161,7 @@ impl Lexer {
                 Token::LogicalOr => self.add_lexeme(LexemeKind::LogicalOr, 1),
                 Token::NotEquals => self.add_lexeme(LexemeKind::NotEquals, 1),
                 Token::Underscore => self.add_lexeme(LexemeKind::Underscore, 1),
+                Token::DoubleColon => self.add_lexeme(LexemeKind::PathSeparator, 1),
                 Token::Open(e) => {
                     self.enclosures.push(e);
                     self.add_lexeme(LexemeKind::Open(e), 1)

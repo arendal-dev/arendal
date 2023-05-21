@@ -55,14 +55,14 @@ impl TestCase {
         super::lex(self.input.as_str())
     }
 
-    fn id(self, separator: Separator, name: &str) -> Self {
+    fn symbol(self, separator: Separator, name: &str) -> Self {
         self.token(
             separator,
             LexemeKind::Symbol(Symbol::new(&Loc::None, name.into()).unwrap()),
         )
     }
 
-    fn type_id(self, separator: Separator, name: &str) -> Self {
+    fn tsymbol(self, separator: Separator, name: &str) -> Self {
         self.token(
             separator,
             LexemeKind::TSymbol(TSymbol::new(&Loc::None, name.into()).unwrap()),
@@ -217,8 +217,19 @@ fn enclosures_mixed_ok() {
 fn assignment() {
     TestCase::new("let x = True")
         .keyword(Separator::NewLine, Keyword::Let)
-        .id(Separator::Whitespace, "x")
+        .symbol(Separator::Whitespace, "x")
         .token(Separator::Whitespace, LexemeKind::Assignment)
-        .type_id(Separator::Whitespace, "True")
+        .tsymbol(Separator::Whitespace, "True")
+        .ok_without_pos();
+}
+
+#[test]
+fn path() {
+    TestCase::new("a::b::C")
+        .symbol(Separator::NewLine, "a")
+        .token(Separator::Nothing, LexemeKind::PathSeparator)
+        .symbol(Separator::Nothing, "b")
+        .token(Separator::Nothing, LexemeKind::PathSeparator)
+        .tsymbol(Separator::Nothing, "C")
         .ok_without_pos();
 }
