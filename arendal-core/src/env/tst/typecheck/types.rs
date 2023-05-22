@@ -1,3 +1,5 @@
+use im::HashMap;
+
 use crate::ast;
 use crate::error::{Error, Errors, Result};
 use crate::symbol::FQType;
@@ -8,15 +10,18 @@ use crate::visibility::Visibility;
 
 use super::{TypeDefMap, TypeDefinition};
 
-type Candidate<'a> = (FQType, &'a ast::TypeDefinition);
-type Candidates<'a> = Vec<Candidate<'a>>;
+type Candidates<'a> = HashMap<FQType, &'a ast::TypeDefinition>;
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<TypeDefMap> {
     let mut candidates = Candidates::default();
     for (path, module) in &input.modules {
         let fqpath = input.pkg.path(path.clone());
         for t in &module.types {
-            candidates.push((fqpath.fq_type(t.symbol.clone()), t));
+            let fq_type = fqpath.fq_type(t.symbol.clone());
+            if candidates.contains_key(&fq_type) {
+                return t.loc.err(Error::DuplicateType(fq_type));
+            }
+            candidates.insert(fq_type, t);
         }
     }
     Checker {
