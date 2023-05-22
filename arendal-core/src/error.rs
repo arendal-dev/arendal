@@ -162,6 +162,19 @@ impl Errors {
             Some(e) => Err(e),
         }
     }
+
+    pub fn to_merged_result<T>(self, result: Result<T>) -> Result<T> {
+        match self.errors {
+            None => result,
+            Some(mut e) => match result {
+                Ok(_) => Err(e),
+                Err(e2) => {
+                    e.append(e2);
+                    Err(e)
+                }
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

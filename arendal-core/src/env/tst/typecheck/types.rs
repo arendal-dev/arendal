@@ -14,23 +14,27 @@ type Candidates<'a> = HashMap<FQType, &'a ast::TypeDefinition>;
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<TypeDefMap> {
     let mut candidates = Candidates::default();
+    let mut errors = Errors::default();
     for (path, module) in &input.modules {
         let fqpath = input.pkg.path(path.clone());
         for t in &module.types {
             let fq_type = fqpath.fq_type(t.symbol.clone());
             if candidates.contains_key(&fq_type) {
-                return t.loc.err(Error::DuplicateType(fq_type));
+                errors.add(t.loc.wrap(Error::DuplicateType(fq_type)));
+            } else {
+                candidates.insert(fq_type, t);
             }
-            candidates.insert(fq_type, t);
         }
     }
-    Checker {
-        env,
-        candidates,
-        types: TypeDefMap::default(),
-        errors: Errors::default(),
-    }
-    .check()
+    errors.to_merged_result(
+        Checker {
+            env,
+            candidates,
+            types: TypeDefMap::default(),
+            errors: Errors::default(),
+        }
+        .check(),
+    )
 }
 
 #[derive(Debug)]
