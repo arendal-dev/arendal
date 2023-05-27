@@ -1,4 +1,5 @@
 mod expr;
+mod resolver;
 mod types;
 
 use im::HashMap;
@@ -10,19 +11,31 @@ use crate::types::Type;
 
 use crate::env::Env;
 
+use self::resolver::Module;
 use super::{Expr, ExprBuilder, Package, TypeDefMap, TypeDefinition, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
-    let types = types::check(env, input)?;
-    PackageChecker { env, input, types }.check()
+    let input = Input {
+        env,
+        pkg: input.pkg.clone(),
+        modules: resolver::get_modules(input)?,
+    };
+    let types = types::check(&input)?;
+    PackageChecker { input, types }.check()
+}
+
+#[derive(Debug)]
+struct Input<'a> {
+    env: &'a Env,
+    pkg: Pkg,
+    modules: Vec<Module<'a>>,
 }
 
 #[derive(Debug)]
 struct PackageChecker<'a> {
-    env: &'a Env,
-    input: &'a ast::Package,
+    input: Input<'a>,
     types: TypeDefMap,
 }
 
@@ -30,14 +43,13 @@ impl<'a> PackageChecker<'a> {
     fn check(mut self) -> Result<Package> {
         let mut expressions = Vec::default();
         let mut errors = Errors::default();
-        for (path, module) in &self.input.modules {
-            let fqpath = self.input.pkg.path(path.clone());
+        for module in &self.input.modules {
             errors
                 .add_result(
                     ModuleChecker {
-                        pkg: &mut self,
-                        path: fqpath,
-                        input: module,
+                        pkg: &self,
+                        path: module.path.clone(),
+                        input: module.ast,
                         scopes: vec![Scope::default()],
                     }
                     .check(),
@@ -87,7 +99,13 @@ impl<'a> ModuleChecker<'a> {
             }
             i = i - 1;
         }
-        if let Some(vv) = self.pkg.env.values.get(&self.path.fq_sym(symbol.clone())) {
+        if let Some(vv) = self
+            .pkg
+            .input
+            .env
+            .values
+            .get(&self.path.fq_sym(symbol.clone()))
+        {
             return Some(vv.unwrap().clone_type());
         }
         None
@@ -103,11 +121,13 @@ impl<'a> ModuleChecker<'a> {
             Some(t) => Ok(t.tipo.clone()),
             None => self
                 .pkg
+                .input
                 .env
                 .types
                 .get(&self.fq_type(symbol))
                 .or_else(|| {
                     self.pkg
+                        .input
                         .env
                         .types
                         .get(&Pkg::Std.empty().fq_type(symbol.clone()))

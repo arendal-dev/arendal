@@ -5,20 +5,18 @@ use crate::error::{Error, Errors, Result};
 use crate::symbol::FQType;
 use crate::types::Type;
 
-use crate::env::Env;
 use crate::visibility::Visibility;
 
-use super::{TypeDefMap, TypeDefinition};
+use super::{Input, Module, TypeDefMap, TypeDefinition};
 
 type Candidates<'a> = HashMap<FQType, &'a ast::TypeDefinition>;
 
-pub(super) fn check(env: &Env, input: &ast::Package) -> Result<TypeDefMap> {
+pub(super) fn check(input: &Input) -> Result<TypeDefMap> {
     let mut candidates = Candidates::default();
     let mut errors = Errors::default();
-    for (path, module) in &input.modules {
-        let fqpath = input.pkg.path(path.clone());
-        for t in &module.types {
-            let fq_type = fqpath.fq_type(t.symbol.clone());
+    for module in &input.modules {
+        for t in &module.ast.types {
+            let fq_type = module.path.fq_type(t.symbol.clone());
             if candidates.contains_key(&fq_type) {
                 errors.add(t.loc.wrap(Error::DuplicateType(fq_type)));
             } else {
@@ -28,7 +26,7 @@ pub(super) fn check(env: &Env, input: &ast::Package) -> Result<TypeDefMap> {
     }
     errors.to_merged_result(
         Checker {
-            env,
+            input,
             candidates,
             types: TypeDefMap::default(),
             errors: Errors::default(),
@@ -39,16 +37,20 @@ pub(super) fn check(env: &Env, input: &ast::Package) -> Result<TypeDefMap> {
 
 #[derive(Debug)]
 struct Checker<'a> {
-    env: &'a Env,
+    input: &'a Input<'a>,
     candidates: Candidates<'a>,
     types: TypeDefMap,
     errors: Errors,
 }
 
 impl<'a> Checker<'a> {
+    fn contains_type(&self, fq: &FQType) -> bool {
+        self.types.contains_key(fq) || self.input.env.types.contains(fq)
+    }
+
     fn check(mut self) -> Result<TypeDefMap> {
         for (fq, t) in &self.candidates {
-            let maybe = if self.types.contains_key(fq) || self.env.types.contains(fq) {
+            let maybe = if self.contains_type(fq) {
                 self.errors
                     .add(t.loc.wrap(Error::DuplicateType(fq.clone())));
                 None

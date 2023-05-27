@@ -1,5 +1,5 @@
 use crate::{
-    ast::parser::Enclosure,
+    ast::{parser::Enclosure, Q},
     keyword::Keyword,
     symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
     types::Type,
@@ -211,6 +211,8 @@ pub enum Error {
     DuplicateLocalType(TSymbol),
     UnknownLocalSymbol(Symbol),
     DuplicateLocalSymbol(TSymbol),
+    UnableToResolveSymbol(Q<Symbol>),
+    UnableToResolveType(Q<TSymbol>),
     // Type checking and runtime
     TypeMismatch(Arc<TypeMismatch>),
     SingletonExpected(Type),
