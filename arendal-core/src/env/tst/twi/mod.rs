@@ -47,7 +47,7 @@ impl<'a> Interpreter<'a> {
             i = i - 1;
         }
         if let Some(vv) = self.env.values.get(&self.path.fq_sym(symbol.clone())) {
-            return Some(vv.unwrap());
+            return Some(vv.it);
         }
         None
     }

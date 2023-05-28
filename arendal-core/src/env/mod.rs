@@ -7,7 +7,7 @@ use crate::{
     error::{Error, Loc, Result},
     symbol::{FQSym, FQType},
     types::Type,
-    visibility::{Visibility, Visible},
+    visibility::{Visibility, V},
     Integer,
 };
 
@@ -106,11 +106,11 @@ impl fmt::Debug for Value {
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Values {
-    values: HashMap<FQSym, Visible<Value>>,
+    values: HashMap<FQSym, V<Value>>,
 }
 
 impl Values {
-    pub(crate) fn get(&self, symbol: &FQSym) -> Option<Visible<Value>> {
+    pub(crate) fn get(&self, symbol: &FQSym) -> Option<V<Value>> {
         self.values.get(symbol).cloned()
     }
 
@@ -124,13 +124,13 @@ impl Values {
         if self.values.contains_key(&symbol) {
             loc.err(Error::DuplicateSymbol(symbol))
         } else {
-            self.values.insert(symbol, Visible::new(visibility, value));
+            self.values.insert(symbol, visibility.wrap(value));
             Ok(())
         }
     }
 }
 
-type TypeMap = HashMap<FQType, Visible<Type>>;
+type TypeMap = HashMap<FQType, V<Type>>;
 
 #[derive(Debug, Clone)]
 struct Types {
@@ -146,7 +146,7 @@ impl Default for Types {
 }
 
 impl Types {
-    pub(crate) fn get(&self, symbol: &FQType) -> Option<&Visible<Type>> {
+    pub(crate) fn get(&self, symbol: &FQType) -> Option<&V<Type>> {
         self.types.get(symbol)
     }
 

@@ -106,7 +106,7 @@ impl<'a> ModuleChecker<'a> {
             .values
             .get(&self.path.fq_sym(symbol.clone()))
         {
-            return Some(vv.unwrap().clone_type());
+            return Some(vv.it.clone_type());
         }
         None
     }

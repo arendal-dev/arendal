@@ -5,35 +5,22 @@ pub enum Visibility {
     Exported,
 }
 
+impl Visibility {
+    pub fn wrap<T>(&self, it: T) -> V<T> {
+        V {
+            visibility: *self,
+            it,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Visible<T> {
-    visibility: Visibility,
-    it: T,
+pub struct V<T> {
+    pub visibility: Visibility,
+    pub it: T,
 }
 
-impl<T> Visible<T> {
-    pub fn new(visibility: Visibility, it: T) -> Self {
-        Visible { visibility, it }
-    }
-
-    pub fn module(it: T) -> Self {
-        Self::new(Visibility::Module, it)
-    }
-
-    pub fn package(it: T) -> Self {
-        Self::new(Visibility::Package, it)
-    }
-
-    pub fn exported(it: T) -> Self {
-        Self::new(Visibility::Exported, it)
-    }
-
-    pub fn unwrap(self) -> T {
-        self.it
-    }
-}
-
-impl<T: Clone> Visible<T> {
+impl<T: Clone> V<T> {
     pub fn cloned(&self) -> T {
         self.it.clone()
     }
