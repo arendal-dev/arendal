@@ -1,5 +1,5 @@
 use crate::ast::{BinaryOp, Expr, Module, TypeDefinition, TypeDfnBuilder};
-use crate::ast::{ExprBuilder, Segment, Q};
+use crate::ast::{ExprBuilder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{Symbol, TSymbol};
 

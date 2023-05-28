@@ -1,13 +1,10 @@
 mod twi;
 mod typecheck;
 
-use im::HashMap;
-
 use crate::ast::UnaryOp;
 use crate::error::{Error, Loc, Result, L};
-use crate::symbol::{FQType, Pkg, Symbol};
-use crate::types::Type;
-use crate::visibility::Visibility;
+use crate::symbol::{Pkg, Symbol};
+use crate::types::{Type, Types};
 use crate::Integer;
 use std::fmt;
 use std::sync::Arc;
@@ -248,18 +245,9 @@ impl ExprBuilder {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeDefinition {
-    loc: Loc,
-    visibility: Visibility,
-    tipo: Type,
-}
-
-type TypeDefMap = HashMap<FQType, TypeDefinition>;
-
 #[derive(Debug)]
 pub(super) struct Package {
     pkg: Pkg,
-    types: TypeDefMap,
+    types: Types,
     expressions: Vec<L<Expr>>,
 }

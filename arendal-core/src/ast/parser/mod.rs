@@ -10,7 +10,6 @@ pub enum Enclosure {
 use super::{
     BinaryOp, Expr, ExprBuilder, Module, Package, Segment, TypeDefinition, TypeDfnBuilder,
 };
-use crate::ast::Q;
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};

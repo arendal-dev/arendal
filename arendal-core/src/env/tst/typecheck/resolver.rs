@@ -1,7 +1,7 @@
 use crate::{
     ast::{self, Package, Q},
     error::{Error, Errors, Loc, Result},
-    symbol::{FQPath, FQSym, FQType, Path, Pkg, Symbol, TSymbol},
+    symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
 };
 
 #[derive(Debug)]

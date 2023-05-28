@@ -5,9 +5,9 @@ use std::sync::Arc;
 
 use im::HashMap;
 
-use crate::error::{Error, Loc, Result};
+use crate::error::{Error, Errors, Result, L};
 use crate::symbol::FQType;
-use crate::visibility::V;
+use crate::visibility::{Visibility, V};
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Type {
@@ -81,17 +81,6 @@ impl Type {
             _ => false,
         }
     }
-
-    pub fn singleton(loc: &Loc, symbol: FQType) -> Result<Type> {
-        if symbol.is_known() {
-            loc.err(Error::DuplicateType(symbol))
-        } else {
-            let tipo = Type::Singleton(Singleton {
-                symbol: symbol.clone(),
-            });
-            Ok(tipo)
-        }
-    }
 }
 
 impl fmt::Display for Type {
@@ -106,10 +95,25 @@ impl fmt::Debug for Type {
     }
 }
 
+// We need this level of indirection to add refinements in the future.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeRef {
+    fq_type: FQType,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum TypeDfn {
+    Singleton,
+    Tuple(Vec<TypeRef>),
+}
+
+pub(crate) type LVTypeDfn = L<V<TypeDfn>>;
+pub(crate) type TypeDfnMap = HashMap<FQType, LVTypeDfn>;
+
 type TypeMap = HashMap<FQType, V<Type>>;
 
 #[derive(Debug, Clone)]
-pub struct Types {
+pub(crate) struct Types {
     types: TypeMap,
 }
 
@@ -126,7 +130,38 @@ impl Types {
         self.types.get(symbol)
     }
 
-    pub fn contains(&self, symbol: &FQType) -> bool {
+    pub(crate) fn contains(&self, symbol: &FQType) -> bool {
         self.types.contains_key(symbol)
+    }
+
+    fn add(&mut self, fq: &FQType, visibility: Visibility, tipo: Type) {
+        self.types.insert(fq.clone(), visibility.wrap(tipo));
+    }
+
+    fn add_singleton(&mut self, fq: &FQType, visibility: Visibility) {
+        self.add(
+            fq,
+            visibility,
+            Type::Singleton(Singleton { symbol: fq.clone() }),
+        );
+    }
+
+    pub(crate) fn add_types(&self, candidates: &TypeDfnMap) -> Result<Types> {
+        let mut result = self.clone();
+        if candidates.is_empty() {
+            return Ok(result);
+        }
+        let mut errors = Errors::default();
+        for (fq, lvdfn) in candidates {
+            if self.types.contains_key(fq) {
+                errors.add(lvdfn.error(Error::DuplicateType(fq.clone())));
+            } else {
+                match &lvdfn.it.it {
+                    TypeDfn::Singleton => result.add_singleton(fq, lvdfn.it.visibility),
+                    _ => todo!(),
+                }
+            }
+        }
+        errors.to_result(result)
     }
 }

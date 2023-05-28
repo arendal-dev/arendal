@@ -1,6 +1,6 @@
 use im::HashMap;
 
-use crate::ast::{self, BinaryOp};
+use crate::ast::{self, BinaryOp, Q};
 use crate::error::{Error, Result, L};
 use crate::symbol::{Symbol, TSymbol};
 use crate::types::Type;
@@ -28,7 +28,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                 None => self.error(Error::UnknownLocalSymbol(q.symbol.clone())),
             },
             ast::Expr::TSymbol(q) => {
-                let tipo = self.resolve_type(&q.symbol)?;
+                let tipo = self.resolve_type(&q)?;
                 let value = Value::singleton(&self.input.loc, &tipo)?;
                 Ok(self.builder().value(value))
             }
@@ -61,7 +61,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn resolve_type(&self, symbol: &TSymbol) -> Result<Type> {
+    fn resolve_type(&self, symbol: &Q<TSymbol>) -> Result<Type> {
         self.checker.resolve_type(&self.input.loc, symbol)
     }
 

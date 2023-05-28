@@ -4,15 +4,15 @@ mod types;
 
 use im::HashMap;
 
-use crate::ast;
-use crate::error::{Error, Errors, Loc, Result, L};
-use crate::symbol::{FQPath, FQType, Pkg, Symbol, TSymbol};
-use crate::types::Type;
+use crate::ast::{self, Q};
+use crate::error::{Errors, Loc, Result, L};
+use crate::symbol::{FQPath, Pkg, Symbol, TSymbol};
+use crate::types::{Type, Types};
 
 use crate::env::Env;
 
 use self::resolver::Module;
-use super::{Expr, ExprBuilder, Package, TypeDefMap, TypeDefinition, Value};
+use super::{Expr, ExprBuilder, Package, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
@@ -36,7 +36,7 @@ struct Input<'a> {
 #[derive(Debug)]
 struct PackageChecker<'a> {
     input: Input<'a>,
-    types: TypeDefMap,
+    types: Types,
 }
 
 impl<'a> PackageChecker<'a> {
@@ -49,7 +49,7 @@ impl<'a> PackageChecker<'a> {
                     ModuleChecker {
                         pkg: &self,
                         path: module.path.clone(),
-                        input: module.ast,
+                        input: module,
                         scopes: vec![Scope::default()],
                     }
                     .check(),
@@ -67,7 +67,7 @@ impl<'a> PackageChecker<'a> {
 #[derive(Debug)]
 struct ModuleChecker<'a> {
     pkg: &'a PackageChecker<'a>,
-    input: &'a ast::Module,
+    input: &'a Module<'a>,
     path: FQPath,
     scopes: Vec<Scope>,
 }
@@ -79,7 +79,7 @@ impl<'a> ModuleChecker<'a> {
 
     fn check_expressions(&mut self) -> Result<Vec<L<Expr>>> {
         let mut expressions: Vec<L<Expr>> = Vec::default();
-        for e in &self.input.expressions {
+        for e in &self.input.ast.expressions {
             expressions.push(expr::check(self, e)?);
         }
         Ok(expressions)
@@ -111,32 +111,11 @@ impl<'a> ModuleChecker<'a> {
         None
     }
 
-    fn fq_type(&self, symbol: &TSymbol) -> FQType {
-        self.path.fq_type(symbol.clone())
-    }
-
-    fn resolve_type(&self, loc: &Loc, symbol: &TSymbol) -> Result<Type> {
-        let fq = self.path.fq_type(symbol.clone());
-        match self.pkg.types.get(&fq) {
-            Some(t) => Ok(t.tipo.clone()),
-            None => self
-                .pkg
-                .input
-                .env
-                .types
-                .get(&self.fq_type(symbol))
-                .or_else(|| {
-                    self.pkg
-                        .input
-                        .env
-                        .types
-                        .get(&Pkg::Std.empty().fq_type(symbol.clone()))
-                })
-                .map_or_else(
-                    || loc.err(Error::UnknownLocalType(symbol.clone())),
-                    |t| Ok(t.cloned()),
-                ),
-        }
+    fn resolve_type(&self, loc: &Loc, symbol: &Q<TSymbol>) -> Result<Type> {
+        let fq = self
+            .input
+            .resolve_type(|fq| self.pkg.types.contains(fq), loc, symbol)?;
+        Ok(self.pkg.types.get(&fq).unwrap().it.clone())
     }
 }
 
