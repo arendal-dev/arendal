@@ -210,7 +210,7 @@ pub enum Error {
     UnknownLocalType(TSymbol),
     DuplicateLocalType(TSymbol),
     UnknownLocalSymbol(Symbol),
-    DuplicateLocalSymbol(TSymbol),
+    DuplicateLocalSymbol(Symbol),
     UnableToResolveSymbol(Q<Symbol>),
     UnableToResolveType(Q<TSymbol>),
     TLExpressionInNonRootModule,
