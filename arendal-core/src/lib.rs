@@ -4,6 +4,7 @@ pub mod error;
 pub mod id;
 pub mod keyword;
 pub mod symbol;
+pub mod types;
 pub mod visibility;
 
 pub use arcstr::{literal, ArcStr, Substr};

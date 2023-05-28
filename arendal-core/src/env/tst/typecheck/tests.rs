@@ -1,5 +1,5 @@
-use super::Package;
-use crate::env::{Env, Type};
+use super::{Package, Type};
+use crate::env::Env;
 use crate::error::{Error, Result};
 
 fn check_module(input: &str) -> Result<Package> {

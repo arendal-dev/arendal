@@ -7,8 +7,9 @@ use im::HashMap;
 use crate::ast;
 use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{FQPath, FQType, Pkg, Symbol, TSymbol};
+use crate::types::Type;
 
-use crate::env::{Env, Type};
+use crate::env::Env;
 
 use self::resolver::Module;
 use super::{Expr, ExprBuilder, Package, TypeDefMap, TypeDefinition, Value};

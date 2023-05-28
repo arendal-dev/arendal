@@ -1,8 +1,8 @@
 use crate::{
     ast::{parser::Enclosure, Q},
-    env::Type,
     keyword::Keyword,
     symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
+    types::Type,
 };
 
 use super::ArcStr;
