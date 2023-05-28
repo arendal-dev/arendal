@@ -2,7 +2,7 @@ use crate::{symbol::FQType, types::Type, visibility::Visibility};
 
 use super::TypeMap;
 
-pub(super) fn load_types() -> TypeMap {
+pub(super) fn get_builtin_types() -> TypeMap {
     TypeLoader::default().load()
 }
 

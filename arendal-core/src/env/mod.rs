@@ -1,12 +1,11 @@
-mod prelude;
 mod tst;
 
 use im::HashMap;
 
 use crate::{
     error::{Error, Loc, Result},
-    symbol::{FQSym, FQType},
-    types::Type,
+    symbol::FQSym,
+    types::{Type, Types},
     visibility::{Visibility, V},
     Integer,
 };
@@ -126,40 +125,6 @@ impl Values {
         } else {
             self.values.insert(symbol, visibility.wrap(value));
             Ok(())
-        }
-    }
-}
-
-type TypeMap = HashMap<FQType, V<Type>>;
-
-#[derive(Debug, Clone)]
-struct Types {
-    types: TypeMap,
-}
-
-impl Default for Types {
-    fn default() -> Self {
-        Types {
-            types: prelude::load_types(),
-        }
-    }
-}
-
-impl Types {
-    pub(crate) fn get(&self, symbol: &FQType) -> Option<&V<Type>> {
-        self.types.get(symbol)
-    }
-
-    fn contains(&self, symbol: &FQType) -> bool {
-        self.types.contains_key(symbol)
-    }
-
-    // temporary
-    pub fn singleton(&self, loc: &Loc, symbol: FQType) -> Result<Type> {
-        if self.types.contains_key(&symbol) {
-            loc.err(Error::DuplicateType(symbol))
-        } else {
-            Type::singleton(loc, symbol)
         }
     }
 }
