@@ -6,13 +6,12 @@ use im::HashMap;
 use crate::ast::UnaryOp;
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQType, Pkg, Symbol};
-use crate::types::Type;
 use crate::visibility::Visibility;
 use crate::Integer;
 use std::fmt;
 use std::sync::Arc;
 
-use super::{Env, Value};
+use super::{Env, Type, Value};
 
 pub(super) fn run(env: &mut Env, input: &str) -> Result<Value> {
     let package = crate::ast::parser::parse(input)?;

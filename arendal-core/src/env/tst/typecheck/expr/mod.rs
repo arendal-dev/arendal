@@ -3,9 +3,8 @@ use im::HashMap;
 use crate::ast::{self, BinaryOp};
 use crate::error::{Error, Result, L};
 use crate::symbol::{Symbol, TSymbol};
-use crate::types::Type;
 
-use super::{Expr, ExprBuilder, ModuleChecker, Value};
+use super::{Expr, ExprBuilder, ModuleChecker, Type, Value};
 
 type Scope = HashMap<Symbol, Type>;
 

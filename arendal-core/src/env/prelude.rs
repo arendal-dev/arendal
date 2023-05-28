@@ -1,6 +1,6 @@
-use crate::{symbol::FQType, types::Type, visibility::Visibility};
+use crate::{symbol::FQType, visibility::Visibility};
 
-use super::TypeMap;
+use super::{Type, TypeMap};
 
 pub(super) fn load_types() -> TypeMap {
     TypeLoader::default().load()

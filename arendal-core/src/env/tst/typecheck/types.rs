@@ -1,9 +1,9 @@
 use im::HashMap;
 
 use crate::ast;
+use crate::env::Type;
 use crate::error::{Error, Errors, Result};
 use crate::symbol::FQType;
-use crate::types::Type;
 
 use crate::visibility::Visibility;
 
