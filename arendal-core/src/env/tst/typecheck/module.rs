@@ -1,6 +1,6 @@
 use crate::{
     ast::{self, Package, Q},
-    error::{Error, Errors, Loc, Result},
+    error::{Error, Errors, Loc, Result, L},
     symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
 };
 
@@ -8,6 +8,8 @@ use crate::{
 pub(super) struct Module<'a> {
     pub(super) path: FQPath,
     pub(super) ast: &'a ast::Module,
+    pub(super) assignments: Vec<&'a L<ast::Expr>>,
+    pub(super) expression: Option<&'a L<ast::Expr>>,
 }
 
 pub(super) fn get_modules(input: &Package) -> Result<Vec<Module>> {
@@ -23,7 +25,25 @@ pub(super) fn get_modules(input: &Package) -> Result<Vec<Module>> {
 
 impl<'a> Module<'a> {
     fn new(path: FQPath, ast: &ast::Module) -> Result<Module> {
-        Ok(Module { path, ast })
+        let mut assignments = Vec::default();
+        let mut expression = None;
+        for lexpr in &ast.expressions {
+            if let ast::Expr::Assignment(_) = lexpr.it {
+                assignments.push(lexpr);
+            } else if path != Pkg::Local.empty() {
+                return lexpr.err(Error::TLExpressionInNonRootModule);
+            } else if expression.is_some() {
+                return lexpr.err(Error::OnlyOneTLExpressionAllowed);
+            } else {
+                expression = Some(lexpr);
+            }
+        }
+        Ok(Module {
+            path,
+            ast,
+            assignments,
+            expression,
+        })
     }
 
     fn get_candidates<S: Clone, F, B>(&self, b: B, q: &Q<S>) -> Vec<F>

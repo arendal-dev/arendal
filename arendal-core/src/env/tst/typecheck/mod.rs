@@ -1,5 +1,5 @@
 mod expr;
-mod resolver;
+mod module;
 mod types;
 
 use im::HashMap;
@@ -11,7 +11,7 @@ use crate::types::{Type, Types};
 
 use crate::env::Env;
 
-use self::resolver::Module;
+use self::module::Module;
 use super::{Expr, ExprBuilder, Package, Value};
 
 type Scope = HashMap<Symbol, Type>;
@@ -20,7 +20,7 @@ pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
     let input = Input {
         env,
         pkg: input.pkg.clone(),
-        modules: resolver::get_modules(input)?,
+        modules: module::get_modules(input)?,
     };
     let types = types::check(&input)?;
     PackageChecker { input, types }.check()

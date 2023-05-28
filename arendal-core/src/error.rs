@@ -213,6 +213,8 @@ pub enum Error {
     DuplicateLocalSymbol(TSymbol),
     UnableToResolveSymbol(Q<Symbol>),
     UnableToResolveType(Q<TSymbol>),
+    TLExpressionInNonRootModule,
+    OnlyOneTLExpressionAllowed,
     // Type checking and runtime
     TypeMismatch(Arc<TypeMismatch>),
     SingletonExpected(Type),
