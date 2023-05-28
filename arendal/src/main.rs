@@ -1,5 +1,6 @@
-use core::env::{Env, Value};
+use core::env::Env;
 use core::error::Result;
+use core::values::Value;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;

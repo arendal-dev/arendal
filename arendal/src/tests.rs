@@ -1,4 +1,4 @@
-use core::env::Value;
+use core::values::Value;
 
 fn eval_ok(input: &str, result: Value) {
     if let Ok(v) = super::REPL::new().eval(input) {
