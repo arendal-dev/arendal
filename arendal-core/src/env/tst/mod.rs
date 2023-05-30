@@ -17,36 +17,6 @@ pub(super) fn run(env: &mut Env, input: &str) -> Result<Value> {
     twi::interpret(env, &checked)
 }
 
-impl L<Expr> {
-    fn borrow_type(&self) -> &Type {
-        self.it.borrow_type()
-    }
-
-    fn clone_type(&self) -> Type {
-        self.borrow_type().clone()
-    }
-
-    fn check_integer(&self) -> Result<()> {
-        if self.borrow_type().is_integer() {
-            Ok(())
-        } else {
-            self.type_mismatch(Type::Integer)
-        }
-    }
-
-    fn check_boolean(&self) -> Result<()> {
-        if self.borrow_type().is_boolean() {
-            Ok(())
-        } else {
-            self.type_mismatch(Type::Boolean)
-        }
-    }
-
-    fn type_mismatch<T>(&self, expected: Type) -> Result<T> {
-        self.err(Error::type_mismatch(expected, self.clone_type()))
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 struct Unary {
     op: UnaryOp,
@@ -115,6 +85,12 @@ struct Assignment {
     expr: L<Expr>,
 }
 
+impl Assignment {
+    fn to_stmt(self) -> Stmt {
+        Stmt::Assignment(Arc::new(self))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 struct Local {
     symbol: Symbol,
@@ -126,7 +102,6 @@ enum Expr {
     Value(Value),
     Local(Arc<Local>),
     Conditional(Arc<Conditional>),
-    Assignment(Arc<Assignment>),
     Unary(Arc<Unary>),
     IntAdd(Arc<TwoInts>),
     IntSub(Arc<TwoInts>),
@@ -134,16 +109,15 @@ enum Expr {
     IntDiv(Arc<TwoInts>),
     LogicalAnd(Arc<TwoBools>),
     LogicalOr(Arc<TwoBools>),
-    Block(Vec<L<Expr>>),
+    Block(Vec<L<Stmt>>),
 }
 
 impl Expr {
-    pub(crate) fn borrow_type(&self) -> &Type {
+    fn borrow_type(&self) -> &Type {
         match self {
             Self::Value(v) => v.borrow_type(),
             Self::Local(l) => &l.tipo,
             Self::Conditional(c) => c.borrow_type(),
-            Self::Assignment(a) => a.expr.borrow_type(),
             Self::Unary(u) => u.expr.borrow_type(),
             Self::IntAdd(t) => t.expr1.borrow_type(),
             Self::IntSub(t) => t.expr1.borrow_type(),
@@ -161,9 +135,65 @@ impl Expr {
     }
 }
 
+impl L<Expr> {
+    fn to_stmt(self) -> L<Stmt> {
+        let loc = self.loc.clone();
+        loc.to_wrap(Stmt::Expr(Arc::new(self)))
+    }
+
+    fn borrow_type(&self) -> &Type {
+        self.it.borrow_type()
+    }
+
+    fn clone_type(&self) -> Type {
+        self.borrow_type().clone()
+    }
+
+    fn check_integer(&self) -> Result<()> {
+        if self.borrow_type().is_integer() {
+            Ok(())
+        } else {
+            self.type_mismatch(Type::Integer)
+        }
+    }
+
+    fn check_boolean(&self) -> Result<()> {
+        if self.borrow_type().is_boolean() {
+            Ok(())
+        } else {
+            self.type_mismatch(Type::Boolean)
+        }
+    }
+
+    fn type_mismatch<T>(&self, expected: Type) -> Result<T> {
+        self.err(Error::type_mismatch(expected, self.clone_type()))
+    }
+}
+
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?} : {:?}", self, self.borrow_type())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Stmt {
+    Assignment(Arc<Assignment>),
+    Expr(Arc<L<Expr>>),
+}
+
+impl Stmt {
+    fn borrow_type(&self) -> &Type {
+        match self {
+            Self::Assignment(a) => a.expr.borrow_type(),
+            Self::Expr(e) => e.borrow_type(),
+        }
+    }
+}
+
+impl L<Stmt> {
+    fn borrow_type(&self) -> &Type {
+        self.it.borrow_type()
     }
 }
 
@@ -204,8 +234,9 @@ impl ExprBuilder {
         self.ok(Expr::Conditional(Conditional::new(expr, then, otherwise)?))
     }
 
-    fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Expr> {
-        self.build(Expr::Assignment(Arc::new(Assignment { symbol, expr })))
+    fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Stmt> {
+        self.loc
+            .wrap(Stmt::Assignment(Arc::new(Assignment { symbol, expr })))
     }
 
     fn unary(&self, op: UnaryOp, expr: L<Expr>) -> L<Expr> {
@@ -236,11 +267,11 @@ impl ExprBuilder {
         self.ok(Expr::LogicalOr(TwoBools::new(expr1, expr2)?))
     }
 
-    fn block(&self, exprs: Vec<L<Expr>>) -> Result<L<Expr>> {
-        if exprs.is_empty() {
+    fn block(&self, stmt: Vec<L<Stmt>>) -> Result<L<Expr>> {
+        if stmt.is_empty() {
             Ok(self.v_none())
         } else {
-            self.ok(Expr::Block(exprs))
+            self.ok(Expr::Block(stmt))
         }
     }
 }
@@ -249,5 +280,5 @@ impl ExprBuilder {
 pub(super) struct Package {
     pkg: Pkg,
     types: Types,
-    expressions: Vec<L<Expr>>,
+    statements: Vec<L<Stmt>>,
 }

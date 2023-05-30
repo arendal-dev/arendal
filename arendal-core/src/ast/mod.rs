@@ -63,7 +63,7 @@ pub struct Conditional {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AssignmentExpr {
+pub struct Assignment {
     pub symbol: Symbol,
     pub expr: L<Expr>,
 }
@@ -75,9 +75,21 @@ pub enum Expr {
     TSymbol(Q<TSymbol>),
     Unary(Box<UnaryExpr>),
     Binary(Box<BinaryExpr>),
-    Block(Vec<L<Expr>>),
+    Block(Vec<L<Stmt>>),
     Conditional(Box<Conditional>),
-    Assignment(Box<AssignmentExpr>),
+}
+
+impl L<Expr> {
+    pub(crate) fn to_stmt(self) -> L<Stmt> {
+        let loc = self.loc.clone();
+        loc.to_wrap(Stmt::Expr(Box::new(self)))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Stmt {
+    Assignment(Box<Assignment>),
+    Expr(Box<L<Expr>>),
 }
 
 pub struct ExprBuilder {
@@ -117,16 +129,17 @@ impl ExprBuilder {
         self.build(Expr::Binary(Box::new(BinaryExpr { op, expr1, expr2 })))
     }
 
-    pub fn block(&self, mut exprs: Vec<L<Expr>>) -> L<Expr> {
+    pub fn block(&self, stmts: Vec<L<Stmt>>) -> L<Expr> {
         assert!(
-            !exprs.is_empty(),
-            "Blocks need to contain at least one expression"
+            !stmts.is_empty(),
+            "Blocks need to contain at least one statement"
         );
-        if exprs.len() == 1 {
-            exprs.pop().unwrap()
-        } else {
-            self.build(Expr::Block(exprs))
+        if stmts.len() == 1 {
+            if let Stmt::Expr(e) = &stmts[0].it {
+                return *e.clone();
+            }
         }
+        self.build(Expr::Block(stmts))
     }
 
     pub fn conditional(&self, expr: L<Expr>, then: L<Expr>, otherwise: L<Expr>) -> L<Expr> {
@@ -137,8 +150,9 @@ impl ExprBuilder {
         })))
     }
 
-    pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Expr> {
-        self.build(Expr::Assignment(Box::new(AssignmentExpr { symbol, expr })))
+    pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Stmt> {
+        self.loc
+            .wrap(Stmt::Assignment(Box::new(Assignment { symbol, expr })))
     }
 }
 
@@ -186,7 +200,7 @@ pub enum ModuleItem {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Module {
     pub(crate) types: Vec<TypeDefinition>,
-    pub(crate) expressions: Vec<L<Expr>>,
+    pub(crate) statements: Vec<L<Stmt>>,
 }
 
 impl Module {
@@ -194,8 +208,8 @@ impl Module {
         self.types.push(tipo)
     }
 
-    fn add_expression(&mut self, expr: L<Expr>) {
-        self.expressions.push(expr)
+    fn add_statement(&mut self, expr: L<Stmt>) {
+        self.statements.push(expr)
     }
 }
 

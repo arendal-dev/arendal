@@ -5,14 +5,14 @@ mod types;
 use im::HashMap;
 
 use crate::ast::{self, Q};
-use crate::error::{Errors, Loc, Result, L};
+use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{FQPath, Pkg, Symbol, TSymbol};
 use crate::types::{Type, Types};
 
 use crate::env::Env;
 
 use self::module::Module;
-use super::{Expr, ExprBuilder, Package, Value};
+use super::{Assignment, Expr, ExprBuilder, Package, Stmt, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
@@ -41,25 +41,17 @@ struct PackageChecker<'a> {
 
 impl<'a> PackageChecker<'a> {
     fn check(mut self) -> Result<Package> {
-        let mut expressions = Vec::default();
+        let mut statements = Vec::default();
         let mut errors = Errors::default();
         for module in &self.input.modules {
-            errors
-                .add_result(
-                    ModuleChecker {
-                        pkg: &self,
-                        path: module.path.clone(),
-                        input: module,
-                        scopes: vec![Scope::default()],
-                    }
-                    .check(),
-                )
-                .map(|mut e| expressions.append(&mut e));
+            let mut checker = ModuleChecker::new(&self, module);
+            errors.add_result(checker.check());
+            statements.append(&mut checker.statements);
         }
         errors.to_lazy_result(|| Package {
             pkg: self.input.pkg.clone(),
             types: self.types,
-            expressions,
+            statements,
         })
     }
 }
@@ -68,21 +60,44 @@ impl<'a> PackageChecker<'a> {
 struct ModuleChecker<'a> {
     pkg: &'a PackageChecker<'a>,
     input: &'a Module<'a>,
-    path: FQPath,
     scopes: Vec<Scope>,
+    statements: Vec<L<Stmt>>,
 }
 
 impl<'a> ModuleChecker<'a> {
-    fn check(mut self) -> Result<Vec<L<Expr>>> {
-        self.check_expressions()
+    fn new(pkg: &'a PackageChecker, input: &'a Module) -> ModuleChecker<'a> {
+        ModuleChecker {
+            pkg,
+            input,
+            scopes: vec![Scope::default()],
+            statements: Vec::default(),
+        }
     }
 
-    fn check_expressions(&mut self) -> Result<Vec<L<Expr>>> {
-        let mut expressions: Vec<L<Expr>> = Vec::default();
-        for e in &self.input.ast.expressions {
-            expressions.push(expr::check(self, e)?);
+    fn check(&mut self) -> Result<()> {
+        for s in &self.input.ast.statements {
+            let checked = match &s.it {
+                ast::Stmt::Assignment(a) => self.check_assignment(&s.loc, a.as_ref())?,
+                ast::Stmt::Expr(e) => self.check_expression(&s.loc, e.as_ref())?,
+            };
+            self.statements.push(checked)
         }
-        Ok(expressions)
+        Ok(())
+    }
+
+    fn check_assignment(&mut self, loc: &Loc, a: &ast::Assignment) -> Result<L<Stmt>> {
+        let symbol = a.symbol.clone();
+        if self.scopes.last().unwrap().contains_key(&symbol) {
+            loc.err(Error::DuplicateSymbol(self.input.path.fq_sym(symbol)))
+        } else {
+            let expr = expr::check(self, &a.expr)?;
+            self.set_val(loc.clone(), symbol.clone(), expr.clone_type())?;
+            Ok(loc.wrap(Assignment { symbol, expr }.to_stmt()))
+        }
+    }
+
+    fn check_expression(&mut self, loc: &Loc, e: &L<ast::Expr>) -> Result<L<Stmt>> {
+        Ok(expr::check(self, e)?.to_stmt())
     }
 
     fn set_val(&mut self, loc: Loc, symbol: Symbol, tipo: Type) -> Result<()> {
@@ -104,7 +119,7 @@ impl<'a> ModuleChecker<'a> {
             .input
             .env
             .values
-            .get(&self.path.fq_sym(symbol.clone()))
+            .get(&self.input.path.fq_sym(symbol.clone()))
         {
             return Some(vv.it.clone_type());
         }

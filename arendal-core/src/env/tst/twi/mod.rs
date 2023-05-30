@@ -1,4 +1,4 @@
-use super::{Env, Expr, Package, TwoInts, Value};
+use super::{Env, Expr, Package, Stmt, TwoInts, Value};
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQPath, Symbol};
 use crate::visibility::Visibility;
@@ -53,15 +53,26 @@ impl<'a> Interpreter<'a> {
     }
 
     fn run(mut self) -> Result<Value> {
-        self.expressions(&Loc::None, &self.package.expressions)
+        self.statements(&Loc::None, &self.package.statements)
     }
 
-    fn expressions(&mut self, loc: &Loc, exprs: &Vec<L<Expr>>) -> Result<Value> {
+    fn statements(&mut self, loc: &Loc, exprs: &Vec<L<Stmt>>) -> Result<Value> {
         let mut value = Value::None;
-        for e in exprs {
-            value = self.expression(e)?;
+        for stmt in exprs {
+            value = self.statement(stmt)?;
         }
         Ok(value)
+    }
+
+    fn statement(&mut self, expr: &L<Stmt>) -> Result<Value> {
+        match &expr.it {
+            Stmt::Assignment(a) => {
+                let value = self.expression(&a.expr)?;
+                self.set_val(&expr.loc, a.symbol.clone(), value.clone())?;
+                Ok(value)
+            }
+            Stmt::Expr(t) => self.expression(t.as_ref()),
+        }
     }
 
     fn expression(&mut self, expr: &L<Expr>) -> Result<Value> {
@@ -78,11 +89,6 @@ impl<'a> Interpreter<'a> {
                     self.expression(&c.otherwise)
                 }
             }
-            Expr::Assignment(a) => {
-                let value = self.expression(&a.expr)?;
-                self.set_val(&expr.loc, a.symbol.clone(), value.clone())?;
-                Ok(value)
-            }
             Expr::IntAdd(t) => self
                 .eval_two_ints(&expr.loc, t)
                 .map(|(v1, v2)| Value::Integer(v1 + v2)),
@@ -95,9 +101,9 @@ impl<'a> Interpreter<'a> {
             Expr::IntDiv(t) => self.div(&expr.loc, t),
             Expr::LogicalAnd(t) => self.and(&expr.loc, &t.expr1, &t.expr2),
             Expr::LogicalOr(t) => self.or(&expr.loc, &t.expr1, &t.expr2),
-            Expr::Block(exprs) => {
+            Expr::Block(stmts) => {
                 self.scopes.push(Scope::default());
-                let value = self.expressions(&expr.loc, exprs);
+                let value = self.statements(&expr.loc, stmts);
                 self.scopes.pop();
                 value
             }

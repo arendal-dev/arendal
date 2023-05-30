@@ -7,13 +7,13 @@ Definitions:
 
 ```
 module -> moduleitem*
-moduleitem -> (typedef | expression) EOI
+moduleitem -> (typedef | statement) EOI
 
 typedef -> "type" TypeSymbol
 
-
-expression -> assignment | conditional | subexpr
-assignment -> "val" symbol "=" expression
+statement -> assignment | expression
+assignment -> "let" symbol "=" expression
+expression -> conditional | subexpr
 conditional -> "if" expression "then" expression "else" expression
 subexpr -> logterm
 logterm -> logfactor ( "||" logfactor )*
@@ -22,7 +22,7 @@ equality -> comparison ( ("==" | "!=") comparison )*
 comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
-primary -> IntLiteral | TypeSymbol | Symbol | "(" subexpr ")" | "{" ( toplevelexpr (EOI toplevelexpr)* )?   "}" 
+primary -> IntLiteral | TypeSymbol | Symbol | "(" subexpr ")" | "{" ( statement (EOI statement)* )?   "}" 
 qsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
 qtsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
 

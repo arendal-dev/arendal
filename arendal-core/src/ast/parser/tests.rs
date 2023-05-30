@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOp, Expr, Module, TypeDefinition, TypeDfnBuilder};
+use crate::ast::{BinaryOp, Expr, Module, Stmt, TypeDefinition, TypeDfnBuilder};
 use crate::ast::{ExprBuilder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{Symbol, TSymbol};
@@ -14,14 +14,16 @@ fn check_module(input: &str, expected: Module) {
 }
 
 fn check_expression(input: &str, expected: L<Expr>) {
-    let mut module = Module::default();
-    module.add_expression(expected);
-    check_module(input, module)
+    check_statement(input, expected.to_stmt())
 }
 
-fn check_expressions(input: &str, expected: Vec<L<Expr>>) {
+fn check_statement(input: &str, expected: L<Stmt>) {
+    check_statements(input, vec![expected])
+}
+
+fn check_statements(input: &str, expected: Vec<L<Stmt>>) {
     let mut module = Module::default();
-    module.expressions = expected;
+    module.statements = expected;
     check_module(input, module)
 }
 
@@ -177,8 +179,8 @@ fn add_id() {
 
 #[test]
 fn assignment() {
-    check_expression("let x = 1", B.assignment(x(), e_i64(1)));
-    check_expression("let x = y + 2", B.assignment(x(), add(e_y(), e_i64(2))));
+    check_statement("let x = 1", B.assignment(x(), e_i64(1)));
+    check_statement("let x = y + 2", B.assignment(x(), add(e_y(), e_i64(2))));
 }
 
 #[test]
@@ -191,7 +193,7 @@ fn parens1() {
 
 #[test]
 fn multiple1() {
-    check_expressions("1\n2", vec![e_i64(1), e_i64(2)]);
+    check_statements("1\n2", vec![e_i64(1).to_stmt(), e_i64(2).to_stmt()]);
 }
 
 #[test]
@@ -211,10 +213,16 @@ fn logical_ops() {
 fn blocks() {
     check_expression("{ }", e_none());
     check_expression("{ 1 }", e_i64(1));
-    check_expression("{ 1\n2 }", B.block(vec![e_i64(1), e_i64(2)]));
+    check_expression(
+        "{ 1\n2 }",
+        B.block(vec![e_i64(1).to_stmt(), e_i64(2).to_stmt()]),
+    );
     check_expression(
         "{ let x = 1\n x+2 }",
-        B.block(vec![B.assignment(x(), e_i64(1)), add(e_x(), e_i64(2))]),
+        B.block(vec![
+            B.assignment(x(), e_i64(1)),
+            add(e_x(), e_i64(2)).to_stmt(),
+        ]),
     );
     expect_error("{ 1 2 }", &Error::EndOfItemExpected);
     expect_error("{ 1\n 2 ", &Error::CloseExpected(Enclosure::Curly))

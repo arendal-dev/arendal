@@ -8,7 +8,7 @@ pub enum Enclosure {
 }
 
 use super::{
-    BinaryOp, Expr, ExprBuilder, Module, Package, Segment, TypeDefinition, TypeDfnBuilder,
+    BinaryOp, Expr, ExprBuilder, Module, Package, Segment, Stmt, TypeDefinition, TypeDfnBuilder,
 };
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
@@ -35,6 +35,7 @@ fn parse_module(input: &str) -> Result<Module> {
 
 type PResult<T> = Result<(T, Parser)>;
 type EResult = PResult<L<Expr>>;
+type SResult = PResult<L<Stmt>>;
 type TResult = PResult<TypeDefinition>;
 
 #[derive(Clone)]
@@ -155,8 +156,8 @@ impl Parser {
             let (dfn, parser) = self.advance().rule_typedef()?;
             parser.expect_eoi(|| module.add_type(dfn))
         } else {
-            let (expr, parser) = self.rule_expression()?;
-            parser.expect_eoi(|| module.add_expression(expr))
+            let (stmt, parser) = self.rule_statement()?;
+            parser.expect_eoi(|| module.add_statement(stmt))
         }
     }
 
@@ -169,17 +170,15 @@ impl Parser {
             .ok(TypeDfnBuilder::new(self.loc(), symbol).singleton())
     }
 
-    fn rule_expression(&self) -> EResult {
+    fn rule_statement(&self) -> SResult {
         if self.is_keyword(Keyword::Let) {
             self.advance().rule_assignment()
-        } else if self.is_keyword(Keyword::If) {
-            self.rule_conditional()
         } else {
-            self.rule_subexpr()
+            self.rule_expression().map(|(e, p)| (e.to_stmt(), p))
         }
     }
 
-    fn rule_assignment(&self) -> EResult {
+    fn rule_assignment(&self) -> SResult {
         let (lvalue, parser) = self.get_lvalue()?;
         if parser.kind_equals(LexemeKind::Assignment) {
             let (expr, next) = parser.advance().rule_expression()?;
@@ -196,6 +195,14 @@ impl Parser {
             }
         }
         self.err(Error::LValueExpected)
+    }
+
+    fn rule_expression(&self) -> EResult {
+        if self.is_keyword(Keyword::If) {
+            self.rule_conditional()
+        } else {
+            self.rule_subexpr()
+        }
     }
 
     fn rule_conditional(&self) -> EResult {
@@ -297,14 +304,14 @@ impl Parser {
                             .advance()
                             .ok(self.builder().tsymbol(Vec::default(), TSymbol::None))
                     } else {
-                        let mut expr;
-                        let mut exprs: Vec<L<Expr>> = Vec::default();
+                        let mut stmt;
+                        let mut stmts: Vec<L<Stmt>> = Vec::default();
                         loop {
                             if parser.is_done() {
                                 return parser.err(Error::CloseExpected(Enclosure::Curly));
                             }
-                            (expr, parser) = parser.rule_expression()?;
-                            exprs.push(expr);
+                            (stmt, parser) = parser.rule_statement()?;
+                            stmts.push(stmt);
                             if parser.kind_equals(LexemeKind::Close(Enclosure::Curly)) {
                                 parser = parser.advance();
                                 break;
@@ -312,7 +319,7 @@ impl Parser {
                                 return parser.err(Error::EndOfItemExpected);
                             }
                         }
-                        parser.ok(self.builder().block(exprs))
+                        parser.ok(self.builder().block(stmts))
                     }
                 }
                 _ => self.expression_expected(),

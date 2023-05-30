@@ -1,11 +1,11 @@
 use im::HashMap;
 
 use crate::ast::{self, BinaryOp, Q};
-use crate::error::{Error, Result, L};
+use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{Symbol, TSymbol};
 use crate::types::Type;
 
-use super::{Expr, ExprBuilder, ModuleChecker, Value};
+use super::{Expr, ExprBuilder, ModuleChecker, Stmt, Value};
 
 type Scope = HashMap<Symbol, Type>;
 
@@ -39,15 +39,6 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                     self.sub_expr(&c.otherwise),
                 )?;
                 self.builder().conditional(expr, then, otherwise)
-            }
-            ast::Expr::Assignment(a) => {
-                let typed = self.sub_expr(&a.expr)?;
-                self.checker.set_val(
-                    self.input.loc.clone(),
-                    a.symbol.clone(),
-                    typed.clone_type(),
-                )?;
-                Ok(self.builder().assignment(a.symbol.clone(), typed))
             }
             ast::Expr::Binary(b) => Error::merge(self.sub_expr(&b.expr1), self.sub_expr(&b.expr2))
                 .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
@@ -85,12 +76,24 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_block(&mut self, exprs: &Vec<L<ast::Expr>>) -> Result<L<Expr>> {
+    fn check_block(&mut self, stmts: &Vec<L<ast::Stmt>>) -> Result<L<Expr>> {
         let mut checked = Vec::default();
-        for e in exprs {
-            checked.push(self.sub_expr(e)?);
+        for s in stmts {
+            match &s.it {
+                ast::Stmt::Assignment(a) => {
+                    checked.push(self.check_assignment(&s.loc, a.as_ref())?)
+                }
+                ast::Stmt::Expr(e) => checked.push(self.sub_expr(e.as_ref())?.to_stmt()),
+            }
         }
         self.builder().block(checked)
+    }
+
+    fn check_assignment(&mut self, loc: &Loc, a: &ast::Assignment) -> Result<L<Stmt>> {
+        let typed = self.sub_expr(&a.expr)?;
+        self.checker
+            .set_val(loc.clone(), a.symbol.clone(), typed.clone_type())?;
+        Ok(self.builder().assignment(a.symbol.clone(), typed))
     }
 
     fn builder(&self) -> ExprBuilder {
