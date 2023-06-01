@@ -100,29 +100,3 @@ impl fmt::Debug for Value {
         fmt::Display::fmt(self, f)
     }
 }
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct Values {
-    values: HashMap<FQSym, V<Value>>,
-}
-
-impl Values {
-    pub(crate) fn get(&self, symbol: &FQSym) -> Option<V<Value>> {
-        self.values.get(symbol).cloned()
-    }
-
-    pub(crate) fn set(
-        &mut self,
-        loc: &Loc,
-        symbol: FQSym,
-        visibility: Visibility,
-        value: Value,
-    ) -> Result<()> {
-        if self.values.contains_key(&symbol) {
-            loc.err(Error::DuplicateSymbol(symbol))
-        } else {
-            self.values.insert(symbol, visibility.wrap(value));
-            Ok(())
-        }
-    }
-}

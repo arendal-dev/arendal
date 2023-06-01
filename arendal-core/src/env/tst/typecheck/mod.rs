@@ -10,7 +10,7 @@ use crate::types::{Type, Types};
 use crate::env::Env;
 
 use self::module::Module;
-use super::{Assignment, Expr, ExprBuilder, Package, Stmt, Value};
+use super::{Assignment, Expr, ExprBuilder, Package, Stmt, TLAssignment, TLStmt, Value};
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
     let input = Input {
@@ -59,7 +59,7 @@ struct ModuleChecker<'a> {
     pkg: &'a PackageChecker<'a>,
     input: &'a Module<'a>,
     scope: Scope,
-    statements: Vec<L<Stmt>>,
+    statements: Vec<L<TLStmt>>,
 }
 
 impl<'a> ModuleChecker<'a> {
@@ -83,19 +83,25 @@ impl<'a> ModuleChecker<'a> {
         Ok(())
     }
 
-    fn check_assignment(&mut self, loc: &Loc, a: &ast::Assignment) -> Result<L<Stmt>> {
+    fn check_assignment(&mut self, loc: &Loc, a: &ast::Assignment) -> Result<L<TLStmt>> {
         let symbol = a.symbol.clone();
         if self.scope.contains(&symbol) {
             loc.err(Error::DuplicateSymbol(self.input.path.fq_sym(symbol)))
         } else {
             let expr = expr::check(self, &self.scope, &a.expr)?;
             self.scope.set(&loc, symbol.clone(), expr.clone_type())?;
-            Ok(loc.wrap(Assignment { symbol, expr }.to_stmt()))
+            Ok(loc.wrap(
+                TLAssignment {
+                    symbol: self.input.path.fq_sym(symbol),
+                    expr,
+                }
+                .to_stmt(),
+            ))
         }
     }
 
-    fn check_expression(&mut self, e: &L<ast::Expr>) -> Result<L<Stmt>> {
-        Ok(expr::check(self, &self.scope, e)?.to_stmt())
+    fn check_expression(&mut self, e: &L<ast::Expr>) -> Result<L<TLStmt>> {
+        Ok(expr::check(self, &self.scope, e)?.to_tl_stmt())
     }
 
     fn resolve_type(&self, loc: &Loc, symbol: &Q<TSymbol>) -> Result<Type> {

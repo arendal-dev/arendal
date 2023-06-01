@@ -3,7 +3,7 @@ mod typecheck;
 
 use crate::ast::UnaryOp;
 use crate::error::{Error, Loc, Result, L};
-use crate::symbol::{Pkg, Symbol};
+use crate::symbol::{FQSym, Pkg, Symbol};
 use crate::types::{Type, Types};
 use crate::Integer;
 use std::fmt;
@@ -136,6 +136,11 @@ impl Expr {
 }
 
 impl L<Expr> {
+    fn to_tl_stmt(self) -> L<TLStmt> {
+        let loc = self.loc.clone();
+        loc.to_wrap(TLStmt::Expr(Arc::new(self)))
+    }
+
     fn to_stmt(self) -> L<Stmt> {
         let loc = self.loc.clone();
         loc.to_wrap(Stmt::Expr(Arc::new(self)))
@@ -197,6 +202,39 @@ impl L<Stmt> {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct TLAssignment {
+    symbol: FQSym,
+    expr: L<Expr>,
+}
+
+impl TLAssignment {
+    fn to_stmt(self) -> TLStmt {
+        TLStmt::Assignment(Arc::new(self))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum TLStmt {
+    Assignment(Arc<TLAssignment>),
+    Expr(Arc<L<Expr>>),
+}
+
+impl TLStmt {
+    fn borrow_type(&self) -> &Type {
+        match self {
+            Self::Assignment(a) => a.expr.borrow_type(),
+            Self::Expr(e) => e.borrow_type(),
+        }
+    }
+}
+
+impl L<TLStmt> {
+    fn borrow_type(&self) -> &Type {
+        self.it.borrow_type()
+    }
+}
+
 struct ExprBuilder {
     loc: Loc,
 }
@@ -237,6 +275,11 @@ impl ExprBuilder {
     fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Stmt> {
         self.loc
             .wrap(Stmt::Assignment(Arc::new(Assignment { symbol, expr })))
+    }
+
+    fn tl_assignment(&self, symbol: FQSym, expr: L<Expr>) -> L<TLStmt> {
+        self.loc
+            .wrap(TLStmt::Assignment(Arc::new(TLAssignment { symbol, expr })))
     }
 
     fn unary(&self, op: UnaryOp, expr: L<Expr>) -> L<Expr> {
@@ -280,5 +323,5 @@ impl ExprBuilder {
 pub(super) struct Package {
     pkg: Pkg,
     types: Types,
-    statements: Vec<L<Stmt>>,
+    statements: Vec<L<TLStmt>>,
 }

@@ -1,4 +1,4 @@
-use super::{Env, Expr, Package, Stmt, TwoInts, Value};
+use super::{Env, Expr, Package, Stmt, TLStmt, TwoInts, Value};
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQPath, Symbol};
 use crate::visibility::Visibility;
@@ -53,7 +53,26 @@ impl<'a> Interpreter<'a> {
     }
 
     fn run(mut self) -> Result<Value> {
-        self.statements(&Loc::None, &self.package.statements)
+        self.tl_statements(&Loc::None, &self.package.statements)
+    }
+
+    fn tl_statements(&mut self, loc: &Loc, exprs: &Vec<L<TLStmt>>) -> Result<Value> {
+        let mut value = Value::None;
+        for stmt in exprs {
+            value = self.tl_statement(stmt)?;
+        }
+        Ok(value)
+    }
+
+    fn tl_statement(&mut self, expr: &L<TLStmt>) -> Result<Value> {
+        match &expr.it {
+            TLStmt::Assignment(a) => {
+                let value = self.expression(&a.expr)?;
+                self.set_val(&expr.loc, a.symbol.symbol(), value.clone())?;
+                Ok(value)
+            }
+            TLStmt::Expr(t) => self.expression(t.as_ref()),
+        }
     }
 
     fn statements(&mut self, loc: &Loc, exprs: &Vec<L<Stmt>>) -> Result<Value> {

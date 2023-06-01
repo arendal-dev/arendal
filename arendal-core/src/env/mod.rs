@@ -1,19 +1,56 @@
 mod tst;
 
-use std::sync::Arc;
-
 use im::HashMap;
 
 use crate::{
     error::{Error, Loc, Result},
-    symbol::Symbol,
-    types::Types,
-    values::{Value, Values},
+    symbol::{FQSym, Symbol},
+    types::{Type, Types},
+    values::Value,
+    visibility::{Visibility, V},
 };
+
+#[derive(Debug, Clone)]
+struct SymbolMap<T: Clone> {
+    values: HashMap<FQSym, V<T>>,
+}
+
+impl<T: Clone> Default for SymbolMap<T> {
+    fn default() -> Self {
+        Self {
+            values: Default::default(),
+        }
+    }
+}
+
+impl<T: Clone> SymbolMap<T> {
+    pub(crate) fn get(&self, symbol: &FQSym) -> Option<V<T>> {
+        self.values.get(symbol).cloned()
+    }
+
+    pub(crate) fn set(
+        &mut self,
+        loc: &Loc,
+        symbol: FQSym,
+        visibility: Visibility,
+        value: T,
+    ) -> Result<()> {
+        if self.values.contains_key(&symbol) {
+            loc.err(Error::DuplicateSymbol(symbol))
+        } else {
+            self.values.insert(symbol, visibility.wrap(value));
+            Ok(())
+        }
+    }
+}
+
+type Symbols = SymbolMap<Type>;
+type Values = SymbolMap<Value>;
 
 #[derive(Debug, Clone, Default)]
 pub struct Env {
     types: Types,
+    symbols: Symbols,
     values: Values,
 }
 
