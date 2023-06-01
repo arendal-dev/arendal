@@ -25,37 +25,44 @@ impl Env {
 
 #[derive(Debug, Clone)]
 struct Scope<T: Clone> {
-    parent: Option<Arc<Scope<T>>>,
-    values: HashMap<Symbol, T>,
+    all: HashMap<Symbol, T>,
+    current: HashMap<Symbol, T>,
+}
+
+impl<T: Clone> Default for Scope<T> {
+    fn default() -> Self {
+        Scope {
+            all: Default::default(),
+            current: Default::default(),
+        }
+    }
 }
 
 impl<T: Clone> Scope<T> {
-    fn new() -> Self {
+    fn create_child(&self) -> Self {
         Scope {
-            parent: None,
-            values: Default::default(),
+            all: self.all.clone(),
+            current: Default::default(),
         }
     }
 
-    fn create_child(&self) -> Self {
-        Scope {
-            parent: Some(Arc::new(self.clone())),
-            values: Default::default(),
-        }
+    fn contains(&self, symbol: &Symbol) -> bool {
+        self.all.contains_key(symbol)
     }
 
     fn get(&self, symbol: &Symbol) -> Option<T> {
-        match self.values.get(symbol) {
-            Some(v) => Some(v.clone()),
-            None => self.parent.as_ref().and_then(|p| p.get(symbol)),
-        }
+        self.current
+            .get(symbol)
+            .or_else(|| self.all.get(symbol))
+            .cloned()
     }
 
-    pub(crate) fn set(&mut self, loc: &Loc, symbol: Symbol, value: T) -> Result<()> {
-        if self.values.contains_key(&symbol) {
+    fn set(&mut self, loc: &Loc, symbol: Symbol, value: T) -> Result<()> {
+        if self.current.contains_key(&symbol) {
             loc.err(Error::DuplicateLocalSymbol(symbol))
         } else {
-            self.values.insert(symbol, value);
+            self.current.insert(symbol.clone(), value.clone());
+            self.all.insert(symbol, value);
             Ok(())
         }
     }

@@ -1,29 +1,35 @@
-use im::HashMap;
-
 use crate::ast::{self, BinaryOp, Q};
 use crate::error::{Error, Loc, Result, L};
-use crate::symbol::{Symbol, TSymbol};
+use crate::symbol::TSymbol;
 use crate::types::Type;
 
-use super::{Expr, ExprBuilder, ModuleChecker, Stmt, Value};
+use super::{Expr, ExprBuilder, ModuleChecker, Scope, Stmt, Value};
 
-type Scope = HashMap<Symbol, Type>;
-
-pub(super) fn check<'a>(checker: &mut ModuleChecker<'a>, input: &L<ast::Expr>) -> Result<L<Expr>> {
-    ExprChecker { checker, input }.check()
+pub(super) fn check<'a>(
+    checker: &ModuleChecker<'a>,
+    scope: &Scope,
+    input: &L<ast::Expr>,
+) -> Result<L<Expr>> {
+    ExprChecker {
+        checker,
+        scope,
+        input,
+    }
+    .check()
 }
 
 #[derive(Debug)]
 struct ExprChecker<'a, 'b> {
-    checker: &'b mut ModuleChecker<'a>,
+    checker: &'b ModuleChecker<'a>,
+    scope: &'b Scope,
     input: &'b L<ast::Expr>,
 }
 
 impl<'a, 'b> ExprChecker<'a, 'b> {
-    fn check(mut self) -> Result<L<Expr>> {
+    fn check(self) -> Result<L<Expr>> {
         match &self.input.it {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
-            ast::Expr::Symbol(q) => match self.checker.get_val(&q.symbol) {
+            ast::Expr::Symbol(q) => match self.scope.get(&q.symbol) {
                 Some(tipo) => Ok(self.builder().local(q.symbol.clone(), tipo.clone())),
                 None => self.error(Error::UnknownLocalSymbol(q.symbol.clone())),
             },
@@ -43,9 +49,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             ast::Expr::Binary(b) => Error::merge(self.sub_expr(&b.expr1), self.sub_expr(&b.expr2))
                 .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
             ast::Expr::Block(v) => {
-                self.checker.scopes.push(Scope::default());
                 let result = self.check_block(v);
-                self.checker.scopes.pop();
                 result
             }
             _ => self.error(Error::InvalidType),
@@ -56,12 +60,8 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.checker.resolve_type(&self.input.loc, symbol)
     }
 
-    fn sub_expr(&mut self, input: &L<ast::Expr>) -> Result<L<Expr>> {
-        ExprChecker {
-            checker: self.checker,
-            input,
-        }
-        .check()
+    fn sub_expr(&self, input: &L<ast::Expr>) -> Result<L<Expr>> {
+        check(self.checker, &self.scope, input)
     }
 
     fn check_binary(self, op: BinaryOp, expr1: L<Expr>, expr2: L<Expr>) -> Result<L<Expr>> {
@@ -76,23 +76,30 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_block(&mut self, stmts: &Vec<L<ast::Stmt>>) -> Result<L<Expr>> {
+    fn check_block(self, stmts: &Vec<L<ast::Stmt>>) -> Result<L<Expr>> {
+        let mut child_scope = self.scope.create_child();
         let mut checked = Vec::default();
         for s in stmts {
             match &s.it {
                 ast::Stmt::Assignment(a) => {
-                    checked.push(self.check_assignment(&s.loc, a.as_ref())?)
+                    checked.push(self.check_assignment(&mut child_scope, &s.loc, a.as_ref())?)
                 }
-                ast::Stmt::Expr(e) => checked.push(self.sub_expr(e.as_ref())?.to_stmt()),
+                ast::Stmt::Expr(e) => {
+                    checked.push(check(self.checker, &child_scope, e.as_ref())?.to_stmt())
+                }
             }
         }
         self.builder().block(checked)
     }
 
-    fn check_assignment(&mut self, loc: &Loc, a: &ast::Assignment) -> Result<L<Stmt>> {
+    fn check_assignment(
+        &self,
+        scope: &mut Scope,
+        loc: &Loc,
+        a: &ast::Assignment,
+    ) -> Result<L<Stmt>> {
         let typed = self.sub_expr(&a.expr)?;
-        self.checker
-            .set_val(loc.clone(), a.symbol.clone(), typed.clone_type())?;
+        scope.set(loc, a.symbol.clone(), typed.clone_type())?;
         Ok(self.builder().assignment(a.symbol.clone(), typed))
     }
 
