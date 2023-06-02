@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     ast::{self, Package, Q},
     error::{Error, Errors, Loc, Result, L},
@@ -23,7 +25,22 @@ pub(super) fn get_modules(input: &Package) -> Result<Vec<Module>> {
 
 impl<'a> Module<'a> {
     fn new(path: FQPath, ast: &ast::Module) -> Result<Module> {
-        Ok(Module { path, ast })
+        let mut errors = Errors::default();
+        let mut symbols: HashSet<Symbol> = Default::default();
+        for s in &ast.statements {
+            let maybe = match &s.it {
+                ast::Stmt::Assignment(a) => Some(a.symbol.clone()),
+                _ => None,
+            };
+            if let Some(symbol) = maybe {
+                if symbols.contains(&symbol) {
+                    errors.add(s.loc.wrap(Error::DuplicateLocalSymbol(symbol)));
+                } else {
+                    symbols.insert(symbol);
+                }
+            }
+        }
+        errors.to_lazy_result(|| Module { path, ast })
     }
 
     fn get_candidates<S: Clone, F, B>(&self, b: B, q: &Q<S>) -> Vec<F>

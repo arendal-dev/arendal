@@ -7,10 +7,10 @@ use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{Pkg, TSymbol};
 use crate::types::{Type, Types};
 
-use crate::env::Env;
+use crate::env::{Env, Symbols};
 
 use self::module::Module;
-use super::{Assignment, Expr, ExprBuilder, Package, Stmt, TLAssignment, TLStmt, Value};
+use super::{Expr, ExprBuilder, Package, Stmt, TLAssignment, TLStmt, Value};
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
     let input = Input {
@@ -19,7 +19,12 @@ pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
         modules: module::get_modules(input)?,
     };
     let types = types::check(&input)?;
-    PackageChecker { input, types }.check()
+    PackageChecker {
+        input,
+        types,
+        symbols: env.symbols.clone(),
+    }
+    .check()
 }
 
 #[derive(Debug)]
@@ -33,6 +38,7 @@ struct Input<'a> {
 struct PackageChecker<'a> {
     input: Input<'a>,
     types: Types,
+    symbols: Symbols,
 }
 
 impl<'a> PackageChecker<'a> {
