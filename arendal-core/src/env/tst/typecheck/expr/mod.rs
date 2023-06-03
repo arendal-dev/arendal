@@ -76,15 +76,15 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_block(self, stmts: &Vec<L<ast::Stmt>>) -> Result<L<Expr>> {
+    fn check_block(self, stmts: &Vec<L<ast::BStmt>>) -> Result<L<Expr>> {
         let mut child_scope = self.scope.create_child();
         let mut checked = Vec::default();
         for s in stmts {
             match &s.it {
-                ast::Stmt::Assignment(a) => {
+                ast::BStmt::Assignment(a) => {
                     checked.push(self.check_assignment(&mut child_scope, &s.loc, a.as_ref())?)
                 }
-                ast::Stmt::Expr(e) => {
+                ast::BStmt::Expr(e) => {
                     checked.push(check(self.checker, &child_scope, e.as_ref())?.to_stmt())
                 }
             }

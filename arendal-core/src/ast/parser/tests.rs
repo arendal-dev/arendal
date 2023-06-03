@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOp, Expr, Module, Stmt, TypeDefinition, TypeDfnBuilder};
+use crate::ast::{BStmt, BinaryOp, Expr, Module, TypeDefinition, TypeDfnBuilder};
 use crate::ast::{ExprBuilder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{Symbol, TSymbol};
@@ -17,11 +17,11 @@ fn check_expression(input: &str, expected: L<Expr>) {
     check_statement(input, expected.to_stmt())
 }
 
-fn check_statement(input: &str, expected: L<Stmt>) {
+fn check_statement(input: &str, expected: L<BStmt>) {
     check_statements(input, vec![expected])
 }
 
-fn check_statements(input: &str, expected: Vec<L<Stmt>>) {
+fn check_statements(input: &str, expected: Vec<L<BStmt>>) {
     let mut module = Module::default();
     module.statements = expected;
     check_module(input, module)

@@ -75,19 +75,19 @@ pub enum Expr {
     TSymbol(Q<TSymbol>),
     Unary(Box<UnaryExpr>),
     Binary(Box<BinaryExpr>),
-    Block(Vec<L<Stmt>>),
+    Block(Vec<L<BStmt>>),
     Conditional(Box<Conditional>),
 }
 
 impl L<Expr> {
-    pub(crate) fn to_stmt(self) -> L<Stmt> {
+    pub(crate) fn to_stmt(self) -> L<BStmt> {
         let loc = self.loc.clone();
-        loc.to_wrap(Stmt::Expr(Box::new(self)))
+        loc.to_wrap(BStmt::Expr(Box::new(self)))
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Stmt {
+pub enum BStmt {
     Assignment(Box<Assignment>),
     Expr(Box<L<Expr>>),
 }
@@ -129,13 +129,13 @@ impl ExprBuilder {
         self.build(Expr::Binary(Box::new(BinaryExpr { op, expr1, expr2 })))
     }
 
-    pub fn block(&self, stmts: Vec<L<Stmt>>) -> L<Expr> {
+    pub fn block(&self, stmts: Vec<L<BStmt>>) -> L<Expr> {
         assert!(
             !stmts.is_empty(),
             "Blocks need to contain at least one statement"
         );
         if stmts.len() == 1 {
-            if let Stmt::Expr(e) = &stmts[0].it {
+            if let BStmt::Expr(e) = &stmts[0].it {
                 return *e.clone();
             }
         }
@@ -150,9 +150,9 @@ impl ExprBuilder {
         })))
     }
 
-    pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Stmt> {
+    pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<BStmt> {
         self.loc
-            .wrap(Stmt::Assignment(Box::new(Assignment { symbol, expr })))
+            .wrap(BStmt::Assignment(Box::new(Assignment { symbol, expr })))
     }
 }
 
@@ -200,7 +200,7 @@ pub enum ModuleItem {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Module {
     pub(crate) types: Vec<TypeDefinition>,
-    pub(crate) statements: Vec<L<Stmt>>,
+    pub(crate) statements: Vec<L<BStmt>>,
 }
 
 impl Module {
@@ -208,7 +208,7 @@ impl Module {
         self.types.push(tipo)
     }
 
-    fn add_statement(&mut self, expr: L<Stmt>) {
+    fn add_statement(&mut self, expr: L<BStmt>) {
         self.statements.push(expr)
     }
 }

@@ -8,7 +8,7 @@ pub enum Enclosure {
 }
 
 use super::{
-    BinaryOp, Expr, ExprBuilder, Module, Package, Segment, Stmt, TypeDefinition, TypeDfnBuilder,
+    BStmt, BinaryOp, Expr, ExprBuilder, Module, Package, Segment, TypeDefinition, TypeDfnBuilder,
 };
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
@@ -35,7 +35,7 @@ fn parse_module(input: &str) -> Result<Module> {
 
 type PResult<T> = Result<(T, Parser)>;
 type EResult = PResult<L<Expr>>;
-type SResult = PResult<L<Stmt>>;
+type SResult = PResult<L<BStmt>>;
 type TResult = PResult<TypeDefinition>;
 
 #[derive(Clone)]
@@ -88,9 +88,9 @@ impl Parser {
         self.kind_equals(LexemeKind::Keyword(keyword))
     }
 
-    // Returns whether the current lexeme is EOI (end of item)
+    // Returns whether the current lexeme is EOS (end of statement)
     // I.e., either end of the input or a newline separator
-    fn is_eoi(&self) -> bool {
+    fn is_eos(&self) -> bool {
         match self.peek() {
             Some(lexeme) => lexeme.separator == Separator::NewLine,
             None => true,
@@ -140,7 +140,7 @@ impl Parser {
     where
         O: FnOnce() -> (),
     {
-        if self.is_eoi() {
+        if self.is_eos() {
             self.ok(o())
         } else {
             self.err(Error::EndOfItemExpected)
@@ -305,7 +305,7 @@ impl Parser {
                             .ok(self.builder().tsymbol(Vec::default(), TSymbol::None))
                     } else {
                         let mut stmt;
-                        let mut stmts: Vec<L<Stmt>> = Vec::default();
+                        let mut stmts: Vec<L<BStmt>> = Vec::default();
                         loop {
                             if parser.is_done() {
                                 return parser.err(Error::CloseExpected(Enclosure::Curly));
@@ -315,7 +315,7 @@ impl Parser {
                             if parser.kind_equals(LexemeKind::Close(Enclosure::Curly)) {
                                 parser = parser.advance();
                                 break;
-                            } else if !parser.is_eoi() {
+                            } else if !parser.is_eos() {
                                 return parser.err(Error::EndOfItemExpected);
                             }
                         }

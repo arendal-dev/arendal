@@ -29,7 +29,7 @@ impl<'a> Module<'a> {
         let mut symbols: HashSet<Symbol> = Default::default();
         for s in &ast.statements {
             let maybe = match &s.it {
-                ast::Stmt::Assignment(a) => Some(a.symbol.clone()),
+                ast::BStmt::Assignment(a) => Some(a.symbol.clone()),
                 _ => None,
             };
             if let Some(symbol) = maybe {

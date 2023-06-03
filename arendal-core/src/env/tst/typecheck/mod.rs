@@ -81,8 +81,8 @@ impl<'a> ModuleChecker<'a> {
     fn check(&mut self) -> Result<()> {
         for s in &self.input.ast.statements {
             let checked = match &s.it {
-                ast::Stmt::Assignment(a) => self.check_assignment(&s.loc, a.as_ref())?,
-                ast::Stmt::Expr(e) => self.check_expression(e.as_ref())?,
+                ast::BStmt::Assignment(a) => self.check_assignment(&s.loc, a.as_ref())?,
+                ast::BStmt::Expr(e) => self.check_expression(e.as_ref())?,
             };
             self.statements.push(checked)
         }
