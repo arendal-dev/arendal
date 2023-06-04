@@ -1,4 +1,4 @@
-use super::{Env, Expr, Package, Stmt, TLStmt, TwoInts, Value};
+use super::{BStmt, Env, Expr, Package, TwoInts, Value};
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQPath, Symbol};
 use crate::visibility::Visibility;
@@ -53,44 +53,33 @@ impl<'a> Interpreter<'a> {
     }
 
     fn run(mut self) -> Result<Value> {
-        self.tl_statements(&Loc::None, &self.package.statements)
-    }
-
-    fn tl_statements(&mut self, loc: &Loc, exprs: &Vec<L<TLStmt>>) -> Result<Value> {
         let mut value = Value::None;
-        for stmt in exprs {
-            value = self.tl_statement(stmt)?;
+        for a in &self.package.assignments {
+            value = self.expression(&a.it.expr)?;
+            self.set_val(&a.loc, a.it.symbol.symbol(), value.clone())?;
+        }
+        for e in &self.package.exprs {
+            value = self.expression(e)?;
         }
         Ok(value)
     }
 
-    fn tl_statement(&mut self, expr: &L<TLStmt>) -> Result<Value> {
-        match &expr.it {
-            TLStmt::Assignment(a) => {
-                let value = self.expression(&a.expr)?;
-                self.set_val(&expr.loc, a.symbol.symbol(), value.clone())?;
-                Ok(value)
-            }
-            TLStmt::Expr(t) => self.expression(t.as_ref()),
-        }
-    }
-
-    fn statements(&mut self, loc: &Loc, exprs: &Vec<L<Stmt>>) -> Result<Value> {
+    fn b_stmts(&mut self, exprs: &Vec<L<BStmt>>) -> Result<Value> {
         let mut value = Value::None;
         for stmt in exprs {
-            value = self.statement(stmt)?;
+            value = self.b_stmt(stmt)?;
         }
         Ok(value)
     }
 
-    fn statement(&mut self, expr: &L<Stmt>) -> Result<Value> {
+    fn b_stmt(&mut self, expr: &L<BStmt>) -> Result<Value> {
         match &expr.it {
-            Stmt::Assignment(a) => {
+            BStmt::Assignment(a) => {
                 let value = self.expression(&a.expr)?;
                 self.set_val(&expr.loc, a.symbol.clone(), value.clone())?;
                 Ok(value)
             }
-            Stmt::Expr(t) => self.expression(t.as_ref()),
+            BStmt::Expr(t) => self.expression(t.as_ref()),
         }
     }
 
@@ -122,7 +111,7 @@ impl<'a> Interpreter<'a> {
             Expr::LogicalOr(t) => self.or(&expr.loc, &t.expr1, &t.expr2),
             Expr::Block(stmts) => {
                 self.scopes.push(Scope::default());
-                let value = self.statements(&expr.loc, stmts);
+                let value = self.b_stmts(stmts);
                 self.scopes.pop();
                 value
             }

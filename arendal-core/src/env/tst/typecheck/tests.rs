@@ -28,7 +28,7 @@ fn ok_expression(input: &str, t: Type) {
     assert_eq!(
         *check_module(input)
             .unwrap()
-            .statements
+            .exprs
             .iter()
             .next()
             .unwrap()

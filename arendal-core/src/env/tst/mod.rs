@@ -86,8 +86,8 @@ struct Assignment {
 }
 
 impl Assignment {
-    fn to_stmt(self) -> Stmt {
-        Stmt::Assignment(Arc::new(self))
+    fn to_stmt(self) -> BStmt {
+        BStmt::Assignment(Arc::new(self))
     }
 }
 
@@ -109,7 +109,7 @@ enum Expr {
     IntDiv(Arc<TwoInts>),
     LogicalAnd(Arc<TwoBools>),
     LogicalOr(Arc<TwoBools>),
-    Block(Vec<L<Stmt>>),
+    Block(Vec<L<BStmt>>),
 }
 
 impl Expr {
@@ -136,14 +136,9 @@ impl Expr {
 }
 
 impl L<Expr> {
-    fn to_tl_stmt(self) -> L<TLStmt> {
+    fn to_stmt(self) -> L<BStmt> {
         let loc = self.loc.clone();
-        loc.to_wrap(TLStmt::Expr(Arc::new(self)))
-    }
-
-    fn to_stmt(self) -> L<Stmt> {
-        let loc = self.loc.clone();
-        loc.to_wrap(Stmt::Expr(Arc::new(self)))
+        loc.to_wrap(BStmt::Expr(Arc::new(self)))
     }
 
     fn borrow_type(&self) -> &Type {
@@ -182,12 +177,12 @@ impl fmt::Debug for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Stmt {
+enum BStmt {
     Assignment(Arc<Assignment>),
     Expr(Arc<L<Expr>>),
 }
 
-impl Stmt {
+impl BStmt {
     fn borrow_type(&self) -> &Type {
         match self {
             Self::Assignment(a) => a.expr.borrow_type(),
@@ -196,7 +191,7 @@ impl Stmt {
     }
 }
 
-impl L<Stmt> {
+impl L<BStmt> {
     fn borrow_type(&self) -> &Type {
         self.it.borrow_type()
     }
@@ -206,33 +201,6 @@ impl L<Stmt> {
 struct TLAssignment {
     symbol: FQSym,
     expr: L<Expr>,
-}
-
-impl TLAssignment {
-    fn to_stmt(self) -> TLStmt {
-        TLStmt::Assignment(Arc::new(self))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum TLStmt {
-    Assignment(Arc<TLAssignment>),
-    Expr(Arc<L<Expr>>),
-}
-
-impl TLStmt {
-    fn borrow_type(&self) -> &Type {
-        match self {
-            Self::Assignment(a) => a.expr.borrow_type(),
-            Self::Expr(e) => e.borrow_type(),
-        }
-    }
-}
-
-impl L<TLStmt> {
-    fn borrow_type(&self) -> &Type {
-        self.it.borrow_type()
-    }
 }
 
 struct ExprBuilder {
@@ -272,14 +240,13 @@ impl ExprBuilder {
         self.ok(Expr::Conditional(Conditional::new(expr, then, otherwise)?))
     }
 
-    fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Stmt> {
+    fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<BStmt> {
         self.loc
-            .wrap(Stmt::Assignment(Arc::new(Assignment { symbol, expr })))
+            .wrap(BStmt::Assignment(Arc::new(Assignment { symbol, expr })))
     }
 
-    fn tl_assignment(&self, symbol: FQSym, expr: L<Expr>) -> L<TLStmt> {
-        self.loc
-            .wrap(TLStmt::Assignment(Arc::new(TLAssignment { symbol, expr })))
+    fn tl_assignment(&self, symbol: FQSym, expr: L<Expr>) -> L<TLAssignment> {
+        self.loc.wrap(TLAssignment { symbol, expr })
     }
 
     fn unary(&self, op: UnaryOp, expr: L<Expr>) -> L<Expr> {
@@ -310,7 +277,7 @@ impl ExprBuilder {
         self.ok(Expr::LogicalOr(TwoBools::new(expr1, expr2)?))
     }
 
-    fn block(&self, stmt: Vec<L<Stmt>>) -> Result<L<Expr>> {
+    fn block(&self, stmt: Vec<L<BStmt>>) -> Result<L<Expr>> {
         if stmt.is_empty() {
             Ok(self.v_none())
         } else {
@@ -323,5 +290,6 @@ impl ExprBuilder {
 pub(super) struct Package {
     pkg: Pkg,
     types: Types,
-    statements: Vec<L<TLStmt>>,
+    assignments: Vec<L<TLAssignment>>,
+    exprs: Vec<L<Expr>>,
 }

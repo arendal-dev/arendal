@@ -13,7 +13,7 @@ use crate::env::{Env, Symbols};
 use crate::visibility::V;
 
 use self::module::Module;
-use super::{Expr, ExprBuilder, Package, Stmt, TLAssignment, TLStmt, Value};
+use super::{BStmt, Expr, ExprBuilder, Package, TLAssignment, Value};
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
     let input = Input {
@@ -67,17 +67,20 @@ impl<'a> PackageChecker<'a> {
         }
     }
     fn check(mut self) -> Result<Package> {
-        let mut statements = Vec::default();
+        let mut assignments = Vec::default();
+        let mut exprs = Vec::default();
         let mut errors = Errors::default();
         for module in &self.input.modules {
             let mut checker = ModuleChecker::new(&self, module);
             errors.add_result(checker.check());
-            statements.append(&mut checker.statements);
+            assignments.append(&mut checker.assignments);
+            exprs.append(&mut checker.exprs);
         }
         errors.to_lazy_result(|| Package {
             pkg: self.input.pkg.clone(),
             types: self.types,
-            statements,
+            assignments,
+            exprs,
         })
     }
 }
@@ -89,7 +92,8 @@ struct ModuleChecker<'a> {
     pkg: &'a PackageChecker<'a>,
     input: &'a Module<'a>,
     scope: Scope,
-    statements: Vec<L<TLStmt>>,
+    assignments: Vec<L<TLAssignment>>,
+    exprs: Vec<L<Expr>>,
 }
 
 impl<'a> ModuleChecker<'a> {
@@ -98,23 +102,24 @@ impl<'a> ModuleChecker<'a> {
             pkg,
             input,
             scope: Scope::default(),
-            statements: Vec::default(),
+            assignments: Vec::default(),
+            exprs: Vec::default(),
         }
     }
 
     fn check(&mut self) -> Result<()> {
         for a in &self.input.ast.assignments {
             let checked = self.check_assignment(a)?;
-            self.statements.push(checked)
+            self.assignments.push(checked)
         }
         for e in &self.input.ast.exprs {
             let checked = self.check_expression(e)?;
-            self.statements.push(checked)
+            self.exprs.push(checked)
         }
         Ok(())
     }
 
-    fn check_assignment(&mut self, a: &L<V<ast::Assignment>>) -> Result<L<TLStmt>> {
+    fn check_assignment(&mut self, a: &L<V<ast::Assignment>>) -> Result<L<TLAssignment>> {
         let symbol = a.it.it.symbol.clone();
         if self.scope.contains(&symbol) {
             a.loc
@@ -122,18 +127,15 @@ impl<'a> ModuleChecker<'a> {
         } else {
             let expr = expr::check(self, &self.scope, &a.it.it.expr)?;
             self.scope.set(&a.loc, symbol.clone(), expr.clone_type())?;
-            Ok(a.loc.wrap(
-                TLAssignment {
-                    symbol: self.input.path.fq_sym(symbol),
-                    expr,
-                }
-                .to_stmt(),
-            ))
+            Ok(a.loc.wrap(TLAssignment {
+                symbol: self.input.path.fq_sym(symbol),
+                expr,
+            }))
         }
     }
 
-    fn check_expression(&mut self, e: &L<ast::Expr>) -> Result<L<TLStmt>> {
-        Ok(expr::check(self, &self.scope, e)?.to_tl_stmt())
+    fn check_expression(&mut self, e: &L<ast::Expr>) -> Result<L<Expr>> {
+        Ok(expr::check(self, &self.scope, e)?)
     }
 
     fn resolve_type(&self, loc: &Loc, symbol: &Q<TSymbol>) -> Result<Type> {

@@ -3,7 +3,7 @@ use crate::error::{Error, Result, L};
 use crate::symbol::TSymbol;
 use crate::types::Type;
 
-use super::{Expr, ExprBuilder, ModuleChecker, Scope, Stmt, Value};
+use super::{BStmt, Expr, ExprBuilder, ModuleChecker, Scope, Value};
 
 pub(super) fn check<'a>(
     checker: &ModuleChecker<'a>,
@@ -92,7 +92,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.builder().block(checked)
     }
 
-    fn check_assignment(&self, scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<Stmt>> {
+    fn check_assignment(&self, scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<BStmt>> {
         let typed = self.sub_expr(&a.it.expr)?;
         scope.set(&a.loc, a.it.symbol.clone(), typed.clone_type())?;
         Ok(self.builder().assignment(a.it.symbol.clone(), typed))
