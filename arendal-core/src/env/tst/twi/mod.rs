@@ -53,10 +53,17 @@ impl<'a> Interpreter<'a> {
     }
 
     fn run(mut self) -> Result<Value> {
+        self.env.types = self.package.types.clone();
+        self.env.symbols = self.package.symbols.clone();
         let mut value = Value::None;
         for a in &self.package.assignments {
             value = self.expression(&a.it.expr)?;
-            self.set_val(&a.loc, a.it.symbol.symbol(), value.clone())?;
+            self.env.values.set(
+                &a.loc,
+                a.it.symbol.clone(),
+                Visibility::Module,
+                value.clone(),
+            )?
         }
         for e in &self.package.exprs {
             value = self.expression(e)?;
@@ -89,6 +96,10 @@ impl<'a> Interpreter<'a> {
             Expr::Local(l) => match self.get_val(&l.symbol) {
                 Some(value) => Ok(value),
                 None => expr.err(Error::UnknownLocalSymbol(l.symbol.clone())),
+            },
+            Expr::Global(g) => match self.env.values.get(&g.symbol) {
+                Some(value) => Ok(value.it.clone()),
+                None => expr.err(Error::UnknownSymbol(g.symbol.clone())),
             },
             Expr::Conditional(c) => {
                 if self.expression(&c.expr)?.as_boolean(&expr.loc)? {

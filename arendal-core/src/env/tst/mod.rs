@@ -9,7 +9,7 @@ use crate::Integer;
 use std::fmt;
 use std::sync::Arc;
 
-use super::{Env, Value};
+use super::{Env, Symbols, Value};
 
 pub(super) fn run(env: &mut Env, input: &str) -> Result<Value> {
     let package = crate::ast::parser::parse(input)?;
@@ -97,10 +97,17 @@ struct Local {
     tipo: Type,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+struct Global {
+    symbol: FQSym,
+    tipo: Type,
+}
+
 #[derive(Clone, PartialEq, Eq)]
 enum Expr {
     Value(Value),
     Local(Arc<Local>),
+    Global(Arc<Global>),
     Conditional(Arc<Conditional>),
     Unary(Arc<Unary>),
     IntAdd(Arc<TwoInts>),
@@ -117,6 +124,7 @@ impl Expr {
         match self {
             Self::Value(v) => v.borrow_type(),
             Self::Local(l) => &l.tipo,
+            Self::Global(g) => &g.tipo,
             Self::Conditional(c) => c.borrow_type(),
             Self::Unary(u) => u.expr.borrow_type(),
             Self::IntAdd(t) => t.expr1.borrow_type(),
@@ -203,13 +211,13 @@ struct TLAssignment {
     expr: L<Expr>,
 }
 
-struct ExprBuilder {
+struct Builder {
     loc: Loc,
 }
 
-impl ExprBuilder {
+impl Builder {
     const fn new(loc: Loc) -> Self {
-        ExprBuilder { loc }
+        Builder { loc }
     }
 
     fn build(&self, expr: Expr) -> L<Expr> {
@@ -234,6 +242,14 @@ impl ExprBuilder {
 
     fn local(&self, symbol: Symbol, tipo: Type) -> L<Expr> {
         self.build(Expr::Local(Arc::new(Local { symbol, tipo })))
+    }
+
+    fn global0(&self, global: Global) -> L<Expr> {
+        self.build(Expr::Global(Arc::new(global)))
+    }
+
+    fn global(&self, symbol: FQSym, tipo: Type) -> L<Expr> {
+        self.global0(Global { symbol, tipo })
     }
 
     fn conditional(&self, expr: L<Expr>, then: L<Expr>, otherwise: L<Expr>) -> Result<L<Expr>> {
@@ -290,6 +306,7 @@ impl ExprBuilder {
 pub(super) struct Package {
     pkg: Pkg,
     types: Types,
+    symbols: Symbols,
     assignments: Vec<L<TLAssignment>>,
     exprs: Vec<L<Expr>>,
 }

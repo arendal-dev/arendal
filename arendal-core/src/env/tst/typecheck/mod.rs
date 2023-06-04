@@ -1,41 +1,29 @@
 mod expr;
-mod module;
-mod types;
 
 use std::collections::{HashMap, HashSet};
 
 use crate::ast::{self, Q};
 use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol};
-use crate::types::{Type, Types};
+use crate::types::{Type, TypeDfn, TypeDfnMap, Types};
 
 use crate::env::{Env, Symbols};
-use crate::visibility::V;
+use crate::visibility::{Visibility, V};
 
-use self::module::Module;
-use super::{BStmt, Expr, ExprBuilder, Package, TLAssignment, Value};
+use super::{BStmt, Builder, Expr, Global, Package, TLAssignment, Value};
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
-    let input = Input {
-        env,
-        pkg: input.pkg.clone(),
-        modules: module::get_modules(input)?,
-    };
-    let types = types::check(&input)?;
-    PackageChecker {
-        input,
-        types,
-        symbols: env.symbols.clone(),
-    }
-    .check()
+    TypeChecker::new(env, input)?.check()
 }
 
+#[derive(Debug)]
 struct TCandidate<'a> {
     dfn: &'a ast::TypeDefinition,
 }
 
 type TCandidates<'a> = HashMap<FQType, TCandidate<'a>>;
 
+#[derive(Debug)]
 struct ACandidate<'a> {
     assignment: &'a L<V<ast::Assignment>>,
     deps: HashSet<FQSym>,
@@ -52,6 +40,7 @@ impl<'a> ACandidate<'a> {
 
 type ACandidates<'a> = HashMap<FQSym, ACandidate<'a>>;
 
+#[derive(Debug)]
 struct ECandidate<'a> {
     path: FQPath,
     expr: &'a L<Expr>,
@@ -59,50 +48,22 @@ struct ECandidate<'a> {
 
 type ECandidates<'a> = Vec<ACandidate<'a>>;
 
-#[derive(Debug)]
-struct Input<'a> {
-    env: &'a Env,
-    pkg: Pkg,
-    modules: Vec<Module<'a>>,
-}
+type Scope = crate::env::Scope<Type>;
 
 #[derive(Debug)]
-struct PackageChecker<'a> {
-    input: Input<'a>,
-    types: Types,
-    symbols: Symbols,
-}
-
-impl<'a> PackageChecker<'a> {
-    fn check(mut self) -> Result<Package> {
-        let mut assignments = Vec::default();
-        let mut exprs = Vec::default();
-        let mut errors = Errors::default();
-        for module in &self.input.modules {
-            let mut checker = ModuleChecker::new(&self, module);
-            errors.add_result(checker.check());
-            assignments.append(&mut checker.assignments);
-            exprs.append(&mut checker.exprs);
-        }
-        errors.to_lazy_result(|| Package {
-            pkg: self.input.pkg.clone(),
-            types: self.types,
-            assignments,
-            exprs,
-        })
-    }
-}
-
-struct PackageChecker2<'a> {
+struct TypeChecker<'a> {
     pkg: Pkg,
     types: Types,
     symbols: Symbols,
+    assignments: Vec<L<TLAssignment>>,
+    exprs: Vec<L<Expr>>,
     t_candidates: TCandidates<'a>,
     a_candidates: ACandidates<'a>,
     e_candidates: Vec<&'a L<ast::Expr>>,
+    scope: Scope,
 }
 
-impl<'a> PackageChecker2<'a> {
+impl<'a> TypeChecker<'a> {
     fn new(env: &Env, input: &'a ast::Package) -> Result<Self> {
         let mut errors = Errors::default();
         let mut t_candidates = TCandidates::default();
@@ -139,9 +100,12 @@ impl<'a> PackageChecker2<'a> {
             pkg: input.pkg.clone(),
             types: env.types.clone(),
             symbols: env.symbols.clone(),
+            assignments: Vec::default(),
+            exprs: Vec::default(),
             t_candidates,
             a_candidates,
             e_candidates,
+            scope: Scope::default(),
         })
     }
 
@@ -200,79 +164,104 @@ impl<'a> PackageChecker2<'a> {
         )
     }
 
-    fn resolve_type(&self, loc: &Loc, path: &FQPath, q: &Q<TSymbol>) -> Result<FQType> {
+    fn resolve_fq_type(&self, loc: &Loc, path: &FQPath, q: &Q<TSymbol>) -> Result<FQType> {
         for f in self.get_type_candidates(path, q) {
             return Ok(f); // TODO: validate visibility
         }
         loc.err(Error::UnableToResolveType(q.clone()))
     }
 
-    fn resolve_symbol(&self, loc: &Loc, path: &FQPath, q: &Q<Symbol>) -> Result<FQSym> {
+    fn resolve_type(&self, loc: &Loc, path: &FQPath, q: &Q<TSymbol>) -> Result<Type> {
+        let fq = self.resolve_fq_type(loc, path, q)?;
+        if let Some(t) = self.types.get(&fq) {
+            Ok(t.it.clone())
+        } else {
+            loc.err(Error::UnableToResolveType(q.clone()))
+        }
+    }
+
+    fn resolve_fq_symbol(&self, loc: &Loc, path: &FQPath, q: &Q<Symbol>) -> Result<FQSym> {
         for f in self.get_symbol_candidates(path, q) {
             return Ok(f); // TODO: validate visibility
         }
         loc.err(Error::UnableToResolveSymbol(q.clone()))
     }
-}
 
-type Scope = crate::env::Scope<Type>;
-
-#[derive(Debug)]
-struct ModuleChecker<'a> {
-    pkg: &'a PackageChecker<'a>,
-    input: &'a Module<'a>,
-    scope: Scope,
-    assignments: Vec<L<TLAssignment>>,
-    exprs: Vec<L<Expr>>,
-}
-
-impl<'a> ModuleChecker<'a> {
-    fn new(pkg: &'a PackageChecker, input: &'a Module) -> ModuleChecker<'a> {
-        ModuleChecker {
-            pkg,
-            input,
-            scope: Scope::default(),
-            assignments: Vec::default(),
-            exprs: Vec::default(),
-        }
-    }
-
-    fn check(&mut self) -> Result<()> {
-        for a in &self.input.ast.assignments {
-            let checked = self.check_assignment(a)?;
-            self.assignments.push(checked)
-        }
-        for e in &self.input.ast.exprs {
-            let checked = self.check_expression(e)?;
-            self.exprs.push(checked)
-        }
-        Ok(())
-    }
-
-    fn check_assignment(&mut self, a: &L<V<ast::Assignment>>) -> Result<L<TLAssignment>> {
-        let symbol = a.it.it.symbol.clone();
-        if self.scope.contains(&symbol) {
-            a.loc
-                .err(Error::DuplicateSymbol(self.input.path.fq_sym(symbol)))
+    fn resolve_global(&self, loc: &Loc, path: &FQPath, q: &Q<Symbol>) -> Result<Global> {
+        let fq = self.resolve_fq_symbol(loc, path, q)?;
+        if let Some(t) = self.symbols.get(&fq) {
+            Ok(Global {
+                symbol: fq,
+                tipo: t.it.clone(),
+            })
         } else {
-            let expr = expr::check(self, &self.scope, &a.it.it.expr)?;
-            self.scope.set(&a.loc, symbol.clone(), expr.clone_type())?;
-            Ok(a.loc.wrap(TLAssignment {
-                symbol: self.input.path.fq_sym(symbol),
-                expr,
-            }))
+            loc.err(Error::UnableToResolveSymbol(q.clone()))
         }
     }
 
-    fn check_expression(&mut self, e: &L<ast::Expr>) -> Result<L<Expr>> {
-        Ok(expr::check(self, &self.scope, e)?)
+    fn check(mut self) -> Result<Package> {
+        self.types = self.check_types()?;
+        self.check_assignments()?;
+        self.check_expressions()?;
+        Ok(Package {
+            pkg: self.pkg,
+            types: self.types,
+            symbols: self.symbols,
+            assignments: self.assignments,
+            exprs: self.exprs,
+        })
     }
 
-    fn resolve_type(&self, loc: &Loc, symbol: &Q<TSymbol>) -> Result<Type> {
-        let fq = self
-            .input
-            .resolve_type(|fq| self.pkg.types.contains(fq), loc, symbol)?;
-        Ok(self.pkg.types.get(&fq).unwrap().it.clone())
+    fn check_types(&self) -> Result<Types> {
+        let errors = Errors::default();
+        let mut dfns = TypeDfnMap::default();
+        for (fq, t) in &self.t_candidates {
+            let maybe = match t.dfn.dfn {
+                ast::TypeDfn::Singleton => Some(TypeDfn::Singleton),
+            };
+            if let Some(dfn) = maybe {
+                dfns.insert(fq.clone(), t.dfn.loc.wrap(Visibility::Module.wrap(dfn)));
+            }
+        }
+        self.types.add_types(&errors.to_result(dfns)?)
+    }
+
+    fn check_assignments(&mut self) -> Result<()> {
+        let mut errors = Errors::default();
+        for (fq, c) in &self.a_candidates {
+            let a = c.assignment;
+            let path = fq.path();
+            if let Some(expr) =
+                errors.add_result(expr::check(self, &path, &self.scope, &a.it.it.expr))
+            {
+                if errors
+                    .add_result(self.symbols.set(
+                        &a.loc,
+                        fq.clone(),
+                        a.it.visibility,
+                        expr.clone_type(),
+                    ))
+                    .is_some()
+                {
+                    self.assignments.push(a.loc.wrap(TLAssignment {
+                        symbol: fq.clone(),
+                        expr,
+                    }));
+                }
+            }
+        }
+        errors.to_unit_result()
+    }
+
+    fn check_expressions(&mut self) -> Result<()> {
+        let path = self.pkg.empty();
+        let mut errors = Errors::default();
+        for e in &self.e_candidates {
+            if let Some(expr) = errors.add_result(expr::check(self, &path, &self.scope, e)) {
+                self.exprs.push(expr)
+            }
+        }
+        errors.to_unit_result()
     }
 }
 

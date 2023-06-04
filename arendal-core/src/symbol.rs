@@ -318,6 +318,13 @@ impl FQSym {
             Self::Member(m) => m.data.symbol.clone(),
         }
     }
+
+    pub fn path(&self) -> FQPath {
+        match self {
+            Self::TopLevel(t) => t.data.path.clone(),
+            Self::Member(m) => m.data.top_level.path(),
+        }
+    }
 }
 
 impl fmt::Display for FQSym {
@@ -421,6 +428,14 @@ impl FQType {
             Self::Integer => TSymbol::Integer,
             Self::TopLevel(t) => t.data.symbol.clone(),
             Self::Member(m) => m.data.symbol.clone(),
+        }
+    }
+
+    pub fn path(&self) -> FQPath {
+        match self {
+            Self::TopLevel(t) => t.data.path.clone(),
+            Self::Member(m) => m.data.top_level.path(),
+            _ => Pkg::Std.empty(),
         }
     }
 }
