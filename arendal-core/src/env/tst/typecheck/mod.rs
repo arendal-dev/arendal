@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{self, Q};
 use crate::error::{Error, Errors, Loc, Result, L};
-use crate::symbol::{FQPath, FQSym, FQType, Pkg, TSymbol};
+use crate::symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol};
 use crate::types::{Type, Types};
 
 use crate::env::{Env, Symbols};
@@ -143,6 +143,75 @@ impl<'a> PackageChecker2<'a> {
             a_candidates,
             e_candidates,
         })
+    }
+
+    fn get_all_candidates<S: Clone, F, A, B>(
+        &self,
+        path: &FQPath,
+        mut accumulator: A,
+        b: B,
+        q: &Q<S>,
+    ) where
+        A: FnMut(F),
+        B: Fn(&FQPath, S) -> F,
+    {
+        if q.segments.is_empty() {
+            accumulator(b(&path, q.symbol.clone()));
+            accumulator(b(&Pkg::Std.empty(), q.symbol.clone()));
+        } else {
+            todo!();
+        }
+    }
+
+    fn get_candidates<S: Clone, F, B, C>(&self, path: &FQPath, check: C, b: B, q: &Q<S>) -> Vec<F>
+    where
+        C: Fn(&F) -> bool,
+        B: Fn(&FQPath, S) -> F,
+    {
+        let mut result = Vec::default();
+        self.get_all_candidates(
+            path,
+            |f| {
+                if check(&f) {
+                    result.push(f)
+                }
+            },
+            b,
+            q,
+        );
+        result
+    }
+
+    fn get_type_candidates(&self, path: &FQPath, q: &Q<TSymbol>) -> Vec<FQType> {
+        self.get_candidates(
+            path,
+            |f| self.t_candidates.contains_key(f) || self.types.contains(f),
+            |p, s| p.fq_type(s),
+            q,
+        )
+    }
+
+    fn get_symbol_candidates(&self, path: &FQPath, q: &Q<Symbol>) -> Vec<FQSym> {
+        self.get_candidates(
+            path,
+            |f| self.a_candidates.contains_key(f) || self.symbols.contains(f),
+            |p, s| p.fq_sym(s),
+            q,
+        )
+    }
+
+    fn resolve_type(&self, loc: &Loc, path: &FQPath, q: &Q<TSymbol>) -> Result<FQType> {
+        for f in self.get_type_candidates(path, q) {
+            return Ok(f); // TODO: validate visibility
+        }
+        loc.err(Error::UnableToResolveType(q.clone()))
+    }
+
+    fn resolve_symbol(&self, loc: &Loc, path: &FQPath, q: &Q<Symbol>) -> Result<FQSym> {
+        for f in self.get_symbol_candidates(path, q) {
+            return Ok(f); // TODO: validate visibility
+        }
+        loc.err(Error::UnableToResolveSymbol(q.clone()))
     }
 }
 

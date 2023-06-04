@@ -24,6 +24,10 @@ impl<T: Clone> Default for SymbolMap<T> {
 }
 
 impl<T: Clone> SymbolMap<T> {
+    pub(crate) fn contains(&self, symbol: &FQSym) -> bool {
+        self.values.contains_key(symbol)
+    }
+
     pub(crate) fn get(&self, symbol: &FQSym) -> Option<V<T>> {
         self.values.get(symbol).cloned()
     }
