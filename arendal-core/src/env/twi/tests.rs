@@ -1,13 +1,11 @@
 use crate::env::Env;
 use crate::error::Result;
-use crate::symbol::Pkg;
 
 use super::Value;
 
 fn eval_module(input: &str) -> Result<Value> {
     let mut env = Env::default();
-    let path = Pkg::Local.empty();
-    super::super::run(&mut env, input)
+    env.run(input)
 }
 
 fn eval_ok(input: &str, result: Value) {

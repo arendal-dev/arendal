@@ -1,34 +1,27 @@
-mod tst;
+mod twi;
 
 use im::HashMap;
 
 use crate::{
     error::{Error, Loc, Result},
     symbol::{FQSym, Symbol},
+    tst,
     types::{Type, Types},
     values::Value,
     visibility::{Visibility, V},
 };
 
-#[derive(Debug, Clone)]
-struct SymbolMap<T: Clone> {
-    values: HashMap<FQSym, V<T>>,
+#[derive(Debug, Default, Clone)]
+pub(crate) struct Symbols {
+    values: HashMap<FQSym, V<Type>>,
 }
 
-impl<T: Clone> Default for SymbolMap<T> {
-    fn default() -> Self {
-        Self {
-            values: Default::default(),
-        }
-    }
-}
-
-impl<T: Clone> SymbolMap<T> {
+impl Symbols {
     pub(crate) fn contains(&self, symbol: &FQSym) -> bool {
         self.values.contains_key(symbol)
     }
 
-    pub(crate) fn get(&self, symbol: &FQSym) -> Option<V<T>> {
+    pub(crate) fn get(&self, symbol: &FQSym) -> Option<V<Type>> {
         self.values.get(symbol).cloned()
     }
 
@@ -37,35 +30,57 @@ impl<T: Clone> SymbolMap<T> {
         loc: &Loc,
         symbol: FQSym,
         visibility: Visibility,
-        value: T,
+        tipo: Type,
     ) -> Result<()> {
         if self.values.contains_key(&symbol) {
             loc.err(Error::DuplicateSymbol(symbol))
         } else {
-            self.values.insert(symbol, visibility.wrap(value));
+            self.values.insert(symbol, visibility.wrap(tipo));
             Ok(())
         }
     }
 }
 
-type Symbols = SymbolMap<Type>;
-type Values = SymbolMap<Value>;
+#[derive(Debug, Default, Clone)]
+pub(crate) struct Values {
+    values: HashMap<FQSym, Value>,
+}
+
+impl Values {
+    pub(crate) fn contains(&self, symbol: &FQSym) -> bool {
+        self.values.contains_key(symbol)
+    }
+
+    pub(crate) fn get(&self, symbol: &FQSym) -> Option<Value> {
+        self.values.get(symbol).cloned()
+    }
+
+    pub(crate) fn set(&mut self, loc: &Loc, symbol: FQSym, value: Value) -> Result<()> {
+        if self.values.contains_key(&symbol) {
+            loc.err(Error::DuplicateSymbol(symbol))
+        } else {
+            self.values.insert(symbol, value);
+            Ok(())
+        }
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Env {
-    types: Types,
-    symbols: Symbols,
+    pub(crate) types: Types,
+    pub(crate) symbols: Symbols,
     values: Values,
 }
 
 impl Env {
     pub fn run(&mut self, input: &str) -> Result<Value> {
-        tst::run(self, input)
+        let package = tst::check(self, input)?;
+        twi::interpret(self, &package)
     }
 }
 
 #[derive(Debug, Clone)]
-struct Scope<T: Clone> {
+pub(crate) struct Scope<T: Clone> {
     all: HashMap<Symbol, T>,
     current: HashMap<Symbol, T>,
 }
@@ -80,25 +95,25 @@ impl<T: Clone> Default for Scope<T> {
 }
 
 impl<T: Clone> Scope<T> {
-    fn create_child(&self) -> Self {
+    pub(crate) fn create_child(&self) -> Self {
         Scope {
             all: self.all.clone(),
             current: Default::default(),
         }
     }
 
-    fn contains(&self, symbol: &Symbol) -> bool {
+    pub(crate) fn contains(&self, symbol: &Symbol) -> bool {
         self.all.contains_key(symbol)
     }
 
-    fn get(&self, symbol: &Symbol) -> Option<T> {
+    pub(crate) fn get(&self, symbol: &Symbol) -> Option<T> {
         self.current
             .get(symbol)
             .or_else(|| self.all.get(symbol))
             .cloned()
     }
 
-    fn set(&mut self, loc: &Loc, symbol: Symbol, value: T) -> Result<()> {
+    pub(crate) fn set(&mut self, loc: &Loc, symbol: Symbol, value: T) -> Result<()> {
         if self.current.contains_key(&symbol) {
             loc.err(Error::DuplicateLocalSymbol(symbol))
         } else {

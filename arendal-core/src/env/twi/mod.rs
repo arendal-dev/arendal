@@ -1,9 +1,11 @@
-use super::{BStmt, Env, Expr, Package, TwoInts, Value};
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQPath, Symbol};
-use crate::visibility::Visibility;
+use crate::tst::{BStmt, Expr, Package, TwoInts};
+use crate::values::Value;
 use crate::Integer;
 use std::collections::HashMap;
+
+use super::Env;
 
 type Scope = HashMap<Symbol, Value>;
 
@@ -31,9 +33,7 @@ impl<'a> Interpreter<'a> {
             self.scopes.last_mut().unwrap().insert(symbol, value);
             Ok(())
         } else {
-            self.env
-                .values
-                .set(loc, self.path.fq_sym(symbol), Visibility::Module, value)
+            panic!()
         }
     }
 
@@ -46,8 +46,8 @@ impl<'a> Interpreter<'a> {
             }
             i = i - 1;
         }
-        if let Some(vv) = self.env.values.get(&self.path.fq_sym(symbol.clone())) {
-            return Some(vv.it);
+        if let Some(value) = self.env.values.get(&self.path.fq_sym(symbol.clone())) {
+            return Some(value);
         }
         None
     }
@@ -58,12 +58,9 @@ impl<'a> Interpreter<'a> {
         let mut value = Value::None;
         for a in &self.package.assignments {
             value = self.expression(&a.it.expr)?;
-            self.env.values.set(
-                &a.loc,
-                a.it.symbol.clone(),
-                Visibility::Module,
-                value.clone(),
-            )?
+            self.env
+                .values
+                .set(&a.loc, a.it.symbol.clone(), value.clone())?
         }
         for e in &self.package.exprs {
             value = self.expression(e)?;
@@ -98,7 +95,7 @@ impl<'a> Interpreter<'a> {
                 None => expr.err(Error::UnknownLocalSymbol(l.symbol.clone())),
             },
             Expr::Global(g) => match self.env.values.get(&g.symbol) {
-                Some(value) => Ok(value.it.clone()),
+                Some(value) => Ok(value.clone()),
                 None => expr.err(Error::UnknownSymbol(g.symbol.clone())),
             },
             Expr::Conditional(c) => {

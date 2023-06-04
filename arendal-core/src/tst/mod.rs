@@ -1,32 +1,30 @@
-mod twi;
 mod typecheck;
 
 use crate::ast::UnaryOp;
+use crate::env::{Env, Symbols};
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQSym, Pkg, Symbol};
 use crate::types::{Type, Types};
+use crate::values::Value;
 use crate::Integer;
 use std::fmt;
 use std::sync::Arc;
 
-use super::{Env, Symbols, Value};
-
-pub(super) fn run(env: &mut Env, input: &str) -> Result<Value> {
-    let package = crate::ast::parser::parse(input)?;
-    let checked = typecheck::check(&env, &package)?;
-    twi::interpret(env, &checked)
+pub(crate) fn check(env: &Env, input: &str) -> Result<Package> {
+    let parsed = crate::ast::parser::parse(input)?;
+    typecheck::check(&env, &parsed)
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Unary {
+pub struct Unary {
     op: UnaryOp,
     expr: L<Expr>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct TwoInts {
-    expr1: L<Expr>,
-    expr2: L<Expr>,
+pub struct TwoInts {
+    pub(crate) expr1: L<Expr>,
+    pub(crate) expr2: L<Expr>,
 }
 
 impl TwoInts {
@@ -37,9 +35,9 @@ impl TwoInts {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct TwoBools {
-    expr1: L<Expr>,
-    expr2: L<Expr>,
+pub struct TwoBools {
+    pub(crate) expr1: L<Expr>,
+    pub(crate) expr2: L<Expr>,
 }
 
 impl TwoBools {
@@ -50,10 +48,10 @@ impl TwoBools {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Conditional {
-    expr: L<Expr>,
-    then: L<Expr>,
-    otherwise: L<Expr>,
+pub struct Conditional {
+    pub(crate) expr: L<Expr>,
+    pub(crate) then: L<Expr>,
+    pub(crate) otherwise: L<Expr>,
 }
 
 impl Conditional {
@@ -80,9 +78,9 @@ impl Conditional {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Assignment {
-    symbol: Symbol,
-    expr: L<Expr>,
+pub struct Assignment {
+    pub(crate) symbol: Symbol,
+    pub(crate) expr: L<Expr>,
 }
 
 impl Assignment {
@@ -92,19 +90,19 @@ impl Assignment {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Local {
-    symbol: Symbol,
-    tipo: Type,
+pub struct Local {
+    pub(crate) symbol: Symbol,
+    pub(crate) tipo: Type,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct Global {
-    symbol: FQSym,
-    tipo: Type,
+pub struct Global {
+    pub(crate) symbol: FQSym,
+    pub(crate) tipo: Type,
 }
 
 #[derive(Clone, PartialEq, Eq)]
-enum Expr {
+pub enum Expr {
     Value(Value),
     Local(Arc<Local>),
     Global(Arc<Global>),
@@ -185,7 +183,7 @@ impl fmt::Debug for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum BStmt {
+pub enum BStmt {
     Assignment(Arc<Assignment>),
     Expr(Arc<L<Expr>>),
 }
@@ -206,9 +204,9 @@ impl L<BStmt> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct TLAssignment {
-    symbol: FQSym,
-    expr: L<Expr>,
+pub struct TLAssignment {
+    pub(crate) symbol: FQSym,
+    pub(crate) expr: L<Expr>,
 }
 
 struct Builder {
@@ -304,9 +302,9 @@ impl Builder {
 
 #[derive(Debug)]
 pub(super) struct Package {
-    pkg: Pkg,
-    types: Types,
-    symbols: Symbols,
-    assignments: Vec<L<TLAssignment>>,
-    exprs: Vec<L<Expr>>,
+    pub(crate) pkg: Pkg,
+    pub(crate) types: Types,
+    pub(crate) symbols: Symbols,
+    pub(crate) assignments: Vec<L<TLAssignment>>,
+    pub(crate) exprs: Vec<L<Expr>>,
 }
