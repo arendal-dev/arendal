@@ -4,6 +4,7 @@ use crate::{
     ast::{self, Package, Q},
     error::{Error, Errors, Loc, Result, L},
     symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
+    visibility::V,
 };
 
 #[derive(Debug)]
@@ -27,17 +28,12 @@ impl<'a> Module<'a> {
     fn new(path: FQPath, ast: &ast::Module) -> Result<Module> {
         let mut errors = Errors::default();
         let mut symbols: HashSet<Symbol> = Default::default();
-        for s in &ast.statements {
-            let maybe = match &s.it {
-                ast::BStmt::Assignment(a) => Some(a.symbol.clone()),
-                _ => None,
-            };
-            if let Some(symbol) = maybe {
-                if symbols.contains(&symbol) {
-                    errors.add(s.loc.wrap(Error::DuplicateLocalSymbol(symbol)));
-                } else {
-                    symbols.insert(symbol);
-                }
+        for a in &ast.assignments {
+            let symbol = a.it.it.symbol.clone();
+            if symbols.contains(&symbol) {
+                errors.add(a.loc.wrap(Error::DuplicateLocalSymbol(symbol)));
+            } else {
+                symbols.insert(symbol);
             }
         }
         errors.to_lazy_result(|| Module { path, ast })

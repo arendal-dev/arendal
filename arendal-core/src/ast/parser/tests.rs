@@ -2,29 +2,53 @@ use crate::ast::{BStmt, BinaryOp, Expr, Module, TypeDefinition, TypeDfnBuilder};
 use crate::ast::{ExprBuilder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{Symbol, TSymbol};
+use crate::visibility::Visibility;
 
 use super::{parse, Enclosure, Error};
 
 const B: ExprBuilder = ExprBuilder::none();
 
-fn check_module(input: &str, expected: Module) {
-    let package = parse(input).unwrap();
-    let module = package.modules.iter().next().unwrap().1;
-    assert_eq!(module, &expected, "Left=Actual; Right=Expected")
+struct Test {
+    expected: Module,
+}
+
+impl Test {
+    fn new() -> Self {
+        Self {
+            expected: Default::default(),
+        }
+    }
+
+    fn check(self, input: &str) {
+        let package = parse(input).unwrap();
+        let module = package.modules.iter().next().unwrap().1;
+        assert_eq!(module, &self.expected, "Left=Actual; Right=Expected")
+    }
+
+    fn expr(mut self, expr: L<Expr>) -> Self {
+        self.expected.exprs.push(expr);
+        self
+    }
+
+    fn v_let(mut self, visibility: Visibility, symbol: Symbol, expr: L<Expr>) -> Self {
+        self.expected
+            .assignments
+            .push(B.assignment(symbol, expr).to_lv(visibility));
+        self
+    }
+
+    fn m_let(mut self, symbol: Symbol, expr: L<Expr>) -> Self {
+        self.v_let(Visibility::Module, symbol, expr)
+    }
+
+    fn type_dfn(mut self, dfn: TypeDefinition) -> Self {
+        self.expected.types.push(dfn);
+        self
+    }
 }
 
 fn check_expression(input: &str, expected: L<Expr>) {
-    check_statement(input, expected.to_stmt())
-}
-
-fn check_statement(input: &str, expected: L<BStmt>) {
-    check_statements(input, vec![expected])
-}
-
-fn check_statements(input: &str, expected: Vec<L<BStmt>>) {
-    let mut module = Module::default();
-    module.statements = expected;
-    check_module(input, module)
+    Test::new().expr(expected).check(input)
 }
 
 fn check_qsymbol(input: &str, segments: Vec<Segment>, symbol: Symbol) {
@@ -119,10 +143,12 @@ fn or(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
     B.binary(BinaryOp::Or, expr1, expr2)
 }
 
+pub fn b_let(symbol: Symbol, expr: L<Expr>) -> BStmt {
+    B.assignment(symbol, expr).to_bstmt()
+}
+
 fn check_type(input: &str, expected: TypeDefinition) {
-    let mut module = Module::default();
-    module.add_type(expected);
-    check_module(input, module)
+    Test::new().type_dfn(expected).check(input)
 }
 
 fn singleton(symbol: &str) -> TypeDefinition {
@@ -179,8 +205,10 @@ fn add_id() {
 
 #[test]
 fn assignment() {
-    check_statement("let x = 1", B.assignment(x(), e_i64(1)));
-    check_statement("let x = y + 2", B.assignment(x(), add(e_y(), e_i64(2))));
+    Test::new().m_let(x(), e_i64(1)).check("let x = 1");
+    Test::new()
+        .m_let(x(), add(e_y(), e_i64(2)))
+        .check("let x = y + 2");
 }
 
 #[test]
@@ -193,7 +221,7 @@ fn parens1() {
 
 #[test]
 fn multiple1() {
-    check_statements("1\n2", vec![e_i64(1).to_stmt(), e_i64(2).to_stmt()]);
+    Test::new().expr(e_i64(1)).expr(e_i64(2)).check("1\n2")
 }
 
 #[test]
@@ -215,14 +243,11 @@ fn blocks() {
     check_expression("{ 1 }", e_i64(1));
     check_expression(
         "{ 1\n2 }",
-        B.block(vec![e_i64(1).to_stmt(), e_i64(2).to_stmt()]),
+        B.block(vec![e_i64(1).to_bstmt(), e_i64(2).to_bstmt()]),
     );
     check_expression(
         "{ let x = 1\n x+2 }",
-        B.block(vec![
-            B.assignment(x(), e_i64(1)),
-            add(e_x(), e_i64(2)).to_stmt(),
-        ]),
+        B.block(vec![b_let(x(), e_i64(1)), add(e_x(), e_i64(2)).to_bstmt()]),
     );
     expect_error("{ 1 2 }", &Error::EndOfItemExpected);
     expect_error("{ 1\n 2 ", &Error::CloseExpected(Enclosure::Curly))

@@ -8,11 +8,13 @@ pub enum Enclosure {
 }
 
 use super::{
-    BStmt, BinaryOp, Expr, ExprBuilder, Module, Package, Segment, TypeDefinition, TypeDfnBuilder,
+    Assignment, BStmt, BinaryOp, Expr, ExprBuilder, Module, Package, Segment, TypeDefinition,
+    TypeDfnBuilder,
 };
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};
+use crate::visibility::Visibility;
 use std::rc::Rc;
 
 use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
@@ -35,8 +37,18 @@ fn parse_module(input: &str) -> Result<Module> {
 
 type PResult<T> = Result<(T, Parser)>;
 type EResult = PResult<L<Expr>>;
-type SResult = PResult<L<BStmt>>;
+type BResult = PResult<BStmt>;
 type TResult = PResult<TypeDefinition>;
+
+fn map<T, F, U>(result: PResult<T>, f: F) -> PResult<U>
+where
+    F: FnOnce(T) -> U,
+{
+    match result {
+        Ok((t, p)) => Ok((f(t), p)),
+        Err(e) => Err(e),
+    }
+}
 
 #[derive(Clone)]
 struct Parser {
@@ -101,7 +113,7 @@ impl Parser {
         let mut module = Module::default();
         let mut parser = self;
         while !parser.is_done() {
-            (_, parser) = parser.rule_moduleitem(&mut module)?;
+            (_, parser) = parser.rule_statement(&mut module)?;
         }
         Ok(module)
     }
@@ -136,7 +148,7 @@ impl Parser {
         }
     }
 
-    fn expect_eoi<O>(&self, o: O) -> PResult<()>
+    fn expect_eos<O>(&self, o: O) -> PResult<()>
     where
         O: FnOnce() -> (),
     {
@@ -151,13 +163,33 @@ impl Parser {
         ExprBuilder::new(self.loc())
     }
 
-    fn rule_moduleitem(&self, module: &mut Module) -> PResult<()> {
-        if self.is_keyword(Keyword::Type) {
-            let (dfn, parser) = self.advance().rule_typedef()?;
-            parser.expect_eoi(|| module.add_type(dfn))
+    fn rule_statement(&self, module: &mut Module) -> PResult<()> {
+        let visibility = if self.is_keyword(Keyword::Pub) {
+            Visibility::Exported
+        } else if self.is_keyword(Keyword::Pkg) {
+            Visibility::Package
         } else {
-            let (stmt, parser) = self.rule_statement()?;
-            parser.expect_eoi(|| module.add_statement(stmt))
+            Visibility::Module
+        };
+        let next = self.advance();
+        let parser = if visibility == Visibility::Module {
+            self
+        } else {
+            &next
+        };
+        if parser.is_keyword(Keyword::Type) {
+            let (dfn, parser) = self.advance().rule_typedef()?;
+            parser.expect_eos(|| module.types.push(dfn))
+        } else if parser.is_keyword(Keyword::Let) {
+            let (a, parser) = self.advance().rule_assignment()?;
+            parser.expect_eos(|| module.assignments.push(a.to_lv(visibility)))
+        } else {
+            if visibility == Visibility::Module {
+                let (expr, parser) = self.rule_expression()?;
+                parser.expect_eos(|| module.exprs.push(expr))
+            } else {
+                parser.err(Error::ExpressionNotExpected)
+            }
         }
     }
 
@@ -170,15 +202,15 @@ impl Parser {
             .ok(TypeDfnBuilder::new(self.loc(), symbol).singleton())
     }
 
-    fn rule_statement(&self) -> SResult {
+    fn rule_bstatement(&self) -> BResult {
         if self.is_keyword(Keyword::Let) {
-            self.advance().rule_assignment()
+            map(self.advance().rule_assignment(), |a| a.to_bstmt())
         } else {
-            self.rule_expression().map(|(e, p)| (e.to_stmt(), p))
+            self.rule_expression().map(|(e, p)| (e.to_bstmt(), p))
         }
     }
 
-    fn rule_assignment(&self) -> SResult {
+    fn rule_assignment(&self) -> PResult<L<Assignment>> {
         let (lvalue, parser) = self.get_lvalue()?;
         if parser.kind_equals(LexemeKind::Assignment) {
             let (expr, next) = parser.advance().rule_expression()?;
@@ -305,12 +337,12 @@ impl Parser {
                             .ok(self.builder().tsymbol(Vec::default(), TSymbol::None))
                     } else {
                         let mut stmt;
-                        let mut stmts: Vec<L<BStmt>> = Vec::default();
+                        let mut stmts: Vec<BStmt> = Vec::default();
                         loop {
                             if parser.is_done() {
                                 return parser.err(Error::CloseExpected(Enclosure::Curly));
                             }
-                            (stmt, parser) = parser.rule_statement()?;
+                            (stmt, parser) = parser.rule_bstatement()?;
                             stmts.push(stmt);
                             if parser.kind_equals(LexemeKind::Close(Enclosure::Curly)) {
                                 parser = parser.advance();

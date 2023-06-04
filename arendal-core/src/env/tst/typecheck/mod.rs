@@ -8,6 +8,7 @@ use crate::symbol::{Pkg, TSymbol};
 use crate::types::{Type, Types};
 
 use crate::env::{Env, Symbols};
+use crate::visibility::V;
 
 use self::module::Module;
 use super::{Expr, ExprBuilder, Package, Stmt, TLAssignment, TLStmt, Value};
@@ -79,24 +80,26 @@ impl<'a> ModuleChecker<'a> {
     }
 
     fn check(&mut self) -> Result<()> {
-        for s in &self.input.ast.statements {
-            let checked = match &s.it {
-                ast::BStmt::Assignment(a) => self.check_assignment(&s.loc, a.as_ref())?,
-                ast::BStmt::Expr(e) => self.check_expression(e.as_ref())?,
-            };
+        for a in &self.input.ast.assignments {
+            let checked = self.check_assignment(a)?;
+            self.statements.push(checked)
+        }
+        for e in &self.input.ast.exprs {
+            let checked = self.check_expression(e)?;
             self.statements.push(checked)
         }
         Ok(())
     }
 
-    fn check_assignment(&mut self, loc: &Loc, a: &ast::Assignment) -> Result<L<TLStmt>> {
-        let symbol = a.symbol.clone();
+    fn check_assignment(&mut self, a: &L<V<ast::Assignment>>) -> Result<L<TLStmt>> {
+        let symbol = a.it.it.symbol.clone();
         if self.scope.contains(&symbol) {
-            loc.err(Error::DuplicateSymbol(self.input.path.fq_sym(symbol)))
+            a.loc
+                .err(Error::DuplicateSymbol(self.input.path.fq_sym(symbol)))
         } else {
-            let expr = expr::check(self, &self.scope, &a.expr)?;
-            self.scope.set(&loc, symbol.clone(), expr.clone_type())?;
-            Ok(loc.wrap(
+            let expr = expr::check(self, &self.scope, &a.it.it.expr)?;
+            self.scope.set(&a.loc, symbol.clone(), expr.clone_type())?;
+            Ok(a.loc.wrap(
                 TLAssignment {
                     symbol: self.input.path.fq_sym(symbol),
                     expr,

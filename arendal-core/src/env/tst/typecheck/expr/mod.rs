@@ -1,5 +1,5 @@
 use crate::ast::{self, BinaryOp, Q};
-use crate::error::{Error, Loc, Result, L};
+use crate::error::{Error, Result, L};
 use crate::symbol::TSymbol;
 use crate::types::Type;
 
@@ -76,13 +76,13 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_block(self, stmts: &Vec<L<ast::BStmt>>) -> Result<L<Expr>> {
+    fn check_block(self, stmts: &Vec<ast::BStmt>) -> Result<L<Expr>> {
         let mut child_scope = self.scope.create_child();
         let mut checked = Vec::default();
         for s in stmts {
-            match &s.it {
+            match s {
                 ast::BStmt::Assignment(a) => {
-                    checked.push(self.check_assignment(&mut child_scope, &s.loc, a.as_ref())?)
+                    checked.push(self.check_assignment(&mut child_scope, a.as_ref())?)
                 }
                 ast::BStmt::Expr(e) => {
                     checked.push(check(self.checker, &child_scope, e.as_ref())?.to_stmt())
@@ -92,15 +92,10 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.builder().block(checked)
     }
 
-    fn check_assignment(
-        &self,
-        scope: &mut Scope,
-        loc: &Loc,
-        a: &ast::Assignment,
-    ) -> Result<L<Stmt>> {
-        let typed = self.sub_expr(&a.expr)?;
-        scope.set(loc, a.symbol.clone(), typed.clone_type())?;
-        Ok(self.builder().assignment(a.symbol.clone(), typed))
+    fn check_assignment(&self, scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<Stmt>> {
+        let typed = self.sub_expr(&a.it.expr)?;
+        scope.set(&a.loc, a.it.symbol.clone(), typed.clone_type())?;
+        Ok(self.builder().assignment(a.it.symbol.clone(), typed))
     }
 
     fn builder(&self) -> ExprBuilder {

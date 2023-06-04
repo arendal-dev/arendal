@@ -3,6 +3,7 @@ use crate::{
     keyword::Keyword,
     symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
     types::Type,
+    visibility::{Visibility, V},
 };
 
 use super::ArcStr;
@@ -70,6 +71,17 @@ impl<T> L<T> {
 
     pub fn err<R>(&self, error: Error) -> Result<R> {
         self.loc.err(error)
+    }
+
+    pub fn map<U, F>(self, f: F) -> L<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        self.loc.to_wrap(f(self.it))
+    }
+
+    pub fn to_lv(self, visibility: Visibility) -> L<V<T>> {
+        self.loc.to_wrap(visibility.wrap(self.it))
     }
 }
 
@@ -186,6 +198,7 @@ pub enum Error {
     UnexpectedToken,
     // Parser
     ExpressionExpected,
+    ExpressionNotExpected,
     LValueExpected,
     AssignmentExpected,
     EndOfItemExpected,

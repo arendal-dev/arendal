@@ -4,6 +4,7 @@ use std::fmt;
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Keyword {
     Pkg,
+    Pub,
     Let,
     If,
     Then,
@@ -13,6 +14,7 @@ pub enum Keyword {
 
 static KEYWORDS: phf::Map<&'static str, Keyword> = phf_map! {
     "pkg" => Keyword::Pkg,
+    "pub" => Keyword::Pub,
     "let" => Keyword::Let,
     "if" => Keyword::If,
     "then" => Keyword::Then,
@@ -28,6 +30,7 @@ impl Keyword {
     pub fn as_str(&self) -> &str {
         match self {
             Self::Pkg => "pkg",
+            Self::Pub => "pub",
             Self::Let => "let",
             Self::If => "if",
             Self::Then => "then",

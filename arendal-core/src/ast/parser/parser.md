@@ -10,7 +10,6 @@ module -> statement*
 
 statement -> (vstatement | expression) EOS
 vstatement -> ("pub" | "pkg" | "") (typedef | assignment)
-bstatement -> assignment | expression
 
 typedef -> "type" TypeSymbol
 
@@ -25,6 +24,7 @@ comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
 primary -> IntLiteral | TypeSymbol | Symbol | "(" subexpr ")" | "{" ( bstatement (EOS bstatement)* )?   "}" 
+bstatement -> assignment | expression
 qsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
 qtsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
 

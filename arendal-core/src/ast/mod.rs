@@ -7,6 +7,7 @@ use im::HashMap;
 use super::Integer;
 use crate::error::{Loc, L};
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};
+use crate::visibility::V;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Segment {
@@ -68,6 +69,12 @@ pub struct Assignment {
     pub expr: L<Expr>,
 }
 
+impl L<Assignment> {
+    pub(crate) fn to_bstmt(self) -> BStmt {
+        BStmt::Assignment(Box::new(self))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     LitInteger(Integer),
@@ -75,20 +82,19 @@ pub enum Expr {
     TSymbol(Q<TSymbol>),
     Unary(Box<UnaryExpr>),
     Binary(Box<BinaryExpr>),
-    Block(Vec<L<BStmt>>),
+    Block(Vec<BStmt>),
     Conditional(Box<Conditional>),
 }
 
 impl L<Expr> {
-    pub(crate) fn to_stmt(self) -> L<BStmt> {
-        let loc = self.loc.clone();
-        loc.to_wrap(BStmt::Expr(Box::new(self)))
+    pub(crate) fn to_bstmt(self) -> BStmt {
+        BStmt::Expr(Box::new(self))
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BStmt {
-    Assignment(Box<Assignment>),
+    Assignment(Box<L<Assignment>>),
     Expr(Box<L<Expr>>),
 }
 
@@ -129,13 +135,13 @@ impl ExprBuilder {
         self.build(Expr::Binary(Box::new(BinaryExpr { op, expr1, expr2 })))
     }
 
-    pub fn block(&self, stmts: Vec<L<BStmt>>) -> L<Expr> {
+    pub fn block(&self, stmts: Vec<BStmt>) -> L<Expr> {
         assert!(
             !stmts.is_empty(),
             "Blocks need to contain at least one statement"
         );
         if stmts.len() == 1 {
-            if let BStmt::Expr(e) = &stmts[0].it {
+            if let BStmt::Expr(e) = &stmts[0] {
                 return *e.clone();
             }
         }
@@ -150,9 +156,8 @@ impl ExprBuilder {
         })))
     }
 
-    pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<BStmt> {
-        self.loc
-            .wrap(BStmt::Assignment(Box::new(Assignment { symbol, expr })))
+    pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Assignment> {
+        self.loc.wrap(Assignment { symbol, expr })
     }
 }
 
@@ -191,26 +196,11 @@ impl TypeDfnBuilder {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum ModuleItem {
-    Expression(L<Expr>),
-    TypeDefinition(TypeDefinition),
-}
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Module {
-    pub(crate) types: Vec<TypeDefinition>,
-    pub(crate) statements: Vec<L<BStmt>>,
-}
-
-impl Module {
-    fn add_type(&mut self, tipo: TypeDefinition) {
-        self.types.push(tipo)
-    }
-
-    fn add_statement(&mut self, expr: L<BStmt>) {
-        self.statements.push(expr)
-    }
+    pub exprs: Vec<L<Expr>>,
+    pub assignments: Vec<L<V<Assignment>>>,
+    pub types: Vec<TypeDefinition>,
 }
 
 #[derive(Debug)]
