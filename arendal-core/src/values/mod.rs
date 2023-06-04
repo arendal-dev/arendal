@@ -1,13 +1,10 @@
 use std::fmt;
 
-use im::HashMap;
 use num::Integer;
 
 use crate::{
     error::{Error, Loc, Result},
-    symbol::FQSym,
     types::Type,
-    visibility::{Visibility, V},
 };
 
 #[derive(Clone, PartialEq, Eq)]

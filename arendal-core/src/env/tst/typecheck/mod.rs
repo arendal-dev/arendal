@@ -2,9 +2,11 @@ mod expr;
 mod module;
 mod types;
 
+use std::collections::HashMap;
+
 use crate::ast::{self, Q};
 use crate::error::{Error, Errors, Loc, Result, L};
-use crate::symbol::{Pkg, TSymbol};
+use crate::symbol::{FQType, Pkg, TSymbol};
 use crate::types::{Type, Types};
 
 use crate::env::{Env, Symbols};
@@ -28,6 +30,12 @@ pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
     .check()
 }
 
+struct TCandidate<'a> {
+    dfn: &'a ast::TypeDefinition,
+}
+
+type TCandidates<'a> = HashMap<FQType, TCandidate<'a>>;
+
 #[derive(Debug)]
 struct Input<'a> {
     env: &'a Env,
@@ -43,6 +51,21 @@ struct PackageChecker<'a> {
 }
 
 impl<'a> PackageChecker<'a> {
+    fn new(env: &Env, input: &ast::Package) {
+        let mut errors = Errors::default();
+        let mut t_candidates = TCandidates::default();
+        for (path, module) in &input.modules {
+            let fq_path = input.pkg.path(path.clone());
+            for dfn in &module.types {
+                let fq_type = fq_path.fq_type(dfn.symbol.clone());
+                if t_candidates.contains_key(&fq_type) {
+                    errors.add(dfn.loc.wrap(Error::DuplicateType(fq_type)));
+                } else {
+                    t_candidates.insert(fq_type, TCandidate { dfn });
+                }
+            }
+        }
+    }
     fn check(mut self) -> Result<Package> {
         let mut statements = Vec::default();
         let mut errors = Errors::default();
