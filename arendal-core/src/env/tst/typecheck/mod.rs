@@ -2,11 +2,11 @@ mod expr;
 mod module;
 mod types;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::{self, Q};
 use crate::error::{Error, Errors, Loc, Result, L};
-use crate::symbol::{FQType, Pkg, TSymbol};
+use crate::symbol::{FQPath, FQSym, FQType, Pkg, TSymbol};
 use crate::types::{Type, Types};
 
 use crate::env::{Env, Symbols};
@@ -36,6 +36,29 @@ struct TCandidate<'a> {
 
 type TCandidates<'a> = HashMap<FQType, TCandidate<'a>>;
 
+struct ACandidate<'a> {
+    assignment: &'a L<V<ast::Assignment>>,
+    deps: HashSet<FQSym>,
+}
+
+impl<'a> ACandidate<'a> {
+    fn new(assignment: &'a L<V<ast::Assignment>>) -> Self {
+        Self {
+            assignment,
+            deps: Default::default(),
+        }
+    }
+}
+
+type ACandidates<'a> = HashMap<FQSym, ACandidate<'a>>;
+
+struct ECandidate<'a> {
+    path: FQPath,
+    expr: &'a L<Expr>,
+}
+
+type ECandidates<'a> = Vec<ACandidate<'a>>;
+
 #[derive(Debug)]
 struct Input<'a> {
     env: &'a Env,
@@ -51,21 +74,6 @@ struct PackageChecker<'a> {
 }
 
 impl<'a> PackageChecker<'a> {
-    fn new(env: &Env, input: &ast::Package) {
-        let mut errors = Errors::default();
-        let mut t_candidates = TCandidates::default();
-        for (path, module) in &input.modules {
-            let fq_path = input.pkg.path(path.clone());
-            for dfn in &module.types {
-                let fq_type = fq_path.fq_type(dfn.symbol.clone());
-                if t_candidates.contains_key(&fq_type) {
-                    errors.add(dfn.loc.wrap(Error::DuplicateType(fq_type)));
-                } else {
-                    t_candidates.insert(fq_type, TCandidate { dfn });
-                }
-            }
-        }
-    }
     fn check(mut self) -> Result<Package> {
         let mut assignments = Vec::default();
         let mut exprs = Vec::default();
@@ -81,6 +89,59 @@ impl<'a> PackageChecker<'a> {
             types: self.types,
             assignments,
             exprs,
+        })
+    }
+}
+
+struct PackageChecker2<'a> {
+    pkg: Pkg,
+    types: Types,
+    symbols: Symbols,
+    t_candidates: TCandidates<'a>,
+    a_candidates: ACandidates<'a>,
+    e_candidates: Vec<&'a L<ast::Expr>>,
+}
+
+impl<'a> PackageChecker2<'a> {
+    fn new(env: &Env, input: &'a ast::Package) -> Result<Self> {
+        let mut errors = Errors::default();
+        let mut t_candidates = TCandidates::default();
+        let mut a_candidates = ACandidates::default();
+        let mut e_candidates = Vec::default();
+        for (path, module) in &input.modules {
+            let fq_path = input.pkg.path(path.clone());
+            for dfn in &module.types {
+                let fq_type = fq_path.fq_type(dfn.symbol.clone());
+                if t_candidates.contains_key(&fq_type) {
+                    errors.add(dfn.loc.wrap(Error::DuplicateType(fq_type)));
+                } else {
+                    t_candidates.insert(fq_type, TCandidate { dfn });
+                }
+            }
+            for a in &module.assignments {
+                let fq = fq_path.fq_sym(a.it.it.symbol.clone());
+                if a_candidates.contains_key(&fq) {
+                    errors.add(a.loc.wrap(Error::DuplicateSymbol(fq)));
+                } else {
+                    a_candidates.insert(fq, ACandidate::new(a));
+                }
+            }
+            for e in &module.exprs {
+                if path.is_empty() {
+                    e_candidates.push(e)
+                } else {
+                    errors.add(e.loc.wrap(Error::TLExpressionInNonRootModule));
+                    break; // one error per module
+                }
+            }
+        }
+        errors.to_lazy_result(|| Self {
+            pkg: input.pkg.clone(),
+            types: env.types.clone(),
+            symbols: env.symbols.clone(),
+            t_candidates,
+            a_candidates,
+            e_candidates,
         })
     }
 }
