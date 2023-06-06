@@ -14,8 +14,9 @@ vstatement -> ("pub" | "pkg" | "") (typedef | assignment)
 typedef -> "type" TypeSymbol
 
 assignment -> "let" symbol "=" expression
-expression -> conditional | subexpr
-conditional -> "if" expression "then" expression "else" expression
+expression -> expr ( "then" expr )*
+expr -> conditional | subexpr
+conditional -> "if" expr "then" expr "else" expr
 subexpr -> logterm
 logterm -> logfactor ( "||" logfactor )*
 logfactor -> equality ( "&&" equality )*
@@ -23,9 +24,9 @@ equality -> comparison ( ("==" | "!=") comparison )*
 comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
 factor -> primary ( ("*" | "/") primary )*
-primary -> IntLiteral | TypeSymbol | Symbol | "(" subexpr ")" | "{" ( bstatement (EOS bstatement)* )?   "}" 
+primary -> IntLiteral | TypeSymbol | Symbol | "(" expression ")" | "{" ( bstatement (EOS bstatement)* )?   "}" 
 bstatement -> assignment | expression
 qsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
-qtsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
+qtsymbol -> ( ((Symbol | TypeSymbol ))"::" )* TSymbol
 
 ```

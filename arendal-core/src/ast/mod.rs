@@ -57,6 +57,12 @@ pub struct BinaryExpr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Seq {
+    pub expr: L<Expr>,
+    pub then: L<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Conditional {
     pub expr: L<Expr>,
     pub then: L<Expr>,
@@ -84,6 +90,7 @@ pub enum Expr {
     Binary(Box<BinaryExpr>),
     Block(Vec<BStmt>),
     Conditional(Box<Conditional>),
+    Seq(Box<Seq>),
 }
 
 impl L<Expr> {
@@ -154,6 +161,10 @@ impl ExprBuilder {
             then,
             otherwise,
         })))
+    }
+
+    pub fn seq(&self, expr: L<Expr>, then: L<Expr>) -> L<Expr> {
+        self.build(Expr::Seq(Box::new(Seq { expr, then })))
     }
 
     pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Assignment> {

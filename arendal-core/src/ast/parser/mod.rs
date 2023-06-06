@@ -230,6 +230,15 @@ impl Parser {
     }
 
     fn rule_expression(&self) -> EResult {
+        let (mut left, mut parser) = self.rule_expr()?;
+        while parser.is_keyword(Keyword::Then) {
+            let (right, p2) = parser.advance().rule_expr()?;
+            (left, parser) = p2.ok(parser.builder().seq(left, right))?;
+        }
+        parser.ok(left)
+    }
+
+    fn rule_expr(&self) -> EResult {
         if self.is_keyword(Keyword::If) {
             self.rule_conditional()
         } else {
@@ -238,9 +247,9 @@ impl Parser {
     }
 
     fn rule_conditional(&self) -> EResult {
-        let (expr, parser2) = self.advance().rule_expression()?;
-        let (then, parser3) = parser2.keyword_expected(Keyword::Then)?.rule_expression()?;
-        let (otherwise, parser4) = parser3.keyword_expected(Keyword::Else)?.rule_expression()?;
+        let (expr, parser2) = self.advance().rule_expr()?;
+        let (then, parser3) = parser2.keyword_expected(Keyword::Then)?.rule_expr()?;
+        let (otherwise, parser4) = parser3.keyword_expected(Keyword::Else)?.rule_expr()?;
         parser4.ok(self.builder().conditional(expr, then, otherwise))
     }
 
@@ -322,7 +331,7 @@ impl Parser {
                 LexemeKind::TSymbol(symbol) => self.rule_q(Segment::Type(symbol.clone())),
                 LexemeKind::Symbol(symbol) => self.rule_q(Segment::Symbol(symbol.clone())),
                 LexemeKind::Open(Enclosure::Parens) => {
-                    let (expr, next) = self.advance().rule_subexpr()?;
+                    let (expr, next) = self.advance().rule_expression()?;
                     if !next.kind_equals(LexemeKind::Close(Enclosure::Parens)) {
                         next.err(Error::CloseExpected(Enclosure::Parens))
                     } else {
