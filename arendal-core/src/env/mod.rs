@@ -75,7 +75,7 @@ pub struct Env {
 impl Env {
     pub fn run(&mut self, input: &str) -> Result<Value> {
         let package = tst::check(self, input)?;
-        twi::interpret(self, &package)
+        twi::run(self, &package)
     }
 }
 

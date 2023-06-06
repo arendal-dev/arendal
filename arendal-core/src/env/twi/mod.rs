@@ -1,14 +1,39 @@
+use im::HashMap;
+
 use crate::error::{Error, Loc, Result, L};
+use crate::symbol::Symbol;
 use crate::tst::{BStmt, Expr, Package, TwoInts};
 use crate::values::Value;
 use crate::Integer;
 
 use super::Env;
 
-type Scope = super::Scope<Value>;
-
-pub(super) fn interpret(env: &mut Env, package: &Package) -> Result<Value> {
+pub(super) fn run(env: &mut Env, package: &Package) -> Result<Value> {
     Interpreter { env, package }.run()
+}
+
+#[derive(Debug, Default, Clone)]
+struct Scope {
+    values: HashMap<Symbol, Value>,
+}
+
+impl Scope {
+    fn contains(&self, symbol: &Symbol) -> bool {
+        self.values.contains_key(symbol)
+    }
+
+    fn get(&self, symbol: &Symbol) -> Option<Value> {
+        self.values.get(symbol).cloned()
+    }
+
+    pub(crate) fn set(&mut self, loc: &Loc, symbol: Symbol, value: Value) -> Result<()> {
+        if self.values.contains_key(&symbol) {
+            loc.err(Error::DuplicateLocalSymbol(symbol))
+        } else {
+            self.values.insert(symbol.clone(), value.clone());
+            Ok(())
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -84,10 +109,7 @@ impl<'a> Interpreter<'a> {
             Expr::IntDiv(t) => self.div(&expr.loc, scope, t),
             Expr::LogicalAnd(t) => self.and(&expr.loc, scope, &t.expr1, &t.expr2),
             Expr::LogicalOr(t) => self.or(&expr.loc, scope, &t.expr1, &t.expr2),
-            Expr::Block(stmts) => {
-                //let mut scope = scope.create_child();
-                self.b_stmts(&mut scope.create_child(), stmts)
-            }
+            Expr::Block(stmts) => self.b_stmts(&mut scope.clone(), stmts),
             _ => expr.err(Error::NotImplemented),
         }
     }
