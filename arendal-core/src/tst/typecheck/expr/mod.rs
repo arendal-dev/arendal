@@ -29,6 +29,10 @@ struct ExprChecker<'a, 'b> {
 }
 
 impl<'a, 'b> ExprChecker<'a, 'b> {
+    fn merge2(&self, e1: &L<ast::Expr>, e2: &L<ast::Expr>) -> Result<(L<Expr>, L<Expr>)> {
+        Error::merge(self.sub_expr(&e1), self.sub_expr(&e2))
+    }
+
     fn check(self) -> Result<L<Expr>> {
         match &self.input.it {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
@@ -38,6 +42,9 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                 let value = Value::singleton(&self.input.loc, &tipo)?;
                 Ok(self.builder().value(value))
             }
+            ast::Expr::Seq(s) => self
+                .merge2(&s.expr, &s.then)
+                .and_then(|(e1, e2)| Ok(self.builder().seq(e1, e2))),
             ast::Expr::Conditional(c) => {
                 let (expr, then, otherwise) = Error::merge3(
                     self.sub_expr(&c.expr),
@@ -46,7 +53,8 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
                 )?;
                 self.builder().conditional(expr, then, otherwise)
             }
-            ast::Expr::Binary(b) => Error::merge(self.sub_expr(&b.expr1), self.sub_expr(&b.expr2))
+            ast::Expr::Binary(b) => self
+                .merge2(&b.expr1, &b.expr2)
                 .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
             ast::Expr::Block(v) => {
                 let result = self.check_block(v);
