@@ -47,6 +47,12 @@ impl TwoBools {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Seq {
+    pub(crate) expr: L<Expr>,
+    pub(crate) then: L<Expr>,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Conditional {
     pub(crate) expr: L<Expr>,
@@ -106,6 +112,7 @@ pub enum Expr {
     Value(Value),
     Local(Arc<Local>),
     Global(Arc<Global>),
+    Seq(Arc<Seq>),
     Conditional(Arc<Conditional>),
     Unary(Arc<Unary>),
     IntAdd(Arc<TwoInts>),
@@ -123,6 +130,7 @@ impl Expr {
             Self::Value(v) => v.borrow_type(),
             Self::Local(l) => &l.tipo,
             Self::Global(g) => &g.tipo,
+            Self::Seq(s) => s.then.borrow_type(),
             Self::Conditional(c) => c.borrow_type(),
             Self::Unary(u) => u.expr.borrow_type(),
             Self::IntAdd(t) => t.expr1.borrow_type(),
@@ -248,6 +256,10 @@ impl Builder {
 
     fn global(&self, symbol: FQSym, tipo: Type) -> L<Expr> {
         self.global0(Global { symbol, tipo })
+    }
+
+    fn seq(&self, expr: L<Expr>, then: L<Expr>) -> L<Expr> {
+        self.build(Expr::Seq(Arc::new(Seq { expr, then })))
     }
 
     fn conditional(&self, expr: L<Expr>, then: L<Expr>, otherwise: L<Expr>) -> Result<L<Expr>> {
