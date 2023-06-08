@@ -84,6 +84,11 @@ fn conditionals() {
 }
 
 #[test]
+fn seq() {
+    ok_int("True then False then 3")
+}
+
+#[test]
 fn blocks() {
     ok_int("{ let x = 1\n x+2 }")
 }
