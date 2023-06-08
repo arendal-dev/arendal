@@ -79,6 +79,12 @@ fn conditional1() {
 }
 
 #[test]
+fn seq() {
+    eval_i64("1 then 2", 2);
+    eval_i64("1 then 2 then 3", 3);
+}
+
+#[test]
 fn block() {
     eval_i64("let x = 1\n{ let y = x + 1\n y + 2\n}", 4);
 }

@@ -90,6 +90,7 @@ impl<'a> Interpreter<'a> {
                 Some(value) => Ok(value.clone()),
                 None => expr.err(Error::UnknownSymbol(g.symbol.clone())),
             },
+            Expr::Seq(s) => self.expression(scope, &s.then), // no effects for now
             Expr::Conditional(c) => {
                 if self.expression(scope, &c.expr)?.as_boolean(&expr.loc)? {
                     self.expression(scope, &c.then)
