@@ -105,13 +105,13 @@ pub enum BStmt {
     Expr(Box<L<Expr>>),
 }
 
-pub struct ExprBuilder {
+pub struct Builder {
     loc: Loc,
 }
 
-impl ExprBuilder {
+impl Builder {
     pub const fn new(loc: Loc) -> Self {
-        ExprBuilder { loc }
+        Builder { loc }
     }
 
     pub const fn none() -> Self {
@@ -170,6 +170,18 @@ impl ExprBuilder {
     pub fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Assignment> {
         self.loc.wrap(Assignment { symbol, expr })
     }
+
+    fn type_dfn(&self, symbol: TSymbol, dfn: TypeDfn) -> TypeDefinition {
+        TypeDefinition {
+            loc: self.loc.clone(),
+            symbol,
+            dfn,
+        }
+    }
+
+    pub fn singleton(&self, symbol: TSymbol) -> TypeDefinition {
+        self.type_dfn(symbol, TypeDfn::Singleton)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -182,29 +194,6 @@ pub struct TypeDefinition {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeDfn {
     Singleton,
-}
-
-pub struct TypeDfnBuilder {
-    loc: Loc,
-    symbol: TSymbol,
-}
-
-impl TypeDfnBuilder {
-    pub const fn new(loc: Loc, symbol: TSymbol) -> Self {
-        TypeDfnBuilder { loc, symbol }
-    }
-
-    fn build(self, dfn: TypeDfn) -> TypeDefinition {
-        TypeDefinition {
-            loc: self.loc,
-            symbol: self.symbol,
-            dfn,
-        }
-    }
-
-    pub fn singleton(self) -> TypeDefinition {
-        self.build(TypeDfn::Singleton)
-    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

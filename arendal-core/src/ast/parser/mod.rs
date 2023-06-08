@@ -7,10 +7,7 @@ pub enum Enclosure {
     Curly,
 }
 
-use super::{
-    Assignment, BStmt, BinaryOp, Expr, ExprBuilder, Module, Package, Segment, TypeDefinition,
-    TypeDfnBuilder,
-};
+use super::{Assignment, BStmt, BinaryOp, Builder, Expr, Module, Package, Segment, TypeDefinition};
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};
@@ -159,8 +156,8 @@ impl Parser {
         }
     }
 
-    fn builder(&self) -> ExprBuilder {
-        ExprBuilder::new(self.loc())
+    fn builder(&self) -> Builder {
+        Builder::new(self.loc())
     }
 
     fn rule_statement(&self, module: &mut Module) -> PResult<()> {
@@ -198,8 +195,7 @@ impl Parser {
             Some(LexemeKind::TSymbol(symbol)) => Ok(symbol.clone()),
             _ => self.err(Error::TSymbolAfterTypeExpected),
         }?;
-        self.advance()
-            .ok(TypeDfnBuilder::new(self.loc(), symbol).singleton())
+        self.advance().ok(self.builder().singleton(symbol))
     }
 
     fn rule_bstatement(&self) -> BResult {

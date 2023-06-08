@@ -1,12 +1,12 @@
-use crate::ast::{BStmt, BinaryOp, Expr, Module, TypeDefinition, TypeDfnBuilder};
-use crate::ast::{ExprBuilder, Segment};
+use crate::ast::{BStmt, BinaryOp, Expr, Module, TypeDefinition};
+use crate::ast::{Builder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{Symbol, TSymbol};
 use crate::visibility::Visibility;
 
 use super::{parse, Enclosure, Error};
 
-const B: ExprBuilder = ExprBuilder::none();
+const B: Builder = Builder::none();
 
 struct Test {
     expected: Module,
@@ -37,7 +37,7 @@ impl Test {
         self
     }
 
-    fn m_let(mut self, symbol: Symbol, expr: L<Expr>) -> Self {
+    fn m_let(self, symbol: Symbol, expr: L<Expr>) -> Self {
         self.v_let(Visibility::Module, symbol, expr)
     }
 
@@ -152,7 +152,7 @@ fn check_type(input: &str, expected: TypeDefinition) {
 }
 
 fn singleton(symbol: &str) -> TypeDefinition {
-    TypeDfnBuilder::new(Loc::None, tsym(symbol)).singleton()
+    B.singleton(tsym(symbol))
 }
 
 #[test]
