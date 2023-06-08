@@ -87,8 +87,6 @@ impl<T> L<T> {
 
 impl<T: fmt::Debug> fmt::Debug for L<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self.loc, f)?;
-        f.write_char('@')?;
         self.it.fmt(f)
     }
 }

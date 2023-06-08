@@ -143,6 +143,10 @@ fn or(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
     B.binary(BinaryOp::Or, expr1, expr2)
 }
 
+fn seq_i64(value1: i64, value2: i64) -> L<Expr> {
+    B.seq(e_i64(value1), e_i64(value2))
+}
+
 pub fn b_let(symbol: Symbol, expr: L<Expr>) -> BStmt {
     B.assignment(symbol, expr).to_bstmt()
 }
@@ -235,6 +239,12 @@ fn logical_ops() {
         "True || False && True",
         or(e_true(), and(e_false(), e_true())),
     );
+}
+
+#[test]
+fn seq() {
+    check_expression("1 then 2", seq_i64(1, 2));
+    check_expression("1 then 2 then 3", B.seq(seq_i64(1, 2), e_i64(3)));
 }
 
 #[test]
