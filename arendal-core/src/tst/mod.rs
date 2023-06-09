@@ -297,5 +297,5 @@ pub(super) struct Package {
     pub(crate) types: Types,
     pub(crate) symbols: Symbols,
     pub(crate) assignments: Vec<L<TLAssignment>>,
-    pub(crate) exprs: Vec<L<Expr>>,
+    pub(crate) expr: Option<L<Expr>>,
 }

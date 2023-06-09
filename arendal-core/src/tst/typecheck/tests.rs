@@ -25,16 +25,7 @@ fn mismatch(input: &str, expected: Type, actual: Type) {
 }
 
 fn ok_expression(input: &str, t: Type) {
-    assert_eq!(
-        *check_module(input)
-            .unwrap()
-            .exprs
-            .iter()
-            .next()
-            .unwrap()
-            .borrow_type(),
-        t
-    );
+    assert_eq!(*check_module(input).unwrap().expr.unwrap().borrow_type(), t);
 }
 
 fn ok_int(input: &str) {
@@ -91,4 +82,10 @@ fn seq() {
 #[test]
 fn blocks() {
     ok_int("{ let x = 1\n x+2 }")
+}
+
+#[test]
+fn only_one_expr() {
+    error("1\n2", &Error::OnlyOneExpressionAllowed);
+    error("{ 1\n2 }", &Error::OnlyOneExpressionAllowed)
 }

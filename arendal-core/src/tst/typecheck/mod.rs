@@ -56,7 +56,7 @@ struct TypeChecker<'a> {
     types: Types,
     symbols: Symbols,
     assignments: Vec<L<TLAssignment>>,
-    exprs: Vec<L<Expr>>,
+    expr: Option<L<Expr>>,
     t_candidates: TCandidates<'a>,
     a_candidates: ACandidates<'a>,
     e_candidates: Vec<&'a L<ast::Expr>>,
@@ -101,7 +101,7 @@ impl<'a> TypeChecker<'a> {
             types: env.types.clone(),
             symbols: env.symbols.clone(),
             assignments: Vec::default(),
-            exprs: Vec::default(),
+            expr: None,
             t_candidates,
             a_candidates,
             e_candidates,
@@ -208,7 +208,7 @@ impl<'a> TypeChecker<'a> {
             types: self.types,
             symbols: self.symbols,
             assignments: self.assignments,
-            exprs: self.exprs,
+            expr: self.expr,
         })
     }
 
@@ -255,13 +255,14 @@ impl<'a> TypeChecker<'a> {
 
     fn check_expressions(&mut self) -> Result<()> {
         let path = self.pkg.empty();
-        let mut errors = Errors::default();
         for e in &self.e_candidates {
-            if let Some(expr) = errors.add_result(expr::check(self, &path, &self.scope, e)) {
-                self.exprs.push(expr)
+            if self.expr.is_none() {
+                self.expr = Some(expr::check(self, &path, &self.scope, e)?);
+            } else {
+                return e.loc.err(Error::OnlyOneExpressionAllowed);
             }
         }
-        errors.to_unit_result()
+        Ok(())
     }
 }
 

@@ -54,7 +54,7 @@ impl<'a> Interpreter<'a> {
                 .values
                 .set(&a.loc, a.it.symbol.clone(), value.clone())?
         }
-        for e in &self.package.exprs {
+        if let Some(e) = &self.package.expr {
             value = self.expression(&mut scope, e)?;
         }
         Ok(value)
