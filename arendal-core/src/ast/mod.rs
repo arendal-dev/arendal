@@ -75,10 +75,10 @@ pub struct Assignment {
     pub expr: L<Expr>,
 }
 
-impl L<Assignment> {
-    pub(crate) fn to_bstmt(self) -> BStmt {
-        BStmt::Assignment(Box::new(self))
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Block {
+    pub assignments: Vec<L<Assignment>>,
+    pub exprs: Vec<L<Expr>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,21 +88,40 @@ pub enum Expr {
     TSymbol(Q<TSymbol>),
     Unary(Box<UnaryExpr>),
     Binary(Box<BinaryExpr>),
-    Block(Vec<BStmt>),
+    Block(Box<Block>),
     Conditional(Box<Conditional>),
     Seq(Box<Seq>),
 }
 
-impl L<Expr> {
-    pub(crate) fn to_bstmt(self) -> BStmt {
-        BStmt::Expr(Box::new(self))
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeDefinition {
+    pub loc: Loc,
+    pub symbol: TSymbol,
+    pub dfn: TypeDfn,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BStmt {
-    Assignment(Box<L<Assignment>>),
-    Expr(Box<L<Expr>>),
+pub enum TypeDfn {
+    Singleton,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Module {
+    pub exprs: Vec<L<Expr>>,
+    pub assignments: Vec<L<V<Assignment>>>,
+    pub types: Vec<TypeDefinition>,
+}
+
+#[derive(Debug)]
+pub struct Package {
+    pub(crate) pkg: Pkg,
+    pub(crate) modules: HashMap<Path, Module>,
+}
+
+impl Package {
+    pub fn is_empty(&self) -> bool {
+        self.modules.is_empty()
+    }
 }
 
 pub struct Builder {
@@ -142,17 +161,17 @@ impl Builder {
         self.build(Expr::Binary(Box::new(BinaryExpr { op, expr1, expr2 })))
     }
 
-    pub fn block(&self, stmts: Vec<BStmt>) -> L<Expr> {
-        assert!(
-            !stmts.is_empty(),
-            "Blocks need to contain at least one statement"
-        );
-        if stmts.len() == 1 {
-            if let BStmt::Expr(e) = &stmts[0] {
-                return *e.clone();
-            }
+    pub fn block(&self, mut assignments: Vec<L<Assignment>>, mut exprs: Vec<L<Expr>>) -> L<Expr> {
+        let na = assignments.len();
+        let ne = exprs.len();
+        assert!(na + ne > 0, "Blocks need to contain at least one statement");
+        if na == 0 && ne == 1 {
+            exprs.pop().unwrap()
+        } else if na == 1 && ne == 0 {
+            assignments.pop().unwrap().it.expr
+        } else {
+            self.build(Expr::Block(Box::new(Block { assignments, exprs })))
         }
-        self.build(Expr::Block(stmts))
     }
 
     pub fn conditional(&self, expr: L<Expr>, then: L<Expr>, otherwise: L<Expr>) -> L<Expr> {
@@ -181,36 +200,5 @@ impl Builder {
 
     pub fn singleton(&self, symbol: TSymbol) -> TypeDefinition {
         self.type_dfn(symbol, TypeDfn::Singleton)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeDefinition {
-    pub loc: Loc,
-    pub symbol: TSymbol,
-    pub dfn: TypeDfn,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TypeDfn {
-    Singleton,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Module {
-    pub exprs: Vec<L<Expr>>,
-    pub assignments: Vec<L<V<Assignment>>>,
-    pub types: Vec<TypeDefinition>,
-}
-
-#[derive(Debug)]
-pub struct Package {
-    pub(crate) pkg: Pkg,
-    pub(crate) modules: HashMap<Path, Module>,
-}
-
-impl Package {
-    pub fn is_empty(&self) -> bool {
-        self.modules.is_empty()
     }
 }

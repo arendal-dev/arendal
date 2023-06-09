@@ -7,7 +7,7 @@ pub enum Enclosure {
     Curly,
 }
 
-use super::{Assignment, BStmt, BinaryOp, Builder, Expr, Module, Package, Segment, TypeDefinition};
+use super::{Assignment, BinaryOp, Builder, Expr, Module, Package, Segment, TypeDefinition};
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
 use crate::symbol::{Path, Pkg, Symbol, TSymbol};
@@ -34,7 +34,6 @@ fn parse_module(input: &str) -> Result<Module> {
 
 type PResult<T> = Result<(T, Parser)>;
 type EResult = PResult<L<Expr>>;
-type BResult = PResult<BStmt>;
 type TResult = PResult<TypeDefinition>;
 
 fn map<T, F, U>(result: PResult<T>, f: F) -> PResult<U>
@@ -198,11 +197,19 @@ impl Parser {
         self.advance().ok(self.builder().singleton(symbol))
     }
 
-    fn rule_bstatement(&self) -> BResult {
+    fn rule_bstatement(
+        &self,
+        assignments: &mut Vec<L<Assignment>>,
+        exprs: &mut Vec<L<Expr>>,
+    ) -> PResult<()> {
         if self.is_keyword(Keyword::Let) {
-            map(self.advance().rule_assignment(), |a| a.to_bstmt())
+            map(self.advance().rule_assignment(), |a| {
+                assignments.push(a);
+            })
         } else {
-            self.rule_expression().map(|(e, p)| (e.to_bstmt(), p))
+            map(self.rule_expression(), |e| {
+                exprs.push(e);
+            })
         }
     }
 
@@ -341,14 +348,13 @@ impl Parser {
                             .advance()
                             .ok(self.builder().tsymbol(Vec::default(), TSymbol::None))
                     } else {
-                        let mut stmt;
-                        let mut stmts: Vec<BStmt> = Vec::default();
+                        let mut assignments = Vec::default();
+                        let mut exprs = Vec::default();
                         loop {
                             if parser.is_done() {
                                 return parser.err(Error::CloseExpected(Enclosure::Curly));
                             }
-                            (stmt, parser) = parser.rule_bstatement()?;
-                            stmts.push(stmt);
+                            (_, parser) = parser.rule_bstatement(&mut assignments, &mut exprs)?;
                             if parser.kind_equals(LexemeKind::Close(Enclosure::Curly)) {
                                 parser = parser.advance();
                                 break;
@@ -356,7 +362,7 @@ impl Parser {
                                 return parser.err(Error::EndOfItemExpected);
                             }
                         }
-                        parser.ok(self.builder().block(stmts))
+                        parser.ok(self.builder().block(assignments, exprs))
                     }
                 }
                 _ => self.expression_expected(),

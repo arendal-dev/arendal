@@ -56,8 +56,8 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             ast::Expr::Binary(b) => self
                 .merge2(&b.expr1, &b.expr2)
                 .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
-            ast::Expr::Block(v) => {
-                let result = self.check_block(v);
+            ast::Expr::Block(b) => {
+                let result = self.check_block(b.as_ref());
                 result
             }
             _ => self.error(Error::InvalidType),
@@ -95,17 +95,14 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_block(self, stmts: &Vec<ast::BStmt>) -> Result<L<Expr>> {
+    fn check_block(self, block: &ast::Block) -> Result<L<Expr>> {
         let mut child_scope = self.scope.create_child();
         let mut checked = Vec::default();
-        for s in stmts {
-            match s {
-                ast::BStmt::Assignment(a) => {
-                    checked.push(self.check_assignment(&mut child_scope, a.as_ref())?)
-                }
-                ast::BStmt::Expr(e) => checked
-                    .push(check(self.checker, self.path, &child_scope, e.as_ref())?.to_stmt()),
-            }
+        for a in &block.assignments {
+            checked.push(self.check_assignment(&mut child_scope, a)?)
+        }
+        for e in &block.exprs {
+            checked.push(check(self.checker, self.path, &child_scope, e)?.to_stmt())
         }
         self.builder().block(checked)
     }

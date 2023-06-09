@@ -1,4 +1,4 @@
-use crate::ast::{BStmt, BinaryOp, Expr, Module, TypeDefinition};
+use crate::ast::{Assignment, BinaryOp, Expr, Module, TypeDefinition};
 use crate::ast::{Builder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{Symbol, TSymbol};
@@ -147,8 +147,8 @@ fn seq_i64(value1: i64, value2: i64) -> L<Expr> {
     B.seq(e_i64(value1), e_i64(value2))
 }
 
-pub fn b_let(symbol: Symbol, expr: L<Expr>) -> BStmt {
-    B.assignment(symbol, expr).to_bstmt()
+pub fn b_let(symbol: Symbol, expr: L<Expr>) -> L<Assignment> {
+    B.assignment(symbol, expr)
 }
 
 fn check_type(input: &str, expected: TypeDefinition) {
@@ -251,13 +251,10 @@ fn seq() {
 fn blocks() {
     check_expression("{ }", e_none());
     check_expression("{ 1 }", e_i64(1));
-    check_expression(
-        "{ 1\n2 }",
-        B.block(vec![e_i64(1).to_bstmt(), e_i64(2).to_bstmt()]),
-    );
+    check_expression("{ 1\n2 }", B.block(vec![], vec![e_i64(1), e_i64(2)]));
     check_expression(
         "{ let x = 1\n x+2 }",
-        B.block(vec![b_let(x(), e_i64(1)), add(e_x(), e_i64(2)).to_bstmt()]),
+        B.block(vec![b_let(x(), e_i64(1))], vec![add(e_x(), e_i64(2))]),
     );
     expect_error("{ 1 2 }", &Error::EndOfItemExpected);
     expect_error("{ 1\n 2 ", &Error::CloseExpected(Enclosure::Curly))
