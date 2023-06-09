@@ -1,9 +1,10 @@
 use crate::ast::{self, BinaryOp, Q};
 use crate::error::{Error, Result, L};
 use crate::symbol::{FQPath, Symbol, TSymbol};
+use crate::tst::Assignment;
 use crate::types::Type;
 
-use super::{BStmt, Builder, Expr, Scope, TypeChecker, Value};
+use super::{Builder, Expr, Scope, TypeChecker, Value};
 
 pub(super) fn check<'a>(
     checker: &TypeChecker<'a>,
@@ -96,18 +97,23 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
     }
 
     fn check_block(self, block: &ast::Block) -> Result<L<Expr>> {
+        let mut assignments = Vec::default();
         let mut child_scope = self.scope.create_child();
-        let mut checked = Vec::default();
+        let mut expr: Option<L<Expr>> = None;
         for a in &block.assignments {
-            checked.push(self.check_assignment(&mut child_scope, a)?)
+            assignments.push(self.check_assignment(&mut child_scope, a)?)
         }
         for e in &block.exprs {
-            checked.push(check(self.checker, self.path, &child_scope, e)?.to_stmt())
+            if expr.is_none() {
+                expr = Some(check(self.checker, self.path, &child_scope, e)?)
+            } else {
+                return self.error(Error::OnlyOneExpressionAllowed);
+            }
         }
-        self.builder().block(checked)
+        self.builder().block(assignments, expr)
     }
 
-    fn check_assignment(&self, scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<BStmt>> {
+    fn check_assignment(&self, scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<Assignment>> {
         let typed = self.sub_expr(&a.it.expr)?;
         scope.set(&a.loc, a.it.symbol.clone(), typed.clone_type())?;
         Ok(self.builder().assignment(a.it.symbol.clone(), typed))

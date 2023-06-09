@@ -89,12 +89,6 @@ pub struct Assignment {
     pub(crate) expr: L<Expr>,
 }
 
-impl Assignment {
-    fn to_stmt(self) -> BStmt {
-        BStmt::Assignment(Arc::new(self))
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct Local {
     pub(crate) symbol: Symbol,
@@ -105,6 +99,24 @@ pub struct Local {
 pub struct Global {
     pub(crate) symbol: FQSym,
     pub(crate) tipo: Type,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Block {
+    pub(crate) assignments: Vec<L<Assignment>>,
+    pub expr: Option<L<Expr>>,
+}
+
+impl Block {
+    fn borrow_type(&self) -> &Type {
+        if let Some(e) = &self.expr {
+            e.borrow_type()
+        } else if let Some(a) = self.assignments.last() {
+            a.it.expr.borrow_type()
+        } else {
+            &Type::None
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -121,7 +133,7 @@ pub enum Expr {
     IntDiv(Arc<TwoInts>),
     LogicalAnd(Arc<TwoBools>),
     LogicalOr(Arc<TwoBools>),
-    Block(Vec<L<BStmt>>),
+    Block(Arc<Block>),
 }
 
 impl Expr {
@@ -138,23 +150,12 @@ impl Expr {
             Self::IntMul(t) => t.expr1.borrow_type(),
             Self::IntDiv(t) => t.expr1.borrow_type(),
             Self::LogicalAnd(_) | Self::LogicalOr(_) => &Type::Boolean,
-            Self::Block(exprs) => {
-                if exprs.is_empty() {
-                    &Type::None
-                } else {
-                    exprs.last().unwrap().borrow_type()
-                }
-            }
+            Self::Block(b) => b.borrow_type(),
         }
     }
 }
 
 impl L<Expr> {
-    fn to_stmt(self) -> L<BStmt> {
-        let loc = self.loc.clone();
-        loc.to_wrap(BStmt::Expr(Arc::new(self)))
-    }
-
     fn borrow_type(&self) -> &Type {
         self.it.borrow_type()
     }
@@ -187,27 +188,6 @@ impl L<Expr> {
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?} : {:?}", self, self.borrow_type())
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BStmt {
-    Assignment(Arc<Assignment>),
-    Expr(Arc<L<Expr>>),
-}
-
-impl BStmt {
-    fn borrow_type(&self) -> &Type {
-        match self {
-            Self::Assignment(a) => a.expr.borrow_type(),
-            Self::Expr(e) => e.borrow_type(),
-        }
-    }
-}
-
-impl L<BStmt> {
-    fn borrow_type(&self) -> &Type {
-        self.it.borrow_type()
     }
 }
 
@@ -266,9 +246,8 @@ impl Builder {
         self.ok(Expr::Conditional(Conditional::new(expr, then, otherwise)?))
     }
 
-    fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<BStmt> {
-        self.loc
-            .wrap(BStmt::Assignment(Arc::new(Assignment { symbol, expr })))
+    fn assignment(&self, symbol: Symbol, expr: L<Expr>) -> L<Assignment> {
+        self.loc.wrap(Assignment { symbol, expr })
     }
 
     fn tl_assignment(&self, symbol: FQSym, expr: L<Expr>) -> L<TLAssignment> {
@@ -303,11 +282,11 @@ impl Builder {
         self.ok(Expr::LogicalOr(TwoBools::new(expr1, expr2)?))
     }
 
-    fn block(&self, stmt: Vec<L<BStmt>>) -> Result<L<Expr>> {
-        if stmt.is_empty() {
-            Ok(self.v_none())
+    fn block(&self, assignments: Vec<L<Assignment>>, expr: Option<L<Expr>>) -> Result<L<Expr>> {
+        if assignments.is_empty() {
+            Ok(expr.or_else(|| Some(self.v_none())).unwrap())
         } else {
-            self.ok(Expr::Block(stmt))
+            self.ok(Expr::Block(Arc::new(Block { assignments, expr })))
         }
     }
 }

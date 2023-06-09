@@ -2,7 +2,7 @@ use im::HashMap;
 
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::Symbol;
-use crate::tst::{BStmt, Expr, Package, TwoInts};
+use crate::tst::{Block, Expr, Package, TwoInts};
 use crate::values::Value;
 use crate::Integer;
 
@@ -60,22 +60,16 @@ impl<'a> Interpreter<'a> {
         Ok(value)
     }
 
-    fn b_stmts(&self, scope: &mut Scope, exprs: &Vec<L<BStmt>>) -> Result<Value> {
+    fn block(&self, scope: &mut Scope, block: &Block) -> Result<Value> {
         let mut value = Value::None;
-        for stmt in exprs {
-            value = self.b_stmt(scope, stmt)?;
+        for a in &block.assignments {
+            value = self.expression(scope, &a.it.expr)?;
+            scope.set(&a.loc, a.it.symbol.clone(), value.clone())?;
         }
-        Ok(value)
-    }
-
-    fn b_stmt(&self, scope: &mut Scope, expr: &L<BStmt>) -> Result<Value> {
-        match &expr.it {
-            BStmt::Assignment(a) => {
-                let value = self.expression(scope, &a.expr)?;
-                scope.set(&expr.loc, a.symbol.clone(), value.clone())?;
-                Ok(value)
-            }
-            BStmt::Expr(t) => self.expression(scope, t.as_ref()),
+        if let Some(e) = &block.expr {
+            self.expression(scope, e)
+        } else {
+            Ok(value)
         }
     }
 
@@ -110,7 +104,7 @@ impl<'a> Interpreter<'a> {
             Expr::IntDiv(t) => self.div(&expr.loc, scope, t),
             Expr::LogicalAnd(t) => self.and(&expr.loc, scope, &t.expr1, &t.expr2),
             Expr::LogicalOr(t) => self.or(&expr.loc, scope, &t.expr1, &t.expr2),
-            Expr::Block(stmts) => self.b_stmts(&mut scope.clone(), stmts),
+            Expr::Block(block) => self.block(&mut scope.clone(), block),
             _ => expr.err(Error::NotImplemented),
         }
     }

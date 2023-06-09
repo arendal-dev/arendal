@@ -10,7 +10,7 @@ use crate::types::{Type, TypeDfn, TypeDfnMap, Types};
 use crate::env::{Env, Symbols};
 use crate::visibility::{Visibility, V};
 
-use super::{BStmt, Builder, Expr, Global, Package, TLAssignment, Value};
+use super::{Builder, Expr, Global, Package, TLAssignment, Value};
 
 pub(super) fn check(env: &Env, input: &ast::Package) -> Result<Package> {
     TypeChecker::new(env, input)?.check()

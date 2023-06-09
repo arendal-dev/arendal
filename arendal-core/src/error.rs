@@ -225,6 +225,7 @@ pub enum Error {
     UnableToResolveSymbol(Q<Symbol>),
     UnableToResolveType(Q<TSymbol>),
     TLExpressionInNonRootModule,
+    OnlyOneExpressionAllowed,
     // Type checking and runtime
     TypeMismatch(Arc<TypeMismatch>),
     SingletonExpected(Type),
