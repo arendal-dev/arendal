@@ -98,7 +98,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
 
     fn check_block(self, block: &ast::Block) -> Result<L<Expr>> {
         let mut assignments = Vec::default();
-        let mut child_scope = self.scope.create_child();
+        let mut child_scope = self.scope.child();
         let mut expr: Option<L<Expr>> = None;
         for a in &block.assignments {
             assignments.push(self.check_assignment(&mut child_scope, a)?)

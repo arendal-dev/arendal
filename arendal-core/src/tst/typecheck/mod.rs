@@ -1,6 +1,6 @@
 mod expr;
 
-use std::collections::{HashMap, HashSet};
+use im::{HashMap, HashSet};
 
 use crate::ast::{self, Q};
 use crate::error::{Error, Errors, Loc, Result, L};
@@ -21,7 +21,7 @@ struct TCandidate<'a> {
     dfn: &'a ast::TypeDefinition,
 }
 
-type TCandidates<'a> = HashMap<FQType, TCandidate<'a>>;
+type TCandidates<'a> = std::collections::HashMap<FQType, TCandidate<'a>>;
 
 #[derive(Debug)]
 struct ACandidate<'a> {
@@ -38,7 +38,7 @@ impl<'a> ACandidate<'a> {
     }
 }
 
-type ACandidates<'a> = HashMap<FQSym, ACandidate<'a>>;
+type ACandidates<'a> = std::collections::HashMap<FQSym, ACandidate<'a>>;
 
 #[derive(Debug)]
 struct ECandidate<'a> {
@@ -47,8 +47,6 @@ struct ECandidate<'a> {
 }
 
 type ECandidates<'a> = Vec<ACandidate<'a>>;
-
-type Scope = crate::env::Scope<Type>;
 
 #[derive(Debug)]
 struct TypeChecker<'a> {
@@ -60,7 +58,6 @@ struct TypeChecker<'a> {
     t_candidates: TCandidates<'a>,
     a_candidates: ACandidates<'a>,
     e_candidates: Vec<&'a L<ast::Expr>>,
-    scope: Scope,
 }
 
 impl<'a> TypeChecker<'a> {
@@ -105,7 +102,6 @@ impl<'a> TypeChecker<'a> {
             t_candidates,
             a_candidates,
             e_candidates,
-            scope: Scope::default(),
         })
     }
 
@@ -232,7 +228,7 @@ impl<'a> TypeChecker<'a> {
             let a = c.assignment;
             let path = fq.path();
             if let Some(expr) =
-                errors.add_result(expr::check(self, &path, &self.scope, &a.it.it.expr))
+                errors.add_result(expr::check(self, &path, &Scope::Empty, &a.it.it.expr))
             {
                 if errors
                     .add_result(self.symbols.set(
@@ -257,12 +253,76 @@ impl<'a> TypeChecker<'a> {
         let path = self.pkg.empty();
         for e in &self.e_candidates {
             if self.expr.is_none() {
-                self.expr = Some(expr::check(self, &path, &self.scope, e)?);
+                self.expr = Some(expr::check(self, &path, &Scope::Empty, e)?);
             } else {
                 return e.loc.err(Error::OnlyOneExpressionAllowed);
             }
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+enum Scope {
+    Empty,
+    First {
+        all: HashMap<Symbol, Type>,
+    },
+    Child {
+        all: HashMap<Symbol, Type>,
+        current: HashSet<Symbol>,
+    },
+}
+
+impl Scope {
+    fn child(&self) -> Self {
+        match self {
+            Self::Empty => Self::First {
+                all: Default::default(),
+            },
+            Self::First { all } | Self::Child { all, .. } => Self::Child {
+                all: all.clone(),
+                current: Default::default(),
+            },
+        }
+    }
+
+    fn contains(&self, symbol: &Symbol) -> bool {
+        match self {
+            Self::Empty => false,
+            Self::First { all } | Self::Child { all, .. } => all.contains_key(symbol),
+        }
+    }
+
+    fn get(&self, symbol: &Symbol) -> Option<Type> {
+        match self {
+            Self::Empty => None,
+            Self::First { all } | Self::Child { all, .. } => all.get(symbol),
+        }
+        .cloned()
+    }
+
+    fn set(&mut self, loc: &Loc, symbol: Symbol, tipo: Type) -> Result<()> {
+        match self {
+            Self::Empty => panic!("Can't add local symbols to an empty scope"),
+            Self::First { all } => {
+                if all.contains_key(&symbol) {
+                    loc.err(Error::DuplicateLocalSymbol(symbol))
+                } else {
+                    all.insert(symbol, tipo);
+                    Ok(())
+                }
+            }
+            Self::Child { all, current } => {
+                if current.contains(&symbol) {
+                    loc.err(Error::DuplicateLocalSymbol(symbol))
+                } else {
+                    current.insert(symbol.clone());
+                    all.insert(symbol, tipo);
+                    Ok(())
+                }
+            }
+        }
     }
 }
 
