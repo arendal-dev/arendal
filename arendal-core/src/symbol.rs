@@ -5,6 +5,7 @@ use std::sync::Arc;
 use crate::error::{Error, Loc, Result};
 use crate::id::Id;
 use crate::keyword::Keyword;
+use crate::visibility::Visibility;
 use crate::{literal, ArcStr};
 
 static STD: ArcStr = literal!("std");
@@ -235,6 +236,14 @@ impl FQPath {
     pub fn fq_type(&self, symbol: TSymbol) -> FQType {
         FQType::top_level(self.clone(), symbol)
     }
+
+    fn can_see(&self, visibility: Visibility, path: &FQPath) -> bool {
+        match visibility {
+            Visibility::Exported => true,
+            Visibility::Package => self.pkg == path.pkg,
+            Visibility::Module => self.pkg == path.pkg && self.path == path.path,
+        }
+    }
 }
 
 impl fmt::Display for FQPath {
@@ -324,6 +333,10 @@ impl FQSym {
             Self::TopLevel(t) => t.data.path.clone(),
             Self::Member(m) => m.data.top_level.path(),
         }
+    }
+
+    pub fn can_see(&self, visibility: Visibility, symbol: &FQSym) -> bool {
+        self.path().can_see(visibility, &symbol.path())
     }
 }
 
@@ -437,6 +450,10 @@ impl FQType {
             Self::Member(m) => m.data.top_level.path(),
             _ => Pkg::Std.empty(),
         }
+    }
+
+    pub fn can_see(&self, visibility: Visibility, tipo: &FQType) -> bool {
+        self.path().can_see(visibility, &tipo.path())
     }
 }
 
