@@ -123,6 +123,46 @@ impl ErrorVec {
     pub fn contains(&self, error: &Error) -> bool {
         self.errors.iter().map(|i| &i.it).any(|e| e == error)
     }
+
+    fn for_each_error<F>(&self, mut f: F)
+    where
+        F: FnMut(&Error),
+    {
+        self.errors.iter().for_each(|e| f(&e.it))
+    }
+
+    fn collect<T, F>(&self, f: F) -> Vec<T>
+    where
+        F: Fn(&Error) -> Option<T>,
+    {
+        let mut result = Vec::default();
+        self.for_each_error(|e| {
+            if let Some(t) = f(e) {
+                result.push(t)
+            }
+        });
+        result
+    }
+
+    pub(crate) fn missing_symbol_deps(&self) -> Vec<FQSym> {
+        self.collect(|e| {
+            if let Error::MissingSymbolDependency(s) = e {
+                Some(s.clone())
+            } else {
+                None
+            }
+        })
+    }
+
+    pub(crate) fn missing_local_symbol_deps(&self) -> Vec<Symbol> {
+        self.collect(|e| {
+            if let Error::MissingLocalSymbolDependency(s) = e {
+                Some(s.clone())
+            } else {
+                None
+            }
+        })
+    }
 }
 
 // Error accumulator and builder.
@@ -226,6 +266,8 @@ pub enum Error {
     UnableToResolveType(Q<TSymbol>),
     TLExpressionInNonRootModule,
     OnlyOneExpressionAllowed,
+    MissingSymbolDependency(FQSym),       // internal
+    MissingLocalSymbolDependency(Symbol), // internal
     // Type checking and runtime
     TypeMismatch(Arc<TypeMismatch>),
     SingletonExpected(Type),
