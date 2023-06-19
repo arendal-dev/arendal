@@ -224,7 +224,9 @@ impl<'a> TypeChecker<'a> {
             let mut errors = Errors::default();
             let progress = self.assignments.len();
             for (fq, a) in &candidates {
-                errors.add_result(self.check_assignment(fq, a));
+                if !self.symbols.contains(fq) {
+                    errors.add_result(self.check_assignment(fq, a));
+                }
             }
             match errors.to_unit_result() {
                 Ok(_) => return Ok(()),
