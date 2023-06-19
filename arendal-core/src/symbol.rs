@@ -237,7 +237,7 @@ impl FQPath {
         FQType::top_level(self.clone(), symbol)
     }
 
-    fn can_see(&self, visibility: Visibility, path: &FQPath) -> bool {
+    pub fn can_see(&self, visibility: Visibility, path: &FQPath) -> bool {
         match visibility {
             Visibility::Exported => true,
             Visibility::Package => self.pkg == path.pkg,

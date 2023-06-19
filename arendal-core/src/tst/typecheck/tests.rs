@@ -8,7 +8,17 @@ fn check_module(input: &str) -> Result<Package> {
     super::check(&env, &parsed)
 }
 
-fn error(input: &str, error: &Error) {
+fn ok(input: &str) {
+    check_module(input).unwrap();
+}
+
+fn error(input: &str) {
+    if let Ok(_) = check_module(input) {
+        panic!("Expected Error")
+    }
+}
+
+fn expect_error(input: &str, error: &Error) {
     match check_module(input) {
         Ok(_) => panic!("Expected Error: {:?}", error),
         Err(e) => assert!(
@@ -21,7 +31,7 @@ fn error(input: &str, error: &Error) {
 }
 
 fn mismatch(input: &str, expected: Type, actual: Type) {
-    error(input, &Error::type_mismatch(expected, actual))
+    expect_error(input, &Error::type_mismatch(expected, actual))
 }
 
 fn ok_expression(input: &str, t: Type) {
@@ -75,6 +85,12 @@ fn conditionals() {
 }
 
 #[test]
+fn assignments() {
+    //ok("let x = 1");
+    ok("let x = 1\nlet y = x + 1");
+}
+
+#[test]
 fn seq() {
     ok_int("True then False then 3")
 }
@@ -86,6 +102,6 @@ fn blocks() {
 
 #[test]
 fn only_one_expr() {
-    error("1\n2", &Error::OnlyOneExpressionAllowed);
-    error("{ 1\n2 }", &Error::OnlyOneExpressionAllowed)
+    expect_error("1\n2", &Error::OnlyOneExpressionAllowed);
+    expect_error("{ 1\n2 }", &Error::OnlyOneExpressionAllowed)
 }

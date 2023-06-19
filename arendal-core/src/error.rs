@@ -7,10 +7,7 @@ use crate::{
 };
 
 use super::ArcStr;
-use std::{
-    fmt::{self, Write},
-    sync::Arc,
-};
+use std::{collections::HashSet, fmt, hash::Hash, sync::Arc};
 
 #[derive(Debug)]
 pub struct Input {
@@ -131,7 +128,7 @@ impl ErrorVec {
         self.errors.iter().for_each(|e| f(&e.it))
     }
 
-    fn collect<T, F>(&self, f: F) -> Vec<T>
+    fn collect_vec<T, F>(&self, f: F) -> Vec<T>
     where
         F: Fn(&Error) -> Option<T>,
     {
@@ -144,8 +141,21 @@ impl ErrorVec {
         result
     }
 
-    pub(crate) fn missing_symbol_deps(&self) -> Vec<FQSym> {
-        self.collect(|e| {
+    fn collect_set<T: Eq + Hash, F>(&self, f: F) -> HashSet<T>
+    where
+        F: Fn(&Error) -> Option<T>,
+    {
+        let mut result = HashSet::default();
+        self.for_each_error(|e| {
+            if let Some(t) = f(e) {
+                result.insert(t);
+            }
+        });
+        result
+    }
+
+    pub(crate) fn missing_symbol_deps(&self) -> HashSet<FQSym> {
+        self.collect_set(|e| {
             if let Error::MissingSymbolDependency(s) = e {
                 Some(s.clone())
             } else {
@@ -154,8 +164,8 @@ impl ErrorVec {
         })
     }
 
-    pub(crate) fn missing_local_symbol_deps(&self) -> Vec<Symbol> {
-        self.collect(|e| {
+    pub(crate) fn missing_local_symbol_deps(&self) -> HashSet<Symbol> {
+        self.collect_set(|e| {
             if let Error::MissingLocalSymbolDependency(s) = e {
                 Some(s.clone())
             } else {
@@ -225,6 +235,13 @@ impl Errors {
             },
         }
     }
+
+    pub fn to_err<T>(self) -> Result<T> {
+        match self.errors {
+            None => panic!("No errors!"),
+            Some(e) => Err(e),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -265,6 +282,8 @@ pub enum Error {
     UnableToResolveSymbol(Q<Symbol>),
     UnableToResolveType(Q<TSymbol>),
     TLExpressionInNonRootModule,
+    SymbolNotVisible(FQSym),
+    TypeNotVisible(FQType),
     OnlyOneExpressionAllowed,
     MissingSymbolDependency(FQSym),       // internal
     MissingLocalSymbolDependency(Symbol), // internal

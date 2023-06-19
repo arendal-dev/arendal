@@ -23,22 +23,8 @@ struct TCandidate<'a> {
 
 type TCandidates<'a> = std::collections::HashMap<FQType, TCandidate<'a>>;
 
-#[derive(Debug)]
-struct ACandidate<'a> {
-    assignment: &'a L<V<ast::Assignment>>,
-    deps: HashSet<FQSym>,
-}
-
-impl<'a> ACandidate<'a> {
-    fn new(assignment: &'a L<V<ast::Assignment>>) -> Self {
-        Self {
-            assignment,
-            deps: Default::default(),
-        }
-    }
-}
-
-type ACandidates<'a> = std::collections::HashMap<FQSym, ACandidate<'a>>;
+type ACandidate<'a> = &'a L<V<ast::Assignment>>;
+type ACandidates<'a> = HashMap<FQSym, ACandidate<'a>>;
 
 #[derive(Debug)]
 struct ECandidate<'a> {
@@ -81,7 +67,7 @@ impl<'a> TypeChecker<'a> {
                 if a_candidates.contains_key(&fq) {
                     errors.add(a.loc.wrap(Error::DuplicateSymbol(fq)));
                 } else {
-                    a_candidates.insert(fq, ACandidate::new(a));
+                    a_candidates.insert(fq, a);
                 }
             }
             for e in &module.exprs {
@@ -177,10 +163,20 @@ impl<'a> TypeChecker<'a> {
     }
 
     fn resolve_fq_symbol(&self, loc: &Loc, path: &FQPath, q: &Q<Symbol>) -> Result<FQSym> {
+        let mut errors = Errors::default();
         for f in self.get_symbol_candidates(path, q) {
-            return Ok(f); // TODO: validate visibility
+            if let Some(s) = self.symbols.get(&f) {
+                if path.can_see(s.visibility, &f.path()) {
+                    return Ok(f);
+                } else {
+                    errors.add(loc.wrap(Error::SymbolNotVisible(f)))
+                }
+            } else {
+                return loc.err(Error::MissingSymbolDependency(f));
+            }
         }
-        loc.err(Error::UnableToResolveSymbol(q.clone()))
+        errors.add(loc.wrap(Error::UnableToResolveSymbol(q.clone())));
+        errors.to_err()
     }
 
     fn resolve_global(&self, loc: &Loc, path: &FQPath, q: &Q<Symbol>) -> Result<Global> {
@@ -223,30 +219,34 @@ impl<'a> TypeChecker<'a> {
     }
 
     fn check_assignments(&mut self) -> Result<()> {
-        let mut errors = Errors::default();
-        for (fq, c) in &self.a_candidates {
-            let a = c.assignment;
-            let path = fq.path();
-            if let Some(expr) =
-                errors.add_result(expr::check(self, &path, &Scope::Empty, &a.it.it.expr))
-            {
-                if errors
-                    .add_result(self.symbols.set(
-                        &a.loc,
-                        fq.clone(),
-                        a.it.visibility,
-                        expr.clone_type(),
-                    ))
-                    .is_some()
-                {
-                    self.assignments.push(a.loc.wrap(TLAssignment {
-                        symbol: fq.clone(),
-                        expr,
-                    }));
+        let candidates = self.a_candidates.clone();
+        loop {
+            let mut errors = Errors::default();
+            let progress = self.assignments.len();
+            for (fq, a) in &candidates {
+                errors.add_result(self.check_assignment(fq, a));
+            }
+            match errors.to_unit_result() {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    let missing = e.missing_symbol_deps();
+                    if self.assignments.len() == progress || missing.is_empty() {
+                        return Err(e);
+                    }
                 }
             }
         }
-        errors.to_unit_result()
+    }
+
+    fn check_assignment(&mut self, fq: &FQSym, a: ACandidate) -> Result<()> {
+        let expr = expr::check(self, &fq.path(), &Scope::Empty, &a.it.it.expr)?;
+        self.symbols
+            .set(&a.loc, fq.clone(), a.it.visibility, expr.clone_type())?;
+        self.assignments.push(a.loc.wrap(TLAssignment {
+            symbol: fq.clone(),
+            expr,
+        }));
+        Ok(())
     }
 
     fn check_expressions(&mut self) -> Result<()> {
