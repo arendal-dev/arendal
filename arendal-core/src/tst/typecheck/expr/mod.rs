@@ -1,20 +1,20 @@
 use crate::ast::{self, BinaryOp, Q};
 use crate::error::{Error, Result, L};
-use crate::symbol::{FQPath, Symbol, TSymbol};
+use crate::symbol::{Symbol, TSymbol};
 use crate::tst::Assignment;
 use crate::types::Type;
 
-use super::{Builder, Expr, Scope, TypeChecker, Value};
+use super::{Builder, Expr, Resolver, Scope, TypeChecker, Value};
 
 pub(super) fn check<'a>(
     checker: &TypeChecker<'a>,
-    path: &FQPath,
+    resolver: &Resolver<'a>,
     scope: &Scope,
     input: &L<ast::Expr>,
 ) -> Result<L<Expr>> {
     ExprChecker {
         checker,
-        path,
+        resolver,
         scope,
         input,
     }
@@ -24,7 +24,7 @@ pub(super) fn check<'a>(
 #[derive(Debug)]
 struct ExprChecker<'a, 'b> {
     checker: &'b TypeChecker<'a>,
-    path: &'b FQPath,
+    resolver: &'b Resolver<'a>,
     scope: &'b Scope,
     input: &'b L<ast::Expr>,
 }
@@ -67,11 +67,11 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
 
     fn resolve_type(&self, symbol: &Q<TSymbol>) -> Result<Type> {
         self.checker
-            .resolve_type(&self.input.loc, self.path, symbol)
+            .resolve_type(&self.input.loc, self.resolver, symbol)
     }
 
     fn sub_expr(&self, input: &L<ast::Expr>) -> Result<L<Expr>> {
-        check(self.checker, self.path, &self.scope, input)
+        check(self.checker, self.resolver, &self.scope, input)
     }
 
     fn check_symbol(self, q: &Q<Symbol>) -> Result<L<Expr>> {
@@ -79,8 +79,11 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
             self.builder()
                 .local(q.symbol.clone(), self.scope.get(&q.symbol).unwrap().clone())
         } else {
-            self.builder()
-                .global0(self.checker.resolve_global(&self.input.loc, self.path, q)?)
+            self.builder().global0(self.checker.resolve_global(
+                &self.input.loc,
+                self.resolver,
+                q,
+            )?)
         })
     }
 
@@ -105,7 +108,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
         for e in &block.exprs {
             if expr.is_none() {
-                expr = Some(check(self.checker, self.path, &child_scope, e)?)
+                expr = Some(check(self.checker, self.resolver, &child_scope, e)?)
             } else {
                 return self.error(Error::OnlyOneExpressionAllowed);
             }
