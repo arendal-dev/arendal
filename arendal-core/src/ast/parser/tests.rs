@@ -1,7 +1,7 @@
 use crate::ast::{Assignment, BinaryOp, Expr, Module, TypeDefinition};
 use crate::ast::{Builder, Segment};
 use crate::error::{Loc, L};
-use crate::symbol::{Symbol, TSymbol};
+use crate::symbol::{self, Symbol, TSymbol};
 use crate::visibility::Visibility;
 
 use super::{parse, Enclosure, Error};
@@ -108,15 +108,15 @@ fn e_y() -> L<Expr> {
 }
 
 fn e_none() -> L<Expr> {
-    B.tsymbol(Vec::default(), TSymbol::None)
+    B.tsymbol(Vec::default(), symbol::NONE.clone())
 }
 
 fn e_true() -> L<Expr> {
-    B.tsymbol(Vec::default(), TSymbol::True)
+    B.tsymbol(Vec::default(), symbol::TRUE.clone())
 }
 
 fn e_false() -> L<Expr> {
-    B.tsymbol(Vec::default(), TSymbol::False)
+    B.tsymbol(Vec::default(), symbol::FALSE.clone())
 }
 
 fn add(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {

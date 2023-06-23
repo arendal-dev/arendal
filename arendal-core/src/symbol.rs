@@ -33,6 +33,23 @@ pub struct Other {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+enum Sym<T> {
+    One(char),
+    Known(T),
+    Other(ArcStr),
+}
+
+impl<T: fmt::Display> fmt::Display for Sym<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::One(c) => f.write_char(*c),
+            Self::Known(s) => s.fmt(f),
+            Self::Other(s) => f.write_str(&s),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Symbol {
     name: ArcStr,
 }
@@ -72,25 +89,47 @@ impl fmt::Debug for Symbol {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum TSymbol {
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum KnownTSymbol {
     None,
     True,
     False,
     Boolean,
     Integer,
-    Other(Other),
+}
+
+impl fmt::Display for KnownTSymbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::None => f.write_str("None"),
+            Self::True => f.write_str("True"),
+            Self::False => f.write_str("False"),
+            Self::Boolean => f.write_str("Boolean"),
+            Self::Integer => f.write_str("Integer"),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct TSymbol {
+    symbol: Sym<KnownTSymbol>,
 }
 
 static T_SYMBOLS: phf::Map<&'static str, TSymbol> = phf_map! {
-    "None" => TSymbol::None,
-    "True" => TSymbol::True,
-    "False" => TSymbol::False,
-    "Boolean" => TSymbol::Boolean,
-    "Integer" => TSymbol::Integer,
+    "None" => TSymbol::known(KnownTSymbol::None),
+    "True" => TSymbol::known(KnownTSymbol::True),
+    "False" => TSymbol::known(KnownTSymbol::False),
+    "Boolean" => TSymbol::known(KnownTSymbol::Boolean),
+    "Integer" => TSymbol::known(KnownTSymbol::Integer),
 };
 
 impl TSymbol {
+    const fn known(symbol: KnownTSymbol) -> Self {
+        Self {
+            symbol: Sym::Known(symbol),
+        }
+    }
+
     pub fn new(loc: &Loc, name: ArcStr) -> Result<Self> {
         if name.is_empty() {
             return loc.err(Error::TSymbolEmpty);
@@ -109,25 +148,20 @@ impl TSymbol {
                     }
                 }
             }
-            Ok(Self::Other(Other { name }))
+            Ok(Self {
+                symbol: Sym::Other(name),
+            })
         }
     }
 
     pub(crate) fn is_known(&self) -> bool {
-        !matches!(self, Self::Other(_))
+        !matches!(self.symbol, Sym::Known(_))
     }
 }
 
 impl fmt::Display for TSymbol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::None => f.write_str("None"),
-            Self::True => f.write_str("True"),
-            Self::False => f.write_str("False"),
-            Self::Boolean => f.write_str("Boolean"),
-            Self::Integer => f.write_str("Integer"),
-            Self::Other(o) => f.write_str(&o.name),
-        }
+        self.symbol.fmt(f)
     }
 }
 
@@ -174,36 +208,60 @@ impl fmt::Debug for Pkg {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+enum PathData {
+    Empty,
+    Single(Symbol),
+    Multi(Arc<Vec<Symbol>>),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Path {
-    path: Arc<Vec<Symbol>>,
+    data: PathData,
 }
 
 impl Path {
-    pub fn new(path: Vec<Symbol>) -> Self {
-        Self {
-            path: Arc::new(path),
+    pub fn new(mut path: Vec<Symbol>) -> Self {
+        match path.len() {
+            0 => Self::empty(),
+            1 => Self::single(path.pop().unwrap()),
+            _ => Self {
+                data: PathData::Multi(Arc::new(path)),
+            },
         }
     }
 
-    pub fn empty() -> Self {
-        Self::new(Vec::default())
+    pub const fn empty() -> Self {
+        Self {
+            data: PathData::Empty,
+        }
     }
 
-    pub fn single(symbol: Symbol) -> Self {
-        Self::new(vec![symbol])
+    pub const fn single(symbol: Symbol) -> Self {
+        Self {
+            data: PathData::Single(symbol),
+        }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.path.is_empty()
+        self.data == PathData::Empty
     }
 }
 
 impl fmt::Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for s in self.path.iter() {
-            s.fmt(f)?
+        match &self.data {
+            PathData::Empty => Ok(()),
+            PathData::Single(s) => s.fmt(f),
+            PathData::Multi(v) => {
+                for (i, s) in v.iter().enumerate() {
+                    s.fmt(f)?;
+                    if i < (v.len() - 1) {
+                        separator(f)?;
+                    }
+                }
+                Ok(())
+            }
         }
-        Ok(())
     }
 }
 
@@ -215,8 +273,8 @@ impl fmt::Debug for Path {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct FQPath {
-    pub(crate) pkg: Pkg,
-    pub(crate) path: Path,
+    pub pkg: Pkg,
+    pub path: Path,
 }
 
 impl FQPath {
@@ -225,16 +283,19 @@ impl FQPath {
     }
 
     pub fn fq_sym(&self, symbol: Symbol) -> FQSym {
-        FQSym::TopLevel(TopLevel {
-            data: Arc::new(TLData {
-                path: self.clone(),
-                symbol,
-            }),
-        })
+        FQ {
+            path: self.clone(),
+            enclosing: None,
+            symbol,
+        }
     }
 
     pub fn fq_type(&self, symbol: TSymbol) -> FQType {
-        FQType::top_level(self.clone(), symbol)
+        FQ {
+            path: self.clone(),
+            enclosing: None,
+            symbol,
+        }
     }
 
     pub fn can_see(&self, visibility: Visibility, path: &FQPath) -> bool {
@@ -260,219 +321,62 @@ impl fmt::Debug for FQPath {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-struct TLData<T> {
-    path: FQPath,
-    symbol: T,
+pub struct FQ<T> {
+    pub path: FQPath,
+    pub enclosing: Option<TSymbol>,
+    pub symbol: T,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct TopLevel<T> {
-    data: Arc<TLData<T>>,
-}
-
-impl<T: Display> fmt::Display for TopLevel<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.data.path.fmt(f)?;
-        add_segment(f, &self.data.symbol)
-    }
-}
-
-impl<T: Display> fmt::Debug for TopLevel<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-struct MemberData<T> {
-    top_level: FQType,
-    symbol: T,
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Member<T> {
-    data: Arc<MemberData<T>>,
-}
-
-impl<T: Display> fmt::Display for Member<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.data.top_level.fmt(f)?;
-        add_segment(f, &self.data.symbol)
-    }
-}
-
-impl<T: Display> fmt::Debug for Member<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum FQSym {
-    TopLevel(TopLevel<Symbol>),
-    Member(Member<Symbol>),
-}
-
-impl FQSym {
-    pub(crate) fn is_top_level(&self) -> bool {
-        match self {
-            Self::Member(_) => false,
-            _ => true,
-        }
-    }
-
-    pub fn symbol(&self) -> Symbol {
-        match self {
-            Self::TopLevel(t) => t.data.symbol.clone(),
-            Self::Member(m) => m.data.symbol.clone(),
-        }
-    }
-
-    pub fn path(&self) -> FQPath {
-        match self {
-            Self::TopLevel(t) => t.data.path.clone(),
-            Self::Member(m) => m.data.top_level.path(),
-        }
-    }
-
-    pub fn can_see(&self, visibility: Visibility, symbol: &FQSym) -> bool {
-        self.path().can_see(visibility, &symbol.path())
-    }
-}
-
-impl fmt::Display for FQSym {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::TopLevel(t) => t.fmt(f),
-            Self::Member(m) => m.fmt(f),
-        }
-    }
-}
-
-impl fmt::Debug for FQSym {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum FQType {
-    None,
-    True,
-    False,
-    Boolean,
-    Integer,
-    TopLevel(TopLevel<TSymbol>),
-    Member(Member<TSymbol>),
-}
-
-impl FQType {
-    fn get_known(path: &FQPath, symbol: &TSymbol) -> Option<Self> {
-        if path.pkg == Pkg::Std && path.is_empty() {
-            match symbol {
-                TSymbol::None => Some(Self::None),
-                TSymbol::True => Some(Self::True),
-                TSymbol::False => Some(Self::False),
-                TSymbol::Boolean => Some(Self::Boolean),
-                TSymbol::Integer => Some(Self::Integer),
-                _ => None,
-            }
-        } else {
-            None
-        }
-    }
-
-    pub(crate) fn is_known(&self) -> bool {
-        match self {
-            Self::TopLevel(_) | &Self::Member(_) => false,
-            _ => true,
-        }
-    }
-
-    fn top_level(path: FQPath, symbol: TSymbol) -> Self {
-        if let Some(fq) = Self::get_known(&path, &symbol) {
-            fq
-        } else {
-            Self::TopLevel(TopLevel {
-                data: Arc::new(TLData { path, symbol }),
-            })
-        }
-    }
-
+impl<T> FQ<T> {
     pub fn is_top_level(&self) -> bool {
-        match self {
-            Self::Member(_) => false,
-            _ => true,
-        }
+        self.enclosing.is_none()
     }
 
-    pub(crate) fn member_sym(&self, loc: &Loc, symbol: Symbol) -> Result<FQSym> {
-        if self.is_top_level() {
-            Ok(FQSym::Member(Member {
-                data: Arc::new(MemberData {
-                    top_level: self.clone(),
-                    symbol,
-                }),
-            }))
-        } else {
-            loc.err(Error::TopLevelTypeExpected(self.clone()))
-        }
-    }
-
-    pub(crate) fn member_type(&self, loc: &Loc, symbol: TSymbol) -> Result<Self> {
-        if self.is_top_level() {
-            Ok(Self::Member(Member {
-                data: Arc::new(MemberData {
-                    top_level: self.clone(),
-                    symbol,
-                }),
-            }))
-        } else {
-            loc.err(Error::TopLevelTypeExpected(self.clone()))
-        }
-    }
-
-    pub fn symbol(&self) -> TSymbol {
-        match self {
-            Self::None => TSymbol::None,
-            Self::True => TSymbol::True,
-            Self::False => TSymbol::False,
-            Self::Boolean => TSymbol::Boolean,
-            Self::Integer => TSymbol::Integer,
-            Self::TopLevel(t) => t.data.symbol.clone(),
-            Self::Member(m) => m.data.symbol.clone(),
-        }
-    }
-
-    pub fn path(&self) -> FQPath {
-        match self {
-            Self::TopLevel(t) => t.data.path.clone(),
-            Self::Member(m) => m.data.top_level.path(),
-            _ => Pkg::Std.empty(),
-        }
-    }
-
-    pub fn can_see(&self, visibility: Visibility, tipo: &FQType) -> bool {
-        self.path().can_see(visibility, &tipo.path())
+    pub fn can_see<O>(&self, visibility: Visibility, symbol: &FQ<O>) -> bool {
+        self.path.can_see(visibility, &symbol.path)
     }
 }
 
-impl fmt::Display for FQType {
+impl<T: Display> fmt::Display for FQ<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::None => f.write_str("std::None"),
-            Self::True => f.write_str("std::True"),
-            Self::False => f.write_str("std::False"),
-            Self::Boolean => f.write_str("std::Boolean"),
-            Self::Integer => f.write_str("std::Integer"),
-            Self::TopLevel(t) => t.fmt(f),
-            Self::Member(m) => m.fmt(f),
+        self.path.fmt(f)?;
+        separator(f)?;
+        if let Some(enclosing) = &self.enclosing {
+            enclosing.fmt(f)?;
+            separator(f)?;
         }
+        self.symbol.fmt(f)
     }
 }
 
-impl fmt::Debug for FQType {
+impl<T: Display> fmt::Debug for FQ<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
+        debug(f, "FQ", self)
     }
 }
+
+pub type FQSym = FQ<Symbol>;
+pub type FQType = FQ<TSymbol>;
+
+pub static NONE: TSymbol = TSymbol::known(KnownTSymbol::None);
+pub static TRUE: TSymbol = TSymbol::known(KnownTSymbol::True);
+pub static FALSE: TSymbol = TSymbol::known(KnownTSymbol::False);
+pub static BOOLEAN: TSymbol = TSymbol::known(KnownTSymbol::Boolean);
+pub static INTEGER: TSymbol = TSymbol::known(KnownTSymbol::Integer);
+
+const fn std_type(symbol: KnownTSymbol) -> FQType {
+    FQ {
+        path: FQPath {
+            pkg: Pkg::Std,
+            path: Path::empty(),
+        },
+        enclosing: None,
+        symbol: TSymbol::known(symbol),
+    }
+}
+
+pub static FQ_NONE: FQType = std_type(KnownTSymbol::None);
+pub static FQ_TRUE: FQType = std_type(KnownTSymbol::True);
+pub static FQ_FALSE: FQType = std_type(KnownTSymbol::False);
+pub static FQ_BOOLEAN: FQType = std_type(KnownTSymbol::Boolean);
+pub static FQ_INTEGER: FQType = std_type(KnownTSymbol::Integer);

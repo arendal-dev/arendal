@@ -166,7 +166,7 @@ impl<'a> TypeChecker<'a> {
         let mut errors = Errors::default();
         for f in self.get_symbol_candidates(path, q) {
             if let Some(s) = self.symbols.get(&f) {
-                if path.can_see(s.visibility, &f.path()) {
+                if path.can_see(s.visibility, &f.path) {
                     return Ok(f);
                 } else {
                     errors.add(loc.wrap(Error::SymbolNotVisible(f)))
@@ -241,7 +241,7 @@ impl<'a> TypeChecker<'a> {
     }
 
     fn check_assignment(&mut self, fq: &FQSym, a: ACandidate) -> Result<()> {
-        let expr = expr::check(self, &fq.path(), &Scope::Empty, &a.it.it.expr)?;
+        let expr = expr::check(self, &fq.path, &Scope::Empty, &a.it.it.expr)?;
         self.symbols
             .set(&a.loc, fq.clone(), a.it.visibility, expr.clone_type())?;
         self.assignments.push(a.loc.wrap(TLAssignment {

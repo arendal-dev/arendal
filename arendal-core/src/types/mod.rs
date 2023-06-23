@@ -6,7 +6,7 @@ use std::sync::Arc;
 use im::HashMap;
 
 use crate::error::{Error, Errors, Result, L};
-use crate::symbol::FQType;
+use crate::symbol::{self, FQType};
 use crate::visibility::{Visibility, V};
 
 #[derive(Clone, PartialEq, Eq)]
@@ -54,14 +54,15 @@ pub struct Tuple {
 impl Type {
     pub fn fq(&self) -> FQType {
         match self {
-            Self::None => FQType::None,
-            Self::True => FQType::True,
-            Self::False => FQType::False,
-            Self::Boolean => FQType::Boolean,
-            Self::Integer => FQType::Integer,
-            Self::Singleton(s) => s.symbol.clone(),
-            Self::Tuple(t) => t.symbol.clone(),
+            Self::None => &symbol::FQ_NONE,
+            Self::True => &symbol::FQ_TRUE,
+            Self::False => &symbol::FQ_FALSE,
+            Self::Boolean => &symbol::FQ_BOOLEAN,
+            Self::Integer => &symbol::FQ_INTEGER,
+            Self::Singleton(s) => &s.symbol,
+            Self::Tuple(t) => &t.symbol,
         }
+        .clone()
     }
 
     pub fn is_boolean(&self) -> bool {

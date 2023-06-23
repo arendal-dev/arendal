@@ -10,7 +10,7 @@ pub enum Enclosure {
 use super::{Assignment, BinaryOp, Builder, Expr, Module, Package, Segment, TypeDefinition};
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
-use crate::symbol::{Path, Pkg, Symbol, TSymbol};
+use crate::symbol::{self, Path, Pkg, Symbol, TSymbol};
 use crate::visibility::Visibility;
 use std::rc::Rc;
 
@@ -346,7 +346,7 @@ impl Parser {
                     if parser.kind_equals(LexemeKind::Close(Enclosure::Curly)) {
                         parser
                             .advance()
-                            .ok(self.builder().tsymbol(Vec::default(), TSymbol::None))
+                            .ok(self.builder().tsymbol(Vec::default(), symbol::NONE.clone()))
                     } else {
                         let mut assignments = Vec::default();
                         let mut exprs = Vec::default();

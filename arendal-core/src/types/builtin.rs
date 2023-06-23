@@ -1,4 +1,4 @@
-use crate::{symbol::FQType, types::Type, visibility::Visibility};
+use crate::{types::Type, visibility::Visibility};
 
 use super::TypeMap;
 
@@ -13,15 +13,18 @@ struct TypeLoader {
 
 impl TypeLoader {
     fn load(mut self) -> TypeMap {
-        self.export(FQType::None, Type::None);
-        self.export(FQType::True, Type::True);
-        self.export(FQType::False, Type::False);
-        self.export(FQType::Boolean, Type::Boolean);
-        self.export(FQType::Integer, Type::Integer);
+        self.export(Type::None);
+        self.export(Type::True);
+        self.export(Type::False);
+        self.export(Type::Boolean);
+        self.export(Type::Integer);
         self.types
     }
 
-    fn export(&mut self, symbol: FQType, tipo: Type) {
-        self.types.insert(symbol, Visibility::Exported.wrap(tipo));
+    fn builtin(&mut self, tipo: Type) {}
+
+    fn export(&mut self, tipo: Type) {
+        self.types
+            .insert(tipo.fq(), Visibility::Exported.wrap(tipo));
     }
 }
