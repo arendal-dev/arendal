@@ -7,10 +7,10 @@ pub enum Enclosure {
     Curly,
 }
 
-use super::{Assignment, BinaryOp, Builder, Expr, Module, Package, Segment, TypeDefinition};
+use super::{Assignment, BinaryOp, Builder, Expr, LNewType, Module, Package, Segment};
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
-use crate::symbol::{self, Path, Pkg, Symbol, TSymbol};
+use crate::symbol::{self, Path, Pkg, Symbol};
 use crate::visibility::Visibility;
 use std::rc::Rc;
 
@@ -34,7 +34,7 @@ fn parse_module(input: &str) -> Result<Module> {
 
 type PResult<T> = Result<(T, Parser)>;
 type EResult = PResult<L<Expr>>;
-type TResult = PResult<TypeDefinition>;
+type TResult = PResult<LNewType>;
 
 fn map<T, F, U>(result: PResult<T>, f: F) -> PResult<U>
 where
@@ -174,8 +174,8 @@ impl Parser {
             &next
         };
         if parser.is_keyword(Keyword::Type) {
-            let (dfn, parser) = self.advance().rule_typedef()?;
-            parser.expect_eos(|| module.types.push(dfn))
+            let (newtype, parser) = self.advance().rule_typedef()?;
+            parser.expect_eos(|| module.types.push(newtype.to_lv(visibility)))
         } else if parser.is_keyword(Keyword::Let) {
             let (a, parser) = self.advance().rule_assignment()?;
             parser.expect_eos(|| module.assignments.push(a.to_lv(visibility)))
@@ -194,7 +194,8 @@ impl Parser {
             Some(LexemeKind::TSymbol(symbol)) => Ok(symbol.clone()),
             _ => self.err(Error::TSymbolAfterTypeExpected),
         }?;
-        self.advance().ok(self.builder().singleton(symbol))
+        self.advance()
+            .ok(self.builder().new_type(symbol).singleton())
     }
 
     fn rule_bstatement(

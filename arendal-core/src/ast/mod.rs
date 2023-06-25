@@ -94,11 +94,13 @@ pub enum Expr {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeDefinition {
-    pub loc: Loc,
+pub struct NewType {
     pub symbol: TSymbol,
     pub dfn: TypeDfn,
 }
+
+pub type LNewType = L<NewType>;
+pub type LVNewType = L<V<NewType>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeDfn {
@@ -109,7 +111,7 @@ pub enum TypeDfn {
 pub struct Module {
     pub exprs: Vec<L<Expr>>,
     pub assignments: Vec<L<V<Assignment>>>,
-    pub types: Vec<TypeDefinition>,
+    pub types: Vec<LVNewType>,
 }
 
 #[derive(Debug)]
@@ -190,15 +192,28 @@ impl Builder {
         self.loc.wrap(Assignment { symbol, expr })
     }
 
-    fn type_dfn(&self, symbol: TSymbol, dfn: TypeDfn) -> TypeDefinition {
-        TypeDefinition {
+    fn new_type(&self, symbol: TSymbol) -> NewTypeBuilder {
+        NewTypeBuilder {
             loc: self.loc.clone(),
             symbol,
-            dfn,
         }
     }
+}
 
-    pub fn singleton(&self, symbol: TSymbol) -> TypeDefinition {
-        self.type_dfn(symbol, TypeDfn::Singleton)
+pub struct NewTypeBuilder {
+    loc: Loc,
+    symbol: TSymbol,
+}
+
+impl NewTypeBuilder {
+    fn build(self, dfn: TypeDfn) -> LNewType {
+        self.loc.to_wrap(NewType {
+            symbol: self.symbol,
+            dfn,
+        })
+    }
+
+    pub fn singleton(self) -> LNewType {
+        self.build(TypeDfn::Singleton)
     }
 }

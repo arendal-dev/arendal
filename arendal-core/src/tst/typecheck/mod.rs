@@ -23,7 +23,7 @@ pub(super) fn check(env: &Env, ast: &ast::Package) -> Result<Package> {
     Checker::new(&input, fqresolvers, types).check()
 }
 
-type TCandidate<'a> = &'a ast::TypeDefinition;
+type TCandidate<'a> = &'a ast::LVNewType;
 type TCandidates<'a> = HashMap<FQType, TCandidate<'a>>;
 
 type ACandidate<'a> = &'a L<V<ast::Assignment>>;
@@ -58,12 +58,12 @@ impl<'a> Input<'a> {
         let mut errors = Errors::default();
         for (local, module) in &ast.modules {
             let path = ast.pkg.path(local.clone());
-            for dfn in &module.types {
-                let symbol = path.fq_type(dfn.symbol.clone());
+            for new_type in &module.types {
+                let symbol = path.fq_type(new_type.it.it.symbol.clone());
                 if input.types.contains_key(&symbol) {
-                    errors.add(dfn.loc.wrap(Error::DuplicateType(symbol)));
+                    errors.add(new_type.loc.wrap(Error::DuplicateType(symbol)));
                 } else {
-                    input.types.insert(symbol, dfn);
+                    input.types.insert(symbol, new_type);
                 }
             }
             for assignment in &module.assignments {

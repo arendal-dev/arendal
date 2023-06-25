@@ -1,4 +1,4 @@
-use crate::ast::{Assignment, BinaryOp, Expr, Module, TypeDefinition};
+use crate::ast::{Assignment, BinaryOp, Expr, LNewType, Module};
 use crate::ast::{Builder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{self, Symbol, TSymbol};
@@ -41,8 +41,8 @@ impl Test {
         self.v_let(Visibility::Module, symbol, expr)
     }
 
-    fn type_dfn(mut self, dfn: TypeDefinition) -> Self {
-        self.expected.types.push(dfn);
+    fn new_type(mut self, visibility: Visibility, new_type: LNewType) -> Self {
+        self.expected.types.push(new_type.to_lv(visibility));
         self
     }
 }
@@ -151,12 +151,12 @@ pub fn b_let(symbol: Symbol, expr: L<Expr>) -> L<Assignment> {
     B.assignment(symbol, expr)
 }
 
-fn check_type(input: &str, expected: TypeDefinition) {
-    Test::new().type_dfn(expected).check(input)
+fn check_type(input: &str, visibility: Visibility, expected: LNewType) {
+    Test::new().new_type(visibility, expected).check(input)
 }
 
-fn singleton(symbol: &str) -> TypeDefinition {
-    B.singleton(tsym(symbol))
+fn singleton(symbol: &str) -> LNewType {
+    B.new_type(tsym(symbol)).singleton()
 }
 
 #[test]
@@ -271,5 +271,5 @@ fn qsymbols() {
 
 #[test]
 fn typedef_singleton() {
-    check_type("type Red", singleton("Red"));
+    check_type("type Red", Visibility::Module, singleton("Red"));
 }
