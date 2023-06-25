@@ -236,11 +236,9 @@ impl Errors {
         }
     }
 
-    pub fn to_err<T>(self) -> Result<T> {
-        match self.errors {
-            None => panic!("No errors!"),
-            Some(e) => Err(e),
-        }
+    pub fn to_err<T>(mut self, error: L<Error>) -> Result<T> {
+        self.add(error);
+        Err(self.errors.unwrap())
     }
 }
 

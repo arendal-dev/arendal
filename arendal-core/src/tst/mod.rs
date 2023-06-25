@@ -226,8 +226,12 @@ impl Builder {
         self.value(Value::Integer(value))
     }
 
+    fn local0(&self, local: Local) -> L<Expr> {
+        self.build(Expr::Local(Arc::new(local)))
+    }
+
     fn local(&self, symbol: Symbol, tipo: Type) -> L<Expr> {
-        self.build(Expr::Local(Arc::new(Local { symbol, tipo })))
+        self.local0(Local { symbol, tipo })
     }
 
     fn global0(&self, global: Global) -> L<Expr> {

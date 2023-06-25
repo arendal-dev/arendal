@@ -4,40 +4,29 @@ use crate::symbol::{Symbol, TSymbol};
 use crate::tst::Assignment;
 use crate::types::Type;
 
-use super::{Builder, Expr, Resolver, Scope, TypeChecker, Value};
+use super::{Builder, Expr, Resolved, Scope, Value};
 
-pub(super) fn check<'a>(
-    checker: &TypeChecker<'a>,
-    resolver: &Resolver<'a>,
-    scope: &Scope,
+pub(super) fn check<'a, 'b, 'c>(
+    scope: &mut Scope<'a, 'b, 'c>,
     input: &L<ast::Expr>,
 ) -> Result<L<Expr>> {
-    ExprChecker {
-        checker,
-        resolver,
-        scope,
-        input,
-    }
-    .check()
+    ExprChecker { scope, input }.check()
 }
 
-#[derive(Debug)]
-struct ExprChecker<'a, 'b> {
-    checker: &'b TypeChecker<'a>,
-    resolver: &'b Resolver<'a>,
-    scope: &'b Scope,
-    input: &'b L<ast::Expr>,
+struct ExprChecker<'a, 'b, 'c, 'd> {
+    scope: &'d mut Scope<'a, 'b, 'c>,
+    input: &'d L<ast::Expr>,
 }
 
-impl<'a, 'b> ExprChecker<'a, 'b> {
-    fn merge2(&self, e1: &L<ast::Expr>, e2: &L<ast::Expr>) -> Result<(L<Expr>, L<Expr>)> {
+impl<'a, 'b, 'c, 'd> ExprChecker<'a, 'b, 'c, 'd> {
+    fn merge2(&mut self, e1: &L<ast::Expr>, e2: &L<ast::Expr>) -> Result<(L<Expr>, L<Expr>)> {
         Error::merge(self.sub_expr(&e1), self.sub_expr(&e2))
     }
 
-    fn check(self) -> Result<L<Expr>> {
+    fn check(mut self) -> Result<L<Expr>> {
         match &self.input.it {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
-            ast::Expr::Symbol(q) => self.check_symbol(q),
+            ast::Expr::Symbol(q) => self.resolve_symbol(q),
             ast::Expr::TSymbol(q) => {
                 let tipo = self.resolve_type(&q)?;
                 let value = Value::singleton(&self.input.loc, &tipo)?;
@@ -66,25 +55,18 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
     }
 
     fn resolve_type(&self, symbol: &Q<TSymbol>) -> Result<Type> {
-        self.checker
-            .resolve_type(&self.input.loc, self.resolver, symbol)
+        self.scope.resolve_type(&self.input.loc, symbol)
     }
 
-    fn sub_expr(&self, input: &L<ast::Expr>) -> Result<L<Expr>> {
-        check(self.checker, self.resolver, &self.scope, input)
-    }
-
-    fn check_symbol(self, q: &Q<Symbol>) -> Result<L<Expr>> {
-        Ok(if q.segments.is_empty() && self.scope.contains(&q.symbol) {
-            self.builder()
-                .local(q.symbol.clone(), self.scope.get(&q.symbol).unwrap().clone())
-        } else {
-            self.builder().global0(self.checker.resolve_global(
-                &self.input.loc,
-                self.resolver,
-                q,
-            )?)
+    fn resolve_symbol(self, symbol: &Q<Symbol>) -> Result<L<Expr>> {
+        Ok(match self.scope.resolve_symbol(&self.input.loc, symbol)? {
+            Resolved::Local(local) => self.builder().local0(local),
+            Resolved::Global(global) => self.builder().global0(global),
         })
+    }
+
+    fn sub_expr(&mut self, input: &L<ast::Expr>) -> Result<L<Expr>> {
+        check(self.scope, input)
     }
 
     fn check_binary(self, op: BinaryOp, expr1: L<Expr>, expr2: L<Expr>) -> Result<L<Expr>> {
@@ -99,7 +81,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
     }
 
-    fn check_block(self, block: &ast::Block) -> Result<L<Expr>> {
+    fn check_block(mut self, block: &ast::Block) -> Result<L<Expr>> {
         let mut assignments = Vec::default();
         let mut child_scope = self.scope.child();
         let mut expr: Option<L<Expr>> = None;
@@ -108,7 +90,7 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         }
         for e in &block.exprs {
             if expr.is_none() {
-                expr = Some(check(self.checker, self.resolver, &child_scope, e)?)
+                expr = Some(check(&mut child_scope, e)?)
             } else {
                 return self.error(Error::OnlyOneExpressionAllowed);
             }
@@ -116,7 +98,11 @@ impl<'a, 'b> ExprChecker<'a, 'b> {
         self.builder().block(assignments, expr)
     }
 
-    fn check_assignment(&self, scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<Assignment>> {
+    fn check_assignment(
+        &mut self,
+        scope: &mut Scope,
+        a: &L<ast::Assignment>,
+    ) -> Result<L<Assignment>> {
         let typed = self.sub_expr(&a.it.expr)?;
         scope.set(&a.loc, a.it.symbol.clone(), typed.clone_type())?;
         Ok(self.builder().assignment(a.it.symbol.clone(), typed))
