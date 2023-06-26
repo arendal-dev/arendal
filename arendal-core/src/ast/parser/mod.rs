@@ -10,15 +10,16 @@ pub enum Enclosure {
 use super::{Assignment, BinaryOp, Builder, Expr, LNewType, Module, Package, Segment};
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
-use crate::symbol::{self, Path, Pkg, Symbol};
+use crate::symbol::{self, FQPath, Path, Pkg, Symbol};
 use crate::visibility::Visibility;
 use std::rc::Rc;
 
 use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
 
 // Parses the input as a package
-pub fn parse(input: &str) -> Result<Package> {
-    let module = parse_module(input)?;
+pub fn parse(pkg: Pkg, input: &str) -> Result<Package> {
+    let path = pkg.empty();
+    let module = parse_module(path, input)?;
     let mut package = Package {
         pkg: Pkg::Local,
         modules: Default::default(),
@@ -27,9 +28,9 @@ pub fn parse(input: &str) -> Result<Package> {
     Ok(package)
 }
 
-fn parse_module(input: &str) -> Result<Module> {
+fn parse_module(path: FQPath, input: &str) -> Result<Module> {
     let lexemes = lex(input)?;
-    Parser::new(lexemes).parse()
+    Parser::new(lexemes).parse(path)
 }
 
 type PResult<T> = Result<(T, Parser)>;
@@ -105,8 +106,8 @@ impl Parser {
         }
     }
 
-    fn parse(self) -> Result<Module> {
-        let mut module = Module::default();
+    fn parse(self, path: FQPath) -> Result<Module> {
+        let mut module = Module::new(path);
         let mut parser = self;
         while !parser.is_done() {
             (_, parser) = parser.rule_statement(&mut module)?;

@@ -11,7 +11,7 @@ use std::fmt;
 use std::sync::Arc;
 
 pub(crate) fn check(env: &Env, input: &str) -> Result<Package> {
-    let parsed = crate::ast::parser::parse(input)?;
+    let parsed = crate::ast::parser::parse(Pkg::Local, input)?;
     typecheck::check(&env, &parsed)
 }
 

@@ -1,7 +1,7 @@
 use crate::ast::{Assignment, BinaryOp, Expr, LNewType, Module};
 use crate::ast::{Builder, Segment};
 use crate::error::{Loc, L};
-use crate::symbol::{self, Symbol, TSymbol};
+use crate::symbol::{self, Pkg, Symbol, TSymbol};
 use crate::visibility::Visibility;
 
 use super::{parse, Enclosure, Error};
@@ -15,12 +15,12 @@ struct Test {
 impl Test {
     fn new() -> Self {
         Self {
-            expected: Default::default(),
+            expected: Module::new(Pkg::Local.empty()),
         }
     }
 
     fn check(self, input: &str) {
-        let package = parse(input).unwrap();
+        let package = parse(Pkg::Local, input).unwrap();
         let module = package.modules.iter().next().unwrap().1;
         assert_eq!(module, &self.expected, "Left=Actual; Right=Expected")
     }
@@ -60,7 +60,7 @@ fn check_qtype(input: &str, segments: Vec<Segment>, symbol: TSymbol) {
 }
 
 fn expect_error(input: &str, expected: &Error) {
-    match parse(input) {
+    match parse(Pkg::Local, input) {
         Ok(_) => panic!("Parsed correctly but expected {:?}", expected),
         Err(e) => assert!(
             e.contains(&expected),
