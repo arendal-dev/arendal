@@ -21,8 +21,8 @@ impl Test {
 
     fn check(self, input: &str) {
         let package = parse(Pkg::Local, input).unwrap();
-        let module = package.modules.iter().next().unwrap().1;
-        assert_eq!(module, &self.expected, "Left=Actual; Right=Expected")
+        let module = package.modules.iter().next().unwrap();
+        assert_eq!(**module, self.expected, "Left=Actual; Right=Expected")
     }
 
     fn expr(mut self, expr: L<Expr>) -> Self {

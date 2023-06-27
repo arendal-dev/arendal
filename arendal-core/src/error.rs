@@ -250,6 +250,9 @@ pub enum Error {
     InvalidClose(Enclosure),
     UnexpectedToken,
     // Parser
+    EmptyPackage,
+    DuplicateModule(FQPath),
+    UnexpectedPackage(Pkg, Pkg),
     ExpressionExpected,
     ExpressionNotExpected,
     LValueExpected,
@@ -289,7 +292,6 @@ pub enum Error {
     TypeMismatch(Arc<TypeMismatch>),
     SingletonExpected(Type),
     InvalidType, // placeholder, temporary error
-    DuplicateModule(Pkg, FQPath),
     DivisionByZero,
     NotImplemented,
 }

@@ -1,11 +1,13 @@
 pub mod parser;
 
 use std::cmp::{Eq, PartialEq};
+use std::collections::HashSet;
+use std::sync::Arc;
 
 use im::HashMap;
 
 use super::Integer;
-use crate::error::{Loc, L};
+use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQPath, Path, Pkg, Symbol, TSymbol};
 use crate::visibility::V;
 
@@ -94,6 +96,7 @@ pub enum Expr {
 }
 
 pub type LExpr = L<Expr>;
+pub type ExprRef = Arc<L<Expr>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewType {
@@ -117,6 +120,8 @@ pub struct Module {
     pub types: Vec<LVNewType>,
 }
 
+pub type ModuleRef = Arc<Module>;
+
 impl Module {
     fn new(path: FQPath) -> Self {
         Module {
@@ -131,10 +136,35 @@ impl Module {
 #[derive(Debug)]
 pub struct Package {
     pub(crate) pkg: Pkg,
-    pub(crate) modules: HashMap<Path, Module>,
+    pub(crate) modules: Vec<ModuleRef>,
 }
 
 impl Package {
+    pub fn new(modules: Vec<ModuleRef>) -> Result<Self> {
+        if modules.is_empty() {
+            return Loc::None.err(Error::EmptyPackage);
+        }
+        let mut pkg: Option<Pkg> = None;
+        let mut paths: HashSet<FQPath> = HashSet::default();
+        for module in &modules {
+            if !paths.insert(module.path.clone()) {
+                return Loc::None.err(Error::DuplicateModule(module.path.clone()));
+            }
+            match &pkg {
+                None => pkg = Some(module.path.pkg.clone()),
+                Some(p) => {
+                    if *p != module.path.pkg {
+                        return Loc::None
+                            .err(Error::UnexpectedPackage(p.clone(), module.path.pkg.clone()));
+                    }
+                }
+            }
+        }
+        Ok(Self {
+            pkg: pkg.unwrap(),
+            modules,
+        })
+    }
     pub fn is_empty(&self) -> bool {
         self.modules.is_empty()
     }

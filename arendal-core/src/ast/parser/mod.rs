@@ -10,9 +10,10 @@ pub enum Enclosure {
 use super::{Assignment, BinaryOp, Builder, Expr, LNewType, Module, Package, Segment};
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
-use crate::symbol::{self, FQPath, Path, Pkg, Symbol};
+use crate::symbol::{self, FQPath, Pkg, Symbol};
 use crate::visibility::Visibility;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
 
@@ -20,12 +21,7 @@ use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
 pub fn parse(pkg: Pkg, input: &str) -> Result<Package> {
     let path = pkg.empty();
     let module = parse_module(path, input)?;
-    let mut package = Package {
-        pkg: Pkg::Local,
-        modules: Default::default(),
-    };
-    package.modules.insert(Path::empty(), module);
-    Ok(package)
+    Package::new(vec![Arc::new(module)])
 }
 
 fn parse_module(path: FQPath, input: &str) -> Result<Module> {

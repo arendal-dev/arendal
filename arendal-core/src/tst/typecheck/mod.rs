@@ -56,10 +56,9 @@ impl<'a> Input<'a> {
             exprs: Vec::default(),
         };
         let mut errors = Errors::default();
-        for (local, module) in &ast.modules {
-            let path = ast.pkg.path(local.clone());
+        for module in &ast.modules {
             for new_type in &module.types {
-                let symbol = path.fq_type(new_type.it.it.symbol.clone());
+                let symbol = module.path.fq_type(new_type.it.it.symbol.clone());
                 if input.types.contains_key(&symbol) {
                     errors.add(new_type.loc.wrap(Error::DuplicateType(symbol)));
                 } else {
@@ -67,7 +66,7 @@ impl<'a> Input<'a> {
                 }
             }
             for assignment in &module.assignments {
-                let symbol = path.fq_sym(assignment.it.it.symbol.clone());
+                let symbol = module.path.fq_sym(assignment.it.it.symbol.clone());
                 if input.assignments.contains_key(&symbol) {
                     errors.add(assignment.loc.wrap(Error::DuplicateSymbol(symbol)));
                 } else {
@@ -75,9 +74,9 @@ impl<'a> Input<'a> {
                 }
             }
             for expr in &module.exprs {
-                if path.is_empty() {
+                if module.path.is_empty() {
                     input.exprs.push(ECandidate {
-                        path: path.clone(),
+                        path: module.path.clone(),
                         expr,
                     })
                 } else {
@@ -85,7 +84,7 @@ impl<'a> Input<'a> {
                     break; // one error per module
                 }
             }
-            input.paths.push(path)
+            input.paths.push(module.path.clone())
         }
         errors.to_result(input)
     }
