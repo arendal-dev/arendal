@@ -183,7 +183,7 @@ impl<'a, 'b> Checker<'a, 'b> {
     }
 
     fn check_assignment(&mut self, fq: &FQSym, a: ACandidate) -> Result<()> {
-        let expr = expr::check(&mut self.new_scope(&fq.path), a.it.it.expr.clone())?;
+        let expr = expr::check(&self.new_scope(&fq.path), a.it.it.expr.clone())?;
         self.symbols
             .set(&a.loc, fq.clone(), a.it.visibility, expr.clone_type())?;
         self.assignments.push(a.loc.wrap(TLAssignment {
@@ -196,7 +196,7 @@ impl<'a, 'b> Checker<'a, 'b> {
     fn check_expressions(&mut self) -> Result<()> {
         for e in &self.input.exprs {
             if self.expr.is_none() {
-                self.expr = Some(expr::check(&mut self.new_scope(&e.path), e.expr.clone())?);
+                self.expr = Some(expr::check(&self.new_scope(&e.path), e.expr.clone())?);
             } else {
                 return e.expr.loc.err(Error::OnlyOneExpressionAllowed);
             }
