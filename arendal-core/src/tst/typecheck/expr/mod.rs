@@ -8,46 +8,46 @@ use super::{Builder, Expr, Resolved, Scope, Value};
 
 pub(super) fn check<'a, 'b, 'c>(
     scope: &mut Scope<'a, 'b, 'c>,
-    input: &L<ast::Expr>,
+    input: ast::ExprRef,
 ) -> Result<L<Expr>> {
     ExprChecker { scope, input }.check()
 }
 
 struct ExprChecker<'a, 'b, 'c, 'd> {
     scope: &'d mut Scope<'a, 'b, 'c>,
-    input: &'d L<ast::Expr>,
+    input: ast::ExprRef,
 }
 
 impl<'a, 'b, 'c, 'd> ExprChecker<'a, 'b, 'c, 'd> {
-    fn merge2(&mut self, e1: &L<ast::Expr>, e2: &L<ast::Expr>) -> Result<(L<Expr>, L<Expr>)> {
-        Error::merge(self.sub_expr(&e1), self.sub_expr(&e2))
+    fn merge2(&mut self, e1: ast::ExprRef, e2: ast::ExprRef) -> Result<(L<Expr>, L<Expr>)> {
+        Error::merge(self.sub_expr(e1), self.sub_expr(e2))
     }
 
     fn check(mut self) -> Result<L<Expr>> {
-        match &self.input.it {
+        match self.input.it.clone() {
             ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
-            ast::Expr::Symbol(q) => self.resolve_symbol(q),
+            ast::Expr::Symbol(q) => self.resolve_symbol(&q),
             ast::Expr::TSymbol(q) => {
                 let tipo = self.resolve_type(&q)?;
                 let value = Value::singleton(&self.input.loc, &tipo)?;
                 Ok(self.builder().value(value))
             }
             ast::Expr::Seq(s) => self
-                .merge2(&s.expr, &s.then)
+                .merge2(s.expr, s.then)
                 .and_then(|(e1, e2)| Ok(self.builder().seq(e1, e2))),
             ast::Expr::Conditional(c) => {
                 let (expr, then, otherwise) = Error::merge3(
-                    self.sub_expr(&c.expr),
-                    self.sub_expr(&c.then),
-                    self.sub_expr(&c.otherwise),
+                    self.sub_expr(c.expr),
+                    self.sub_expr(c.then),
+                    self.sub_expr(c.otherwise),
                 )?;
                 self.builder().conditional(expr, then, otherwise)
             }
             ast::Expr::Binary(b) => self
-                .merge2(&b.expr1, &b.expr2)
+                .merge2(b.expr1, b.expr2)
                 .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
             ast::Expr::Block(b) => {
-                let result = self.check_block(b);
+                let result = self.check_block(&b);
                 result
             }
             _ => self.error(Error::InvalidType),
@@ -65,7 +65,7 @@ impl<'a, 'b, 'c, 'd> ExprChecker<'a, 'b, 'c, 'd> {
         })
     }
 
-    fn sub_expr(&mut self, input: &L<ast::Expr>) -> Result<L<Expr>> {
+    fn sub_expr(&mut self, input: ast::ExprRef) -> Result<L<Expr>> {
         check(self.scope, input)
     }
 
@@ -90,7 +90,7 @@ impl<'a, 'b, 'c, 'd> ExprChecker<'a, 'b, 'c, 'd> {
         }
         for e in &block.exprs {
             if expr.is_none() {
-                expr = Some(check(&mut child_scope, e)?)
+                expr = Some(check(&mut child_scope, e.clone())?)
             } else {
                 return self.error(Error::OnlyOneExpressionAllowed);
             }
@@ -103,7 +103,7 @@ impl<'a, 'b, 'c, 'd> ExprChecker<'a, 'b, 'c, 'd> {
         scope: &mut Scope,
         a: &L<ast::Assignment>,
     ) -> Result<L<Assignment>> {
-        let typed = self.sub_expr(&a.it.expr)?;
+        let typed = self.sub_expr(a.it.expr.clone())?;
         scope.set(&a.loc, a.it.symbol.clone(), typed.clone_type())?;
         Ok(self.builder().assignment(a.it.symbol.clone(), typed))
     }

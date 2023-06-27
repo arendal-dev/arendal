@@ -4,7 +4,7 @@ mod types;
 
 use im::{HashMap, HashSet};
 
-use crate::ast::{self, Q};
+use crate::ast::{self, ExprRef, Q};
 use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol};
 use crate::types::{Type, Types};
@@ -30,9 +30,9 @@ type ACandidate<'a> = &'a L<V<ast::Assignment>>;
 type ACandidates<'a> = HashMap<FQSym, ACandidate<'a>>;
 
 #[derive(Debug)]
-struct ECandidate<'a> {
+struct ECandidate {
     path: FQPath,
-    expr: &'a L<ast::Expr>,
+    expr: ExprRef,
 }
 
 #[derive(Debug)]
@@ -42,7 +42,7 @@ struct Input<'a> {
     paths: Vec<FQPath>,
     types: TCandidates<'a>,
     assignments: ACandidates<'a>,
-    exprs: Vec<ECandidate<'a>>,
+    exprs: Vec<ECandidate>,
 }
 
 impl<'a> Input<'a> {
@@ -77,7 +77,7 @@ impl<'a> Input<'a> {
                 if module.path.is_empty() {
                     input.exprs.push(ECandidate {
                         path: module.path.clone(),
-                        expr,
+                        expr: expr.clone(),
                     })
                 } else {
                     errors.add(expr.loc.wrap(Error::TLExpressionInNonRootModule));
@@ -183,7 +183,7 @@ impl<'a, 'b> Checker<'a, 'b> {
     }
 
     fn check_assignment(&mut self, fq: &FQSym, a: ACandidate) -> Result<()> {
-        let expr = expr::check(&mut self.new_scope(&fq.path), &a.it.it.expr)?;
+        let expr = expr::check(&mut self.new_scope(&fq.path), a.it.it.expr.clone())?;
         self.symbols
             .set(&a.loc, fq.clone(), a.it.visibility, expr.clone_type())?;
         self.assignments.push(a.loc.wrap(TLAssignment {
@@ -196,7 +196,7 @@ impl<'a, 'b> Checker<'a, 'b> {
     fn check_expressions(&mut self) -> Result<()> {
         for e in &self.input.exprs {
             if self.expr.is_none() {
-                self.expr = Some(expr::check(&mut self.new_scope(&e.path), e.expr)?);
+                self.expr = Some(expr::check(&mut self.new_scope(&e.path), e.expr.clone())?);
             } else {
                 return e.expr.loc.err(Error::OnlyOneExpressionAllowed);
             }
