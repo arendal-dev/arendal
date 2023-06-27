@@ -4,11 +4,9 @@ use std::cmp::{Eq, PartialEq};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use im::HashMap;
-
 use super::Integer;
 use crate::error::{Error, Loc, Result, L};
-use crate::symbol::{FQPath, Path, Pkg, Symbol, TSymbol};
+use crate::symbol::{FQPath, Pkg, Symbol, TSymbol};
 use crate::visibility::V;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,41 +44,41 @@ pub enum BinaryOp {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UnaryExpr {
+pub struct Unary {
     pub op: UnaryOp,
-    pub expr: LExpr,
+    pub expr: ExprRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BinaryExpr {
+pub struct Binary {
     pub op: BinaryOp,
-    pub expr1: LExpr,
-    pub expr2: LExpr,
+    pub expr1: ExprRef,
+    pub expr2: ExprRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Seq {
-    pub expr: LExpr,
-    pub then: LExpr,
+    pub expr: ExprRef,
+    pub then: ExprRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Conditional {
-    pub expr: LExpr,
-    pub then: LExpr,
-    pub otherwise: LExpr,
+    pub expr: ExprRef,
+    pub then: ExprRef,
+    pub otherwise: ExprRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assignment {
     pub symbol: Symbol,
-    pub expr: LExpr,
+    pub expr: ExprRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Block {
     pub assignments: Vec<L<Assignment>>,
-    pub exprs: Vec<LExpr>,
+    pub exprs: Vec<ExprRef>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,14 +86,13 @@ pub enum Expr {
     LitInteger(Integer),
     Symbol(Q<Symbol>),
     TSymbol(Q<TSymbol>),
-    Unary(Box<UnaryExpr>),
-    Binary(Box<BinaryExpr>),
-    Block(Box<Block>),
-    Conditional(Box<Conditional>),
-    Seq(Box<Seq>),
+    Unary(Unary),
+    Binary(Binary),
+    Block(Block),
+    Conditional(Conditional),
+    Seq(Seq),
 }
 
-pub type LExpr = L<Expr>;
 pub type ExprRef = Arc<L<Expr>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -115,7 +112,7 @@ pub enum TypeDfn {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
     pub path: FQPath,
-    pub exprs: Vec<LExpr>,
+    pub exprs: Vec<ExprRef>,
     pub assignments: Vec<L<V<Assignment>>>,
     pub types: Vec<LVNewType>,
 }
@@ -183,31 +180,31 @@ impl Builder {
         Self::new(Loc::None)
     }
 
-    fn build(&self, expr: Expr) -> LExpr {
-        self.loc.wrap(expr)
+    fn build(&self, expr: Expr) -> ExprRef {
+        Arc::new(self.loc.wrap(expr))
     }
 
-    pub fn lit_integer(&self, value: Integer) -> LExpr {
+    pub fn lit_integer(&self, value: Integer) -> ExprRef {
         self.build(Expr::LitInteger(value))
     }
 
-    pub fn symbol(&self, segments: Vec<Segment>, symbol: Symbol) -> LExpr {
+    pub fn symbol(&self, segments: Vec<Segment>, symbol: Symbol) -> ExprRef {
         self.build(Expr::Symbol(Q { segments, symbol }))
     }
 
-    pub fn tsymbol(&self, segments: Vec<Segment>, symbol: TSymbol) -> LExpr {
+    pub fn tsymbol(&self, segments: Vec<Segment>, symbol: TSymbol) -> ExprRef {
         self.build(Expr::TSymbol(Q { segments, symbol }))
     }
 
-    pub fn unary(&self, op: UnaryOp, expr: LExpr) -> LExpr {
-        self.build(Expr::Unary(Box::new(UnaryExpr { op, expr })))
+    pub fn unary(&self, op: UnaryOp, expr: ExprRef) -> ExprRef {
+        self.build(Expr::Unary(Unary { op, expr }))
     }
 
-    pub fn binary(&self, op: BinaryOp, expr1: LExpr, expr2: LExpr) -> LExpr {
-        self.build(Expr::Binary(Box::new(BinaryExpr { op, expr1, expr2 })))
+    pub fn binary(&self, op: BinaryOp, expr1: ExprRef, expr2: ExprRef) -> ExprRef {
+        self.build(Expr::Binary(Binary { op, expr1, expr2 }))
     }
 
-    pub fn block(&self, mut assignments: Vec<L<Assignment>>, mut exprs: Vec<LExpr>) -> LExpr {
+    pub fn block(&self, mut assignments: Vec<L<Assignment>>, mut exprs: Vec<ExprRef>) -> ExprRef {
         let na = assignments.len();
         let ne = exprs.len();
         assert!(na + ne > 0, "Blocks need to contain at least one statement");
@@ -216,23 +213,23 @@ impl Builder {
         } else if na == 1 && ne == 0 {
             assignments.pop().unwrap().it.expr
         } else {
-            self.build(Expr::Block(Box::new(Block { assignments, exprs })))
+            self.build(Expr::Block(Block { assignments, exprs }))
         }
     }
 
-    pub fn conditional(&self, expr: LExpr, then: LExpr, otherwise: LExpr) -> LExpr {
-        self.build(Expr::Conditional(Box::new(Conditional {
+    pub fn conditional(&self, expr: ExprRef, then: ExprRef, otherwise: ExprRef) -> ExprRef {
+        self.build(Expr::Conditional(Conditional {
             expr,
             then,
             otherwise,
-        })))
+        }))
     }
 
-    pub fn seq(&self, expr: LExpr, then: LExpr) -> LExpr {
-        self.build(Expr::Seq(Box::new(Seq { expr, then })))
+    pub fn seq(&self, expr: ExprRef, then: ExprRef) -> ExprRef {
+        self.build(Expr::Seq(Seq { expr, then }))
     }
 
-    pub fn assignment(&self, symbol: Symbol, expr: LExpr) -> L<Assignment> {
+    pub fn assignment(&self, symbol: Symbol, expr: ExprRef) -> L<Assignment> {
         self.loc.wrap(Assignment { symbol, expr })
     }
 

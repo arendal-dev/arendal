@@ -1,4 +1,4 @@
-use crate::ast::{Assignment, BinaryOp, Expr, LNewType, Module};
+use crate::ast::{Assignment, BinaryOp, ExprRef, LNewType, Module};
 use crate::ast::{Builder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{self, Pkg, Symbol, TSymbol};
@@ -25,19 +25,19 @@ impl Test {
         assert_eq!(**module, self.expected, "Left=Actual; Right=Expected")
     }
 
-    fn expr(mut self, expr: L<Expr>) -> Self {
+    fn expr(mut self, expr: ExprRef) -> Self {
         self.expected.exprs.push(expr);
         self
     }
 
-    fn v_let(mut self, visibility: Visibility, symbol: Symbol, expr: L<Expr>) -> Self {
+    fn v_let(mut self, visibility: Visibility, symbol: Symbol, expr: ExprRef) -> Self {
         self.expected
             .assignments
             .push(B.assignment(symbol, expr).to_lv(visibility));
         self
     }
 
-    fn m_let(self, symbol: Symbol, expr: L<Expr>) -> Self {
+    fn m_let(self, symbol: Symbol, expr: ExprRef) -> Self {
         self.v_let(Visibility::Module, symbol, expr)
     }
 
@@ -47,7 +47,7 @@ impl Test {
     }
 }
 
-fn check_expression(input: &str, expected: L<Expr>) {
+fn check_expression(input: &str, expected: ExprRef) {
     Test::new().expr(expected).check(input)
 }
 
@@ -95,59 +95,59 @@ fn y() -> Symbol {
     sym("y")
 }
 
-fn e_i64(value: i64) -> L<Expr> {
+fn e_i64(value: i64) -> ExprRef {
     B.lit_integer(value.into())
 }
 
-fn e_x() -> L<Expr> {
+fn e_x() -> ExprRef {
     B.symbol(Vec::default(), x())
 }
 
-fn e_y() -> L<Expr> {
+fn e_y() -> ExprRef {
     B.symbol(Vec::default(), y())
 }
 
-fn e_none() -> L<Expr> {
+fn e_none() -> ExprRef {
     B.tsymbol(Vec::default(), symbol::NONE.clone())
 }
 
-fn e_true() -> L<Expr> {
+fn e_true() -> ExprRef {
     B.tsymbol(Vec::default(), symbol::TRUE.clone())
 }
 
-fn e_false() -> L<Expr> {
+fn e_false() -> ExprRef {
     B.tsymbol(Vec::default(), symbol::FALSE.clone())
 }
 
-fn add(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
+fn add(expr1: ExprRef, expr2: ExprRef) -> ExprRef {
     B.binary(BinaryOp::Add, expr1, expr2)
 }
 
-fn add_i64(value1: i64, value2: i64) -> L<Expr> {
+fn add_i64(value1: i64, value2: i64) -> ExprRef {
     add(e_i64(value1), e_i64(value2))
 }
 
-fn sub(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
+fn sub(expr1: ExprRef, expr2: ExprRef) -> ExprRef {
     B.binary(BinaryOp::Sub, expr1, expr2)
 }
 
-fn sub_i64(value1: i64, value2: i64) -> L<Expr> {
+fn sub_i64(value1: i64, value2: i64) -> ExprRef {
     sub(e_i64(value1), e_i64(value2))
 }
 
-fn and(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
+fn and(expr1: ExprRef, expr2: ExprRef) -> ExprRef {
     B.binary(BinaryOp::And, expr1, expr2)
 }
 
-fn or(expr1: L<Expr>, expr2: L<Expr>) -> L<Expr> {
+fn or(expr1: ExprRef, expr2: ExprRef) -> ExprRef {
     B.binary(BinaryOp::Or, expr1, expr2)
 }
 
-fn seq_i64(value1: i64, value2: i64) -> L<Expr> {
+fn seq_i64(value1: i64, value2: i64) -> ExprRef {
     B.seq(e_i64(value1), e_i64(value2))
 }
 
-pub fn b_let(symbol: Symbol, expr: L<Expr>) -> L<Assignment> {
+pub fn b_let(symbol: Symbol, expr: ExprRef) -> L<Assignment> {
     B.assignment(symbol, expr)
 }
 

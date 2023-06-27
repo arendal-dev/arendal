@@ -4,7 +4,7 @@ use im::HashMap;
 
 use crate::{
     error::{Error, Loc, Result},
-    symbol::{FQSym, Symbol},
+    symbol::FQSym,
     tst,
     types::{Type, Types},
     values::Value,

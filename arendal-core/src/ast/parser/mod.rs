@@ -7,7 +7,7 @@ pub enum Enclosure {
     Curly,
 }
 
-use super::{Assignment, BinaryOp, Builder, Expr, LNewType, Module, Package, Segment};
+use super::{Assignment, BinaryOp, Builder, ExprRef, LNewType, Module, Package, Segment};
 use crate::error::{Error, Loc, Result, L};
 use crate::keyword::Keyword;
 use crate::symbol::{self, FQPath, Pkg, Symbol};
@@ -30,7 +30,7 @@ fn parse_module(path: FQPath, input: &str) -> Result<Module> {
 }
 
 type PResult<T> = Result<(T, Parser)>;
-type EResult = PResult<L<Expr>>;
+type EResult = PResult<ExprRef>;
 type TResult = PResult<LNewType>;
 
 fn map<T, F, U>(result: PResult<T>, f: F) -> PResult<U>
@@ -198,7 +198,7 @@ impl Parser {
     fn rule_bstatement(
         &self,
         assignments: &mut Vec<L<Assignment>>,
-        exprs: &mut Vec<L<Expr>>,
+        exprs: &mut Vec<ExprRef>,
     ) -> PResult<()> {
         if self.is_keyword(Keyword::Let) {
             map(self.advance().rule_assignment(), |a| {

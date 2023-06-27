@@ -47,7 +47,7 @@ impl<'a, 'b, 'c, 'd> ExprChecker<'a, 'b, 'c, 'd> {
                 .merge2(&b.expr1, &b.expr2)
                 .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
             ast::Expr::Block(b) => {
-                let result = self.check_block(b.as_ref());
+                let result = self.check_block(b);
                 result
             }
             _ => self.error(Error::InvalidType),
