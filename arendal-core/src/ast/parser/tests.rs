@@ -1,4 +1,4 @@
-use crate::ast::{Assignment, BinaryOp, ExprRef, LNewType, Module};
+use crate::ast::{BinaryOp, ExprRef, LAssignmentRef, LNewType, Module};
 use crate::ast::{Builder, Segment};
 use crate::error::{Loc, L};
 use crate::symbol::{self, Pkg, Symbol, TSymbol};
@@ -30,15 +30,15 @@ impl Test {
         self
     }
 
-    fn v_let(mut self, visibility: Visibility, symbol: Symbol, expr: ExprRef) -> Self {
+    fn g_let(mut self, visibility: Visibility, symbol: Symbol, expr: ExprRef) -> Self {
         self.expected
             .assignments
-            .push(B.assignment(symbol, expr).to_lv(visibility));
+            .push(B.g_let(visibility, symbol, expr));
         self
     }
 
     fn m_let(self, symbol: Symbol, expr: ExprRef) -> Self {
-        self.v_let(Visibility::Module, symbol, expr)
+        self.g_let(Visibility::Module, symbol, expr)
     }
 
     fn new_type(mut self, visibility: Visibility, new_type: LNewType) -> Self {
@@ -147,8 +147,8 @@ fn seq_i64(value1: i64, value2: i64) -> ExprRef {
     B.seq(e_i64(value1), e_i64(value2))
 }
 
-pub fn b_let(symbol: Symbol, expr: ExprRef) -> L<Assignment> {
-    B.assignment(symbol, expr)
+pub fn b_let(symbol: Symbol, expr: ExprRef) -> LAssignmentRef {
+    B.l_let(symbol, expr)
 }
 
 fn check_type(input: &str, visibility: Visibility, expected: LNewType) {

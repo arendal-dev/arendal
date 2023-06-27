@@ -7,7 +7,7 @@ use std::sync::Arc;
 use super::Integer;
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQPath, Pkg, Symbol, TSymbol};
-use crate::visibility::V;
+use crate::visibility::{Visibility, V};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Segment {
@@ -75,9 +75,12 @@ pub struct Assignment {
     pub expr: ExprRef,
 }
 
+pub type LAssignmentRef = Arc<L<Assignment>>;
+pub type GAssignmentRef = Arc<L<V<Assignment>>>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Block {
-    pub assignments: Vec<L<Assignment>>,
+    pub assignments: Vec<LAssignmentRef>,
     pub exprs: Vec<ExprRef>,
 }
 
@@ -113,7 +116,7 @@ pub enum TypeDfn {
 pub struct Module {
     pub path: FQPath,
     pub exprs: Vec<ExprRef>,
-    pub assignments: Vec<L<V<Assignment>>>,
+    pub assignments: Vec<GAssignmentRef>,
     pub types: Vec<LVNewType>,
 }
 
@@ -204,14 +207,14 @@ impl Builder {
         self.build(Expr::Binary(Binary { op, expr1, expr2 }))
     }
 
-    pub fn block(&self, mut assignments: Vec<L<Assignment>>, mut exprs: Vec<ExprRef>) -> ExprRef {
+    pub fn block(&self, mut assignments: Vec<LAssignmentRef>, mut exprs: Vec<ExprRef>) -> ExprRef {
         let na = assignments.len();
         let ne = exprs.len();
         assert!(na + ne > 0, "Blocks need to contain at least one statement");
         if na == 0 && ne == 1 {
             exprs.pop().unwrap()
         } else if na == 1 && ne == 0 {
-            assignments.pop().unwrap().it.expr
+            assignments.pop().unwrap().it.expr.clone()
         } else {
             self.build(Expr::Block(Block { assignments, exprs }))
         }
@@ -229,8 +232,12 @@ impl Builder {
         self.build(Expr::Seq(Seq { expr, then }))
     }
 
-    pub fn assignment(&self, symbol: Symbol, expr: ExprRef) -> L<Assignment> {
-        self.loc.wrap(Assignment { symbol, expr })
+    pub fn l_let(&self, symbol: Symbol, expr: ExprRef) -> LAssignmentRef {
+        Arc::new(self.loc.wrap(Assignment { symbol, expr }))
+    }
+
+    pub fn g_let(&self, visibility: Visibility, symbol: Symbol, expr: ExprRef) -> GAssignmentRef {
+        Arc::new(self.loc.wrap(visibility.wrap(Assignment { symbol, expr })))
     }
 
     fn new_type(&self, symbol: TSymbol) -> NewTypeBuilder {

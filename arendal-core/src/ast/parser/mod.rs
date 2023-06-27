@@ -7,8 +7,10 @@ pub enum Enclosure {
     Curly,
 }
 
-use super::{Assignment, BinaryOp, Builder, ExprRef, LNewType, Module, Package, Segment};
-use crate::error::{Error, Loc, Result, L};
+use super::{
+    BinaryOp, Builder, ExprRef, GAssignmentRef, LAssignmentRef, LNewType, Module, Package, Segment,
+};
+use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::{self, FQPath, Pkg, Symbol};
 use crate::visibility::Visibility;
@@ -174,8 +176,8 @@ impl Parser {
             let (newtype, parser) = self.advance().rule_typedef()?;
             parser.expect_eos(|| module.types.push(newtype.to_lv(visibility)))
         } else if parser.is_keyword(Keyword::Let) {
-            let (a, parser) = self.advance().rule_assignment()?;
-            parser.expect_eos(|| module.assignments.push(a.to_lv(visibility)))
+            let (a, parser) = self.advance().rule_g_assignment(visibility)?;
+            parser.expect_eos(|| module.assignments.push(a))
         } else {
             if visibility == Visibility::Module {
                 let (expr, parser) = self.rule_expression()?;
@@ -197,11 +199,11 @@ impl Parser {
 
     fn rule_bstatement(
         &self,
-        assignments: &mut Vec<L<Assignment>>,
+        assignments: &mut Vec<LAssignmentRef>,
         exprs: &mut Vec<ExprRef>,
     ) -> PResult<()> {
         if self.is_keyword(Keyword::Let) {
-            map(self.advance().rule_assignment(), |a| {
+            map(self.advance().rule_l_assignment(), |a| {
                 assignments.push(a);
             })
         } else {
@@ -211,11 +213,21 @@ impl Parser {
         }
     }
 
-    fn rule_assignment(&self) -> PResult<L<Assignment>> {
+    fn rule_g_assignment(&self, visibility: Visibility) -> PResult<GAssignmentRef> {
         let (lvalue, parser) = self.get_lvalue()?;
         if parser.kind_equals(LexemeKind::Assignment) {
             let (expr, next) = parser.advance().rule_expression()?;
-            next.ok(parser.builder().assignment(lvalue, expr))
+            next.ok(parser.builder().g_let(visibility, lvalue, expr))
+        } else {
+            parser.err(Error::AssignmentExpected)
+        }
+    }
+
+    fn rule_l_assignment(&self) -> PResult<LAssignmentRef> {
+        let (lvalue, parser) = self.get_lvalue()?;
+        if parser.kind_equals(LexemeKind::Assignment) {
+            let (expr, next) = parser.advance().rule_expression()?;
+            next.ok(parser.builder().l_let(lvalue, expr))
         } else {
             parser.err(Error::AssignmentExpected)
         }
