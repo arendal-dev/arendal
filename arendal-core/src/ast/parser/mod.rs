@@ -8,7 +8,8 @@ pub enum Enclosure {
 }
 
 use super::{
-    BinaryOp, Builder, ExprRef, GAssignmentRef, LAssignmentRef, LNewType, Module, Package, Segment,
+    BinaryOp, Builder, ExprRef, GAssignmentRef, LAssignmentRef, Module, NewTypeRef, Package,
+    Segment,
 };
 use crate::error::{Error, Loc, Result};
 use crate::keyword::Keyword;
@@ -33,7 +34,7 @@ fn parse_module(path: FQPath, input: &str) -> Result<Module> {
 
 type PResult<T> = Result<(T, Parser)>;
 type EResult = PResult<ExprRef>;
-type TResult = PResult<LNewType>;
+type TResult = PResult<NewTypeRef>;
 
 fn map<T, F, U>(result: PResult<T>, f: F) -> PResult<U>
 where
@@ -173,8 +174,8 @@ impl Parser {
             &next
         };
         if parser.is_keyword(Keyword::Type) {
-            let (newtype, parser) = self.advance().rule_typedef()?;
-            parser.expect_eos(|| module.types.push(newtype.to_lv(visibility)))
+            let (newtype, parser) = self.advance().rule_typedef(visibility)?;
+            parser.expect_eos(|| module.types.push(newtype))
         } else if parser.is_keyword(Keyword::Let) {
             let (a, parser) = self.advance().rule_g_assignment(visibility)?;
             parser.expect_eos(|| module.assignments.push(a))
@@ -188,13 +189,13 @@ impl Parser {
         }
     }
 
-    fn rule_typedef(&self) -> TResult {
+    fn rule_typedef(&self, visibility: Visibility) -> TResult {
         let symbol = match self.peek_kind() {
             Some(LexemeKind::TSymbol(symbol)) => Ok(symbol.clone()),
             _ => self.err(Error::TSymbolAfterTypeExpected),
         }?;
         self.advance()
-            .ok(self.builder().new_type(symbol).singleton())
+            .ok(self.builder().new_type(visibility, symbol).singleton())
     }
 
     fn rule_bstatement(

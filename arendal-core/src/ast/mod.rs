@@ -104,8 +104,7 @@ pub struct NewType {
     pub dfn: TypeDfn,
 }
 
-pub type LNewType = L<NewType>;
-pub type LVNewType = L<V<NewType>>;
+pub type NewTypeRef = Arc<L<V<NewType>>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeDfn {
@@ -117,7 +116,7 @@ pub struct Module {
     pub path: FQPath,
     pub exprs: Vec<ExprRef>,
     pub assignments: Vec<GAssignmentRef>,
-    pub types: Vec<LVNewType>,
+    pub types: Vec<NewTypeRef>,
 }
 
 pub type ModuleRef = Arc<Module>;
@@ -240,9 +239,10 @@ impl Builder {
         Arc::new(self.loc.wrap(visibility.wrap(Assignment { symbol, expr })))
     }
 
-    fn new_type(&self, symbol: TSymbol) -> NewTypeBuilder {
+    fn new_type(&self, visibility: Visibility, symbol: TSymbol) -> NewTypeBuilder {
         NewTypeBuilder {
             loc: self.loc.clone(),
+            visibility,
             symbol,
         }
     }
@@ -250,18 +250,19 @@ impl Builder {
 
 pub struct NewTypeBuilder {
     loc: Loc,
+    visibility: Visibility,
     symbol: TSymbol,
 }
 
 impl NewTypeBuilder {
-    fn build(self, dfn: TypeDfn) -> LNewType {
-        self.loc.to_wrap(NewType {
+    fn build(self, dfn: TypeDfn) -> NewTypeRef {
+        Arc::new(self.loc.to_wrap(self.visibility.wrap(NewType {
             symbol: self.symbol,
             dfn,
-        })
+        })))
     }
 
-    pub fn singleton(self) -> LNewType {
+    pub fn singleton(self) -> NewTypeRef {
         self.build(TypeDfn::Singleton)
     }
 }

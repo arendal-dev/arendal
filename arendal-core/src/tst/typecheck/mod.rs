@@ -23,8 +23,7 @@ pub(super) fn check(env: &Env, ast: &ast::Package) -> Result<Package> {
     Checker::new(&input, fqresolvers, types).check()
 }
 
-type TCandidate<'a> = &'a ast::LVNewType;
-type TCandidates<'a> = HashMap<FQType, TCandidate<'a>>;
+type TCandidates = HashMap<FQType, ast::NewTypeRef>;
 
 type ACandidate<'a> = &'a L<V<ast::Assignment>>;
 type ACandidates<'a> = HashMap<FQSym, ACandidate<'a>>;
@@ -40,7 +39,7 @@ struct Input<'a> {
     env: &'a Env,
     pkg: Pkg,
     paths: Vec<FQPath>,
-    types: TCandidates<'a>,
+    types: TCandidates,
     assignments: ACandidates<'a>,
     exprs: Vec<ECandidate>,
 }
@@ -62,7 +61,7 @@ impl<'a> Input<'a> {
                 if input.types.contains_key(&symbol) {
                     errors.add(new_type.loc.wrap(Error::DuplicateType(symbol)));
                 } else {
-                    input.types.insert(symbol, new_type);
+                    input.types.insert(symbol, new_type.clone());
                 }
             }
             for assignment in &module.assignments {
