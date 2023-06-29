@@ -33,22 +33,24 @@ struct ECandidate {
 }
 
 #[derive(Debug)]
-struct Input<'a> {
-    env: &'a Env,
+struct Input {
+    types: Types,
+    symbols: Symbols,
     pkg: Pkg,
     paths: Vec<FQPath>,
-    types: TCandidates,
+    new_types: TCandidates,
     assignments: ACandidates,
     exprs: Vec<ECandidate>,
 }
 
-impl<'a> Input<'a> {
-    fn new(env: &'a Env, ast: &'a ast::Package) -> Result<Self> {
+impl Input {
+    fn new(env: &Env, ast: &ast::Package) -> Result<Self> {
         let mut input = Self {
-            env,
+            types: env.types.clone(),
+            symbols: env.symbols.clone(),
             pkg: ast.pkg.clone(),
             paths: Vec::default(),
-            types: Default::default(),
+            new_types: Default::default(),
             assignments: Default::default(),
             exprs: Vec::default(),
         };
@@ -56,10 +58,10 @@ impl<'a> Input<'a> {
         for module in &ast.modules {
             for new_type in &module.types {
                 let symbol = module.path.fq_type(new_type.it.it.symbol.clone());
-                if input.types.contains_key(&symbol) {
+                if input.new_types.contains_key(&symbol) {
                     errors.add(new_type.loc.wrap(Error::DuplicateType(symbol)));
                 } else {
-                    input.types.insert(symbol, new_type.clone());
+                    input.new_types.insert(symbol, new_type.clone());
                 }
             }
             for assignment in &module.assignments {
@@ -89,8 +91,8 @@ impl<'a> Input<'a> {
 
 #[derive(Debug)]
 struct Checker<'a, 'b> {
-    input: &'b Input<'a>,
-    fqresolvers: FQResolvers<'a, 'b>,
+    input: &'b Input,
+    fqresolvers: FQResolvers<'a>,
     types: Types,
     symbols: Symbols,
     assignments: Vec<L<TLAssignment>>,
@@ -98,8 +100,8 @@ struct Checker<'a, 'b> {
 }
 
 impl<'a, 'b> Checker<'a, 'b> {
-    fn new(input: &'b Input<'a>, fqresolvers: FQResolvers<'a, 'b>, types: Types) -> Self {
-        let symbols = input.env.symbols.clone();
+    fn new(input: &'b Input, fqresolvers: FQResolvers<'a>, types: Types) -> Self {
+        let symbols = input.symbols.clone();
         Self {
             input,
             fqresolvers,

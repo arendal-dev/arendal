@@ -9,7 +9,7 @@ use crate::{
 
 use super::Input;
 
-pub(super) fn get<'a, 'b>(input: &'b Input<'a>) -> Result<FQResolvers<'a, 'b>> {
+pub(super) fn get(input: &Input) -> Result<FQResolvers> {
     let mut resolvers = FQResolvers::default();
     for path in &input.paths {
         resolvers.resolvers.insert(
@@ -24,27 +24,27 @@ pub(super) fn get<'a, 'b>(input: &'b Input<'a>) -> Result<FQResolvers<'a, 'b>> {
 }
 
 #[derive(Debug, Default)]
-pub(super) struct FQResolvers<'a, 'b> {
-    resolvers: HashMap<FQPath, FQResolver<'a, 'b>>,
+pub(super) struct FQResolvers<'a> {
+    resolvers: HashMap<FQPath, FQResolver<'a>>,
 }
 
-impl<'a, 'b> FQResolvers<'a, 'b> {
-    pub(super) fn for_path(&self, path: &FQPath) -> &FQResolver<'a, 'b> {
+impl<'a> FQResolvers<'a> {
+    pub(super) fn for_path(&self, path: &FQPath) -> &FQResolver<'a> {
         self.resolvers.get(path).unwrap()
     }
 
-    pub(super) fn for_symbol<T>(&self, symbol: &FQ<T>) -> &FQResolver<'a, 'b> {
+    pub(super) fn for_symbol<T>(&self, symbol: &FQ<T>) -> &FQResolver<'a> {
         self.resolvers.get(&symbol.path).unwrap()
     }
 }
 
 #[derive(Debug)]
-pub(super) struct FQResolver<'a, 'b> {
+pub(super) struct FQResolver<'a> {
     path: FQPath,
-    input: &'b Input<'a>,
+    input: &'a Input,
 }
 
-impl<'a, 'b> FQResolver<'a, 'b> {
+impl<'a> FQResolver<'a> {
     fn get_candidates<S: Clone, F, B>(&self, b: B, q: &Q<S>) -> Vec<F>
     where
         B: Fn(&FQPath, S) -> F,
@@ -72,8 +72,8 @@ impl<'a, 'b> FQResolver<'a, 'b> {
     }
 
     fn get_type_visibility(&self, f: &FQType) -> Option<Visibility> {
-        self.input.env.types.get(f).map_or_else(
-            || self.input.types.get(f).map(|t| Visibility::Exported), // TODO
+        self.input.types.get(f).map_or_else(
+            || self.input.new_types.get(f).map(|t| Visibility::Exported), // TODO
             |t| Some(t.visibility),
         )
     }
@@ -93,7 +93,7 @@ impl<'a, 'b> FQResolver<'a, 'b> {
     }
 
     fn get_symbol_visibility(&self, f: &FQSym) -> Option<Visibility> {
-        self.input.env.symbols.get(f).map_or_else(
+        self.input.symbols.get(f).map_or_else(
             || self.input.assignments.get(f).map(|a| a.it.visibility),
             |s| Some(s.visibility),
         )

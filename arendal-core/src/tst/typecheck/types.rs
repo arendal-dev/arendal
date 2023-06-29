@@ -6,10 +6,10 @@ use crate::{
 
 use super::{FQResolvers, Input};
 
-pub(super) fn check<'a, 'b>(input: &Input<'a>, fqresolvers: &FQResolvers<'a, 'b>) -> Result<Types> {
+pub(super) fn check(input: &Input, fqresolvers: &FQResolvers) -> Result<Types> {
     let errors = Errors::default();
     let mut dfns = TypeDfnMap::default();
-    for (symbol, new_type) in &input.types {
+    for (symbol, new_type) in &input.new_types {
         let maybe = match new_type.it.it.dfn {
             ast::TypeDfn::Singleton => Some(TypeDfn::Singleton),
         };
@@ -20,5 +20,5 @@ pub(super) fn check<'a, 'b>(input: &Input<'a>, fqresolvers: &FQResolvers<'a, 'b>
             );
         }
     }
-    input.env.types.add_types(&errors.to_result(dfns)?)
+    input.types.add_types(&errors.to_result(dfns)?)
 }
