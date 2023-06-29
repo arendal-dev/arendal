@@ -10,7 +10,6 @@ use crate::symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol};
 use crate::types::{Type, Types};
 
 use crate::env::{Env, Symbols};
-use crate::visibility::V;
 
 use self::fqresolver::FQResolvers;
 
@@ -25,8 +24,7 @@ pub(super) fn check(env: &Env, ast: &ast::Package) -> Result<Package> {
 
 type TCandidates = HashMap<FQType, ast::NewTypeRef>;
 
-type ACandidate<'a> = &'a L<V<ast::Assignment>>;
-type ACandidates<'a> = HashMap<FQSym, ACandidate<'a>>;
+type ACandidates = HashMap<FQSym, ast::GAssignmentRef>;
 
 #[derive(Debug)]
 struct ECandidate {
@@ -40,7 +38,7 @@ struct Input<'a> {
     pkg: Pkg,
     paths: Vec<FQPath>,
     types: TCandidates,
-    assignments: ACandidates<'a>,
+    assignments: ACandidates,
     exprs: Vec<ECandidate>,
 }
 
@@ -69,7 +67,7 @@ impl<'a> Input<'a> {
                 if input.assignments.contains_key(&symbol) {
                     errors.add(assignment.loc.wrap(Error::DuplicateSymbol(symbol)));
                 } else {
-                    input.assignments.insert(symbol, assignment);
+                    input.assignments.insert(symbol, assignment.clone());
                 }
             }
             for expr in &module.exprs {
@@ -181,7 +179,7 @@ impl<'a, 'b> Checker<'a, 'b> {
         }
     }
 
-    fn check_assignment(&mut self, fq: &FQSym, a: ACandidate) -> Result<()> {
+    fn check_assignment(&mut self, fq: &FQSym, a: &ast::GAssignmentRef) -> Result<()> {
         let expr = expr::check(&self.new_scope(&fq.path), a.it.it.expr.clone())?;
         self.symbols
             .set(&a.loc, fq.clone(), a.it.visibility, expr.clone_type())?;
