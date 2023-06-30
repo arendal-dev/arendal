@@ -87,8 +87,11 @@ fn conditionals() {
 
 #[test]
 fn assignments() {
-    //ok("let x = 1");
+    ok("let x = 1");
     ok("let x = 1\nlet y = x + 1");
+    ok("let y = x + 1\nlet x = 1");
+    ok("let a = b + c\nlet b = c\nlet c = 3");
+    ok_int("let a = b + c\nlet b = c\nlet c = 3\nc - 1");
 }
 
 #[test]

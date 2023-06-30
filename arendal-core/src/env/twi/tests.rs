@@ -85,6 +85,11 @@ fn seq() {
 }
 
 #[test]
+fn assignments() {
+    eval_i64("let a = b + c\nlet b = c\nlet c = 3\na - 1", 5);
+}
+
+#[test]
 fn block() {
     eval_i64("let x = 1\n{ let y = x + 1\n y + 2\n}", 4);
 }
