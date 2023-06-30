@@ -2,6 +2,8 @@ mod expr;
 mod fqresolver;
 mod types;
 
+use std::sync::Arc;
+
 use im::{HashMap, HashSet};
 
 use crate::ast::{self, ExprRef, Q};
@@ -19,7 +21,7 @@ pub(super) fn check(env: &Env, ast: &ast::Package) -> Result<Package> {
     let input = Input::new(env, ast)?;
     let fqresolvers = fqresolver::get(&input)?;
     let types = types::check(&input, &fqresolvers)?;
-    Checker::new(&input, fqresolvers, types).check()
+    Checker::new(input, fqresolvers, types).check()
 }
 
 type TCandidates = HashMap<FQType, ast::NewTypeRef>;
@@ -43,8 +45,10 @@ struct Input {
     exprs: Vec<ECandidate>,
 }
 
+type InputRef = Arc<Input>;
+
 impl Input {
-    fn new(env: &Env, ast: &ast::Package) -> Result<Self> {
+    fn new(env: &Env, ast: &ast::Package) -> Result<InputRef> {
         let mut input = Self {
             types: env.types.clone(),
             symbols: env.symbols.clone(),
@@ -85,22 +89,22 @@ impl Input {
             }
             input.paths.push(module.path.clone())
         }
-        errors.to_result(input)
+        errors.to_lazy_result(|| Arc::new(input))
     }
 }
 
 #[derive(Debug)]
-struct Checker<'a, 'b> {
-    input: &'b Input,
-    fqresolvers: FQResolvers<'a>,
+struct Checker {
+    input: InputRef,
+    fqresolvers: FQResolvers,
     types: Types,
     symbols: Symbols,
     assignments: Vec<L<TLAssignment>>,
     expr: Option<L<Expr>>,
 }
 
-impl<'a, 'b> Checker<'a, 'b> {
-    fn new(input: &'b Input, fqresolvers: FQResolvers<'a>, types: Types) -> Self {
+impl Checker {
+    fn new(input: InputRef, fqresolvers: FQResolvers, types: Types) -> Self {
         let symbols = input.symbols.clone();
         Self {
             input,
@@ -112,7 +116,7 @@ impl<'a, 'b> Checker<'a, 'b> {
         }
     }
 
-    fn new_scope<'c>(&'c self, path: &'c FQPath) -> Scope<'a, 'b, 'c> {
+    fn new_scope<'a>(&'a self, path: &'a FQPath) -> Scope {
         Scope {
             checker: self,
             path,
@@ -209,13 +213,13 @@ enum Resolved {
     Global(Global),
 }
 
-struct Scope<'a, 'b, 'c> {
-    checker: &'c Checker<'a, 'b>,
-    path: &'c FQPath,
+struct Scope<'a> {
+    checker: &'a Checker,
+    path: &'a FQPath,
     local: LocalScope,
 }
 
-impl<'a, 'b, 'c> Scope<'a, 'b, 'c> {
+impl<'a> Scope<'a> {
     fn resolve_type(&self, loc: &Loc, symbol: &Q<TSymbol>) -> Result<Type> {
         self.checker.resolve_type(loc, self.path, symbol)
     }

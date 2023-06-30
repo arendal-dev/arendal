@@ -6,16 +6,16 @@ use crate::types::Type;
 
 use super::{Builder, Expr, Resolved, Scope, Value};
 
-pub(super) fn check<'a, 'b, 'c>(scope: &Scope<'a, 'b, 'c>, input: ast::ExprRef) -> Result<L<Expr>> {
+pub(super) fn check<'a>(scope: &Scope<'a>, input: ast::ExprRef) -> Result<L<Expr>> {
     ExprChecker { scope, input }.check()
 }
 
-struct ExprChecker<'a, 'b, 'c, 'd> {
-    scope: &'d Scope<'a, 'b, 'c>,
+struct ExprChecker<'a, 'b> {
+    scope: &'b Scope<'a>,
     input: ast::ExprRef,
 }
 
-impl<'a, 'b, 'c, 'd> ExprChecker<'a, 'b, 'c, 'd> {
+impl<'a, 'b> ExprChecker<'a, 'b> {
     fn merge2(&self, e1: ast::ExprRef, e2: ast::ExprRef) -> Result<(L<Expr>, L<Expr>)> {
         Error::merge(self.sub_expr(e1), self.sub_expr(e2))
     }

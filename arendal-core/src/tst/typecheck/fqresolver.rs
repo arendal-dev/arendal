@@ -7,16 +7,16 @@ use crate::{
     visibility::Visibility,
 };
 
-use super::Input;
+use super::InputRef;
 
-pub(super) fn get(input: &Input) -> Result<FQResolvers> {
+pub(super) fn get(input: &InputRef) -> Result<FQResolvers> {
     let mut resolvers = FQResolvers::default();
     for path in &input.paths {
         resolvers.resolvers.insert(
             path.clone(),
             FQResolver {
                 path: path.clone(),
-                input,
+                input: input.clone(),
             },
         );
     }
@@ -24,27 +24,27 @@ pub(super) fn get(input: &Input) -> Result<FQResolvers> {
 }
 
 #[derive(Debug, Default)]
-pub(super) struct FQResolvers<'a> {
-    resolvers: HashMap<FQPath, FQResolver<'a>>,
+pub(super) struct FQResolvers {
+    resolvers: HashMap<FQPath, FQResolver>,
 }
 
-impl<'a> FQResolvers<'a> {
-    pub(super) fn for_path(&self, path: &FQPath) -> &FQResolver<'a> {
+impl FQResolvers {
+    pub(super) fn for_path(&self, path: &FQPath) -> &FQResolver {
         self.resolvers.get(path).unwrap()
     }
 
-    pub(super) fn for_symbol<T>(&self, symbol: &FQ<T>) -> &FQResolver<'a> {
+    pub(super) fn for_symbol<T>(&self, symbol: &FQ<T>) -> &FQResolver {
         self.resolvers.get(&symbol.path).unwrap()
     }
 }
 
 #[derive(Debug)]
-pub(super) struct FQResolver<'a> {
+pub(super) struct FQResolver {
     path: FQPath,
-    input: &'a Input,
+    input: InputRef,
 }
 
-impl<'a> FQResolver<'a> {
+impl FQResolver {
     fn get_candidates<S: Clone, F, B>(&self, b: B, q: &Q<S>) -> Vec<F>
     where
         B: Fn(&FQPath, S) -> F,
