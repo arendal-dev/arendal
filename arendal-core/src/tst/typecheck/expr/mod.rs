@@ -1,112 +1,135 @@
 use crate::ast::{self, BinaryOp, Q};
-use crate::error::{Error, Result, L};
+use crate::error::{Error, Errors, Result, L};
 use crate::symbol::{Symbol, TSymbol};
 use crate::tst::Assignment;
 use crate::types::Type;
 
 use super::{Builder, Expr, Resolved, Scope, Value};
 
-pub(super) fn check<'a>(scope: &Scope<'a>, input: ast::ExprRef) -> Result<L<Expr>> {
-    ExprChecker { scope, input }.check()
+pub(super) fn check(scope: &Scope, input: &ast::ExprRef) -> Result<L<Expr>> {
+    match &input.it {
+        ast::Expr::LitInteger(value) => Ok(builder(input).val_integer(value.clone())),
+        ast::Expr::Symbol(q) => resolve_symbol(scope, input, &q),
+        ast::Expr::TSymbol(q) => {
+            let tipo = resolve_type(scope, input, &q)?;
+            let value = Value::singleton(&input.loc, &tipo)?;
+            Ok(builder(&input).value(value))
+        }
+        ast::Expr::Seq(s) => {
+            merge2(scope, &s.expr, &s.then).and_then(|(e1, e2)| Ok(builder(input).seq(e1, e2)))
+        }
+        ast::Expr::Conditional(c) => {
+            let (expr, then, otherwise) = Error::merge3(
+                check(scope, &c.expr),
+                check(scope, &c.then),
+                check(scope, &c.otherwise),
+            )?;
+            builder(&input).conditional(expr, then, otherwise)
+        }
+        ast::Expr::Binary(b) => merge2(scope, &b.expr1, &b.expr2)
+            .and_then(|(t1, t2)| check_binary(scope, input, b.op, t1, t2)),
+        ast::Expr::Block(b) => {
+            let result = check_block(scope, input, &b);
+            result
+        }
+        _ => error(input, Error::InvalidType),
+    }
 }
 
-struct ExprChecker<'a, 'b> {
-    scope: &'b Scope<'a>,
-    input: ast::ExprRef,
+fn resolve_type(scope: &Scope, input: &ast::ExprRef, symbol: &Q<TSymbol>) -> Result<Type> {
+    scope.resolve_type(&input.loc, symbol)
 }
 
-impl<'a, 'b> ExprChecker<'a, 'b> {
-    fn merge2(&self, e1: ast::ExprRef, e2: ast::ExprRef) -> Result<(L<Expr>, L<Expr>)> {
-        Error::merge(self.sub_expr(e1), self.sub_expr(e2))
-    }
+fn resolve_symbol(scope: &Scope, input: &ast::ExprRef, symbol: &Q<Symbol>) -> Result<L<Expr>> {
+    Ok(match scope.resolve_symbol(&input.loc, symbol)? {
+        Resolved::Local(local) => builder(input).local0(local),
+        Resolved::Global(global) => builder(input).global0(global),
+    })
+}
 
-    fn check(self) -> Result<L<Expr>> {
-        match self.input.it.clone() {
-            ast::Expr::LitInteger(value) => Ok(self.builder().val_integer(value.clone())),
-            ast::Expr::Symbol(q) => self.resolve_symbol(&q),
-            ast::Expr::TSymbol(q) => {
-                let tipo = self.resolve_type(&q)?;
-                let value = Value::singleton(&self.input.loc, &tipo)?;
-                Ok(self.builder().value(value))
-            }
-            ast::Expr::Seq(s) => self
-                .merge2(s.expr, s.then)
-                .and_then(|(e1, e2)| Ok(self.builder().seq(e1, e2))),
-            ast::Expr::Conditional(c) => {
-                let (expr, then, otherwise) = Error::merge3(
-                    self.sub_expr(c.expr),
-                    self.sub_expr(c.then),
-                    self.sub_expr(c.otherwise),
-                )?;
-                self.builder().conditional(expr, then, otherwise)
-            }
-            ast::Expr::Binary(b) => self
-                .merge2(b.expr1, b.expr2)
-                .and_then(|(t1, t2)| self.check_binary(b.op, t1, t2)),
-            ast::Expr::Block(b) => {
-                let result = self.check_block(&b);
-                result
-            }
-            _ => self.error(Error::InvalidType),
+fn check_binary(
+    scope: &Scope,
+    input: &ast::ExprRef,
+    op: BinaryOp,
+    expr1: L<Expr>,
+    expr2: L<Expr>,
+) -> Result<L<Expr>> {
+    match op {
+        BinaryOp::Add => builder(input).int_add(expr1, expr2),
+        BinaryOp::Sub => builder(input).int_sub(expr1, expr2),
+        BinaryOp::Mul => builder(input).int_mul(expr1, expr2),
+        BinaryOp::Div => builder(input).int_div(expr1, expr2),
+        BinaryOp::And => builder(input).log_and(expr1, expr2),
+        BinaryOp::Or => builder(input).log_or(expr1, expr2),
+        _ => error(input, Error::InvalidType),
+    }
+}
+
+fn check_block(scope: &Scope, input: &ast::ExprRef, block: &ast::Block) -> Result<L<Expr>> {
+    let mut child_scope = scope.child();
+    let assignments = check_assignments(&mut child_scope, &block.assignments)?;
+    let mut expr: Option<L<Expr>> = None;
+    for e in &block.exprs {
+        if expr.is_none() {
+            expr = Some(check(&child_scope, &e)?)
+        } else {
+            return error(input, Error::OnlyOneExpressionAllowed);
         }
     }
+    builder(&input).block(assignments, expr)
+}
 
-    fn resolve_type(&self, symbol: &Q<TSymbol>) -> Result<Type> {
-        self.scope.resolve_type(&self.input.loc, symbol)
-    }
-
-    fn resolve_symbol(self, symbol: &Q<Symbol>) -> Result<L<Expr>> {
-        Ok(match self.scope.resolve_symbol(&self.input.loc, symbol)? {
-            Resolved::Local(local) => self.builder().local0(local),
-            Resolved::Global(global) => self.builder().global0(global),
-        })
-    }
-
-    fn sub_expr(&self, input: ast::ExprRef) -> Result<L<Expr>> {
-        check(self.scope, input)
-    }
-
-    fn check_binary(self, op: BinaryOp, expr1: L<Expr>, expr2: L<Expr>) -> Result<L<Expr>> {
-        match op {
-            BinaryOp::Add => self.builder().int_add(expr1, expr2),
-            BinaryOp::Sub => self.builder().int_sub(expr1, expr2),
-            BinaryOp::Mul => self.builder().int_mul(expr1, expr2),
-            BinaryOp::Div => self.builder().int_div(expr1, expr2),
-            BinaryOp::And => self.builder().log_and(expr1, expr2),
-            BinaryOp::Or => self.builder().log_or(expr1, expr2),
-            _ => self.error(Error::InvalidType),
-        }
-    }
-
-    fn check_block(self, block: &ast::Block) -> Result<L<Expr>> {
-        let mut assignments = Vec::default();
-        let mut child_scope = self.scope.child();
-        let mut expr: Option<L<Expr>> = None;
-        for a in &block.assignments {
-            assignments.push(self.check_assignment(&mut child_scope, a)?)
-        }
-        for e in &block.exprs {
-            if expr.is_none() {
-                expr = Some(check(&mut child_scope, e.clone())?)
-            } else {
-                return self.error(Error::OnlyOneExpressionAllowed);
+fn check_assignments(
+    scope: &mut Scope,
+    ast: &Vec<ast::LAssignmentRef>,
+) -> Result<Vec<L<Assignment>>> {
+    add_assignment_candidates(scope, ast)?;
+    let mut assignments = Vec::default();
+    loop {
+        let mut errors = Errors::default();
+        let progress = assignments.len();
+        for a in ast {
+            if scope.eval_pending(&a.it.symbol) {
+                errors
+                    .add_result(check_assignment(scope, a))
+                    .map(|a| assignments.push(a));
             }
         }
-        self.builder().block(assignments, expr)
+        match errors.to_unit_result() {
+            Ok(_) => return Ok(assignments),
+            Err(e) => {
+                let missing = e.missing_local_symbol_deps();
+                if assignments.len() == progress || missing.is_empty() {
+                    return Err(e);
+                }
+            }
+        }
     }
+}
 
-    fn check_assignment(&self, scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<Assignment>> {
-        let typed = self.sub_expr(a.it.expr.clone())?;
-        scope.set(&a.loc, a.it.symbol.clone(), typed.clone_type())?;
-        Ok(self.builder().assignment(a.it.symbol.clone(), typed))
+fn add_assignment_candidates(scope: &mut Scope, ast: &Vec<ast::LAssignmentRef>) -> Result<()> {
+    let mut errors = Errors::default();
+    for a in ast {
+        errors.add_result(scope.add_current(&a.loc, a.it.symbol.clone()));
     }
+    errors.to_unit_result()
+}
 
-    fn builder(&self) -> Builder {
-        Builder::new(self.input.loc.clone())
-    }
+fn check_assignment(scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<Assignment>> {
+    let typed = check(scope, &a.it.expr)?;
+    scope.set(&a.loc, a.it.symbol.clone(), typed.clone_type())?;
+    Ok(Builder::new(a.loc.clone()).assignment(a.it.symbol.clone(), typed))
+}
 
-    // Creates and returns an error
-    fn error(self, error: Error) -> Result<L<Expr>> {
-        self.input.loc.err(error)
-    }
+fn merge2(scope: &Scope, e1: &ast::ExprRef, e2: &ast::ExprRef) -> Result<(L<Expr>, L<Expr>)> {
+    Error::merge(check(scope, e1), check(scope, e2))
+}
+
+fn builder(input: &ast::ExprRef) -> Builder {
+    Builder::new(input.loc.clone())
+}
+
+// Creates and returns an error
+fn error(input: &ast::ExprRef, error: Error) -> Result<L<Expr>> {
+    input.loc.err(error)
 }

@@ -101,7 +101,8 @@ fn seq() {
 
 #[test]
 fn blocks() {
-    ok_int("{ let x = 1\n x+2 }")
+    ok_int("{ let x = 1\n x+2 }");
+    ok_int("{ let x = y+2\nlet y = 3\n x+2 }")
 }
 
 #[test]

@@ -4,7 +4,7 @@ mod types;
 
 use std::sync::Arc;
 
-use im::{HashMap, HashSet};
+use im::HashMap;
 
 use crate::ast::{self, ExprRef, Q};
 use crate::error::{Error, Errors, Loc, Result, L};
@@ -120,7 +120,8 @@ impl Checker {
         Scope {
             checker: self,
             path,
-            local: LocalScope::Empty,
+            all: Default::default(),
+            current: Default::default(),
         }
     }
 
@@ -186,7 +187,7 @@ impl Checker {
     }
 
     fn check_assignment(&mut self, fq: &FQSym, a: &ast::GAssignmentRef) -> Result<()> {
-        let expr = expr::check(&self.new_scope(&fq.path), a.it.it.expr.clone())?;
+        let expr = expr::check(&self.new_scope(&fq.path), &a.it.it.expr)?;
         self.symbols
             .set(&a.loc, fq.clone(), a.it.visibility, expr.clone_type())?;
         self.assignments.push(a.loc.wrap(TLAssignment {
@@ -199,7 +200,7 @@ impl Checker {
     fn check_expressions(&mut self) -> Result<()> {
         for e in &self.input.exprs {
             if self.expr.is_none() {
-                self.expr = Some(expr::check(&self.new_scope(&e.path), e.expr.clone())?);
+                self.expr = Some(expr::check(&self.new_scope(&e.path), &e.expr)?);
             } else {
                 return e.expr.loc.err(Error::OnlyOneExpressionAllowed);
             }
@@ -216,7 +217,8 @@ enum Resolved {
 struct Scope<'a> {
     checker: &'a Checker,
     path: &'a FQPath,
-    local: LocalScope,
+    all: HashMap<Symbol, Type>,
+    current: HashMap<Symbol, bool>,
 }
 
 impl<'a> Scope<'a> {
@@ -225,85 +227,54 @@ impl<'a> Scope<'a> {
     }
 
     fn resolve_symbol(&self, loc: &Loc, symbol: &Q<Symbol>) -> Result<Resolved> {
-        if symbol.segments.is_empty() && self.contains(&symbol.symbol) {
-            Ok(Resolved::Local(Local {
-                symbol: symbol.symbol.clone(),
-                tipo: self.get(&symbol.symbol).unwrap().clone(),
-            }))
-        } else {
-            self.checker.resolve_symbol(loc, self.path, symbol)
+        if symbol.segments.is_empty() {
+            if let Some(false) = self.current.get(&symbol.symbol) {
+                return loc.err(Error::MissingLocalSymbolDependency(symbol.symbol.clone()));
+            }
+            if let Some(tipo) = self.all.get(&symbol.symbol) {
+                return Ok(Resolved::Local(Local {
+                    symbol: symbol.symbol.clone(),
+                    tipo: tipo.clone(),
+                }));
+            }
         }
-    }
-
-    fn child_with(&self, local: LocalScope) -> Self {
-        Self {
-            checker: self.checker,
-            path: self.path,
-            local,
-        }
+        self.checker.resolve_symbol(loc, self.path, symbol)
     }
 
     fn child(&self) -> Self {
-        self.child_with(match &self.local {
-            LocalScope::Empty => LocalScope::First {
-                all: Default::default(),
-            },
-            LocalScope::First { all } | LocalScope::Child { all, .. } => LocalScope::Child {
-                all: all.clone(),
-                current: Default::default(),
-            },
-        })
-    }
-
-    fn contains(&self, symbol: &Symbol) -> bool {
-        match &self.local {
-            LocalScope::Empty => false,
-            LocalScope::First { all } | LocalScope::Child { all, .. } => all.contains_key(symbol),
+        Self {
+            checker: self.checker,
+            path: self.path,
+            all: self.all.clone(),
+            current: Default::default(),
         }
     }
 
-    fn get(&self, symbol: &Symbol) -> Option<Type> {
-        match &self.local {
-            LocalScope::Empty => None,
-            LocalScope::First { all } | LocalScope::Child { all, .. } => all.get(symbol),
+    fn add_current(&mut self, loc: &Loc, symbol: Symbol) -> Result<()> {
+        if self.current.contains_key(&symbol) {
+            loc.err(Error::DuplicateLocalSymbol(symbol))
+        } else {
+            self.current.insert(symbol.clone(), false);
+            Ok(())
         }
-        .cloned()
+    }
+
+    fn eval_pending(&self, symbol: &Symbol) -> bool {
+        !self.current.get(symbol).cloned().unwrap_or(false)
     }
 
     fn set(&mut self, loc: &Loc, symbol: Symbol, tipo: Type) -> Result<()> {
-        match &mut self.local {
-            LocalScope::Empty => panic!("Can't add local symbols to an empty scope"),
-            LocalScope::First { all } => {
-                if all.contains_key(&symbol) {
-                    loc.err(Error::DuplicateLocalSymbol(symbol))
-                } else {
-                    all.insert(symbol, tipo);
-                    Ok(())
-                }
-            }
-            LocalScope::Child { all, current } => {
-                if current.contains(&symbol) {
-                    loc.err(Error::DuplicateLocalSymbol(symbol))
-                } else {
-                    current.insert(symbol.clone());
-                    all.insert(symbol, tipo);
-                    Ok(())
-                }
+        let exists = self.current.get(&symbol);
+        match exists {
+            None => panic!("Setting symbol [{}] not added as candidate", &symbol),
+            Some(true) => loc.err(Error::DuplicateLocalSymbol(symbol)),
+            Some(false) => {
+                self.current.insert(symbol.clone(), true);
+                self.all.insert(symbol, tipo);
+                Ok(())
             }
         }
     }
-}
-
-#[derive(Debug, Clone)]
-enum LocalScope {
-    Empty,
-    First {
-        all: HashMap<Symbol, Type>,
-    },
-    Child {
-        all: HashMap<Symbol, Type>,
-        current: HashSet<Symbol>,
-    },
 }
 
 #[cfg(test)]
