@@ -12,7 +12,7 @@ pub(super) fn check(scope: &Scope, input: &ast::ExprRef) -> Result<L<Expr>> {
         ast::Expr::Symbol(q) => resolve_symbol(scope, input, &q),
         ast::Expr::TSymbol(q) => {
             let tipo = resolve_type(scope, input, &q)?;
-            let value = Value::singleton(&input.loc, &tipo)?;
+            let value = Value::v_singleton(&input.loc, tipo)?;
             Ok(builder(&input).value(value))
         }
         ast::Expr::Seq(s) => {
@@ -117,7 +117,7 @@ fn add_assignment_candidates(scope: &mut Scope, ast: &Vec<ast::LAssignmentRef>) 
 
 fn check_assignment(scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<Assignment>> {
     let typed = check(scope, &a.it.expr)?;
-    scope.set(&a.loc, a.it.symbol.clone(), typed.clone_type())?;
+    scope.set(&a.loc, a.it.symbol.clone(), typed.get_type())?;
     Ok(Builder::new(a.loc.clone()).assignment(a.it.symbol.clone(), typed))
 }
 

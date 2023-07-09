@@ -36,11 +36,11 @@ fn mismatch(input: &str, expected: Type, actual: Type) {
 }
 
 fn ok_expression(input: &str, t: Type) {
-    assert_eq!(*check_module(input).unwrap().expr.unwrap().borrow_type(), t);
+    assert_eq!(check_module(input).unwrap().expr.unwrap().get_type(), t);
 }
 
 fn ok_int(input: &str) {
-    ok_expression(input, Type::Integer);
+    ok_expression(input, Type::type_integer());
 }
 
 #[test]
@@ -65,24 +65,32 @@ fn sub1() {
 
 #[test]
 fn std_singleton() {
-    ok_expression("True", Type::True);
+    ok_expression("True", Type::type_true());
 }
 
 #[test]
 fn mismatch1() {
-    mismatch("1 + True", Type::Integer, Type::True)
+    mismatch("1 + True", Type::type_integer(), Type::type_true())
 }
 
 #[test]
 fn mismatch2() {
-    mismatch("1 && True", Type::Boolean, Type::Integer)
+    mismatch("1 && True", Type::type_boolean(), Type::type_integer())
 }
 
 #[test]
 fn conditionals() {
     ok_int("if True then 1 else 2");
-    mismatch("if 0 then 1 else 2", Type::Boolean, Type::Integer);
-    mismatch("if True then 1 else False", Type::Integer, Type::False);
+    mismatch(
+        "if 0 then 1 else 2",
+        Type::type_boolean(),
+        Type::type_integer(),
+    );
+    mismatch(
+        "if True then 1 else False",
+        Type::type_integer(),
+        Type::type_false(),
+    );
 }
 
 #[test]

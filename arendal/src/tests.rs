@@ -1,4 +1,7 @@
-use core::values::Value;
+use core::{
+    error::Loc,
+    types::{Type, Value},
+};
 
 fn eval_ok(input: &str, result: Value) {
     if let Ok(v) = super::REPL::new().eval(input) {
@@ -9,7 +12,7 @@ fn eval_ok(input: &str, result: Value) {
 }
 
 fn v_i64(value: i64) -> Value {
-    Value::Integer(value.into())
+    Value::v_integer(&Loc::None, Type::type_integer(), value.into()).unwrap()
 }
 
 fn eval_i64(input: &str, result: i64) {
@@ -18,12 +21,12 @@ fn eval_i64(input: &str, result: i64) {
 
 #[test]
 fn empty1() {
-    eval_ok("", Value::None);
+    eval_ok("", Value::v_none());
 }
 
 #[test]
 fn empty2() {
-    eval_ok(" \t\n", Value::None);
+    eval_ok(" \t\n", Value::v_none());
 }
 
 #[test]

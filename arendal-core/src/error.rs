@@ -290,6 +290,7 @@ pub enum Error {
     MissingLocalSymbolDependency(Symbol), // internal
     // Type checking and runtime
     TypeMismatch(Arc<TypeMismatch>),
+    IntegerExpected(Type),
     SingletonExpected(Type),
     InvalidType, // placeholder, temporary error
     DivisionByZero,

@@ -1,16 +1,20 @@
-mod builtin;
-
 use std::fmt;
 use std::sync::Arc;
 
 use im::HashMap;
+use num::Integer;
 
-use crate::error::{Error, Errors, Result, L};
+use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{self, FQType};
 use crate::visibility::{Visibility, V};
 
 #[derive(Clone, PartialEq, Eq)]
-pub enum Type {
+pub struct Type {
+    data: TypeData,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+enum TypeData {
     None,
     True,
     False,
@@ -52,33 +56,75 @@ pub struct Tuple {
 }
 
 impl Type {
+    pub fn type_none() -> Type {
+        Type {
+            data: TypeData::None,
+        }
+    }
+
+    pub fn type_true() -> Type {
+        Type {
+            data: TypeData::True,
+        }
+    }
+
+    pub fn type_false() -> Type {
+        Type {
+            data: TypeData::False,
+        }
+    }
+
+    pub fn type_boolean() -> Type {
+        Type {
+            data: TypeData::Boolean,
+        }
+    }
+
+    pub fn type_integer() -> Type {
+        Type {
+            data: TypeData::Integer,
+        }
+    }
+
     pub fn fq(&self) -> FQType {
-        match self {
-            Self::None => &symbol::FQ_NONE,
-            Self::True => &symbol::FQ_TRUE,
-            Self::False => &symbol::FQ_FALSE,
-            Self::Boolean => &symbol::FQ_BOOLEAN,
-            Self::Integer => &symbol::FQ_INTEGER,
-            Self::Singleton(s) => &s.symbol,
-            Self::Tuple(t) => &t.symbol,
+        match &self.data {
+            TypeData::None => symbol::FQ_NONE.clone(),
+            TypeData::True => symbol::FQ_TRUE.clone(),
+            TypeData::False => symbol::FQ_FALSE.clone(),
+            TypeData::Boolean => symbol::FQ_BOOLEAN.clone(),
+            TypeData::Integer => symbol::FQ_INTEGER.clone(),
+            TypeData::Singleton(s) => s.symbol.clone(),
+            TypeData::Tuple(t) => t.symbol.clone(),
         }
         .clone()
     }
 
+    pub fn is_none(&self) -> bool {
+        self.data == TypeData::None
+    }
+
+    pub fn is_true(&self) -> bool {
+        self.data == TypeData::True
+    }
+
+    pub fn is_false(&self) -> bool {
+        self.data == TypeData::False
+    }
+
     pub fn is_boolean(&self) -> bool {
-        match self {
-            Self::True | Self::False | Self::Boolean => true,
+        match self.data {
+            TypeData::True | TypeData::False | TypeData::Boolean => true,
             _ => false,
         }
     }
 
     pub fn is_integer(&self) -> bool {
-        *self == Self::Integer
+        self.data == TypeData::Integer
     }
 
     pub fn is_singleton(&self) -> bool {
-        match self {
-            Type::None | Type::True | Type::False | Type::Singleton(_) => true,
+        match self.data {
+            TypeData::None | TypeData::True | TypeData::False | TypeData::Singleton(_) => true,
             _ => false,
         }
     }
@@ -113,20 +159,118 @@ pub(crate) type TypeDfnMap = HashMap<FQType, LVTypeDfn>;
 
 type TypeMap = HashMap<FQType, V<Type>>;
 
+#[derive(Clone, PartialEq, Eq)]
+pub struct Value {
+    tipo: Type,
+    val: Val,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+enum Val {
+    Singleton,
+    Integer(Integer),
+}
+
+impl Value {
+    pub fn get_type(&self) -> Type {
+        self.tipo.clone()
+    }
+
+    pub fn as_integer(self, loc: &Loc) -> Result<Integer> {
+        match self.val {
+            Val::Integer(v) => Ok(v),
+            _ => self.type_mismatch(loc, Type::type_integer()),
+        }
+    }
+
+    pub fn as_boolean(self, loc: &Loc) -> Result<bool> {
+        match self.tipo.data {
+            TypeData::True => Ok(true),
+            TypeData::False => Ok(false),
+            _ => self.type_mismatch(loc, Type::type_boolean()),
+        }
+    }
+
+    fn type_mismatch<T>(&self, loc: &Loc, expected: Type) -> Result<T> {
+        loc.err(Error::type_mismatch(expected, self.get_type()))
+    }
+
+    fn v_builtin_singleton(data: TypeData) -> Value {
+        Value {
+            tipo: Type { data },
+            val: Val::Singleton,
+        }
+    }
+
+    pub fn v_none() -> Value {
+        Self::v_builtin_singleton(TypeData::None)
+    }
+
+    pub fn v_true() -> Value {
+        Self::v_builtin_singleton(TypeData::True)
+    }
+
+    pub fn v_false() -> Value {
+        Self::v_builtin_singleton(TypeData::False)
+    }
+
+    pub fn v_bool(value: bool) -> Value {
+        if value {
+            Self::v_true()
+        } else {
+            Self::v_false()
+        }
+    }
+
+    pub fn v_integer(loc: &Loc, tipo: Type, value: Integer) -> Result<Value> {
+        if tipo.is_integer() {
+            Ok(Value {
+                tipo,
+                val: Val::Integer(value),
+            })
+        } else {
+            loc.err(Error::SingletonExpected(tipo))
+        }
+    }
+
+    pub fn v_singleton(loc: &Loc, tipo: Type) -> Result<Value> {
+        if tipo.is_singleton() {
+            Ok(Value {
+                tipo,
+                val: Val::Singleton,
+            })
+        } else {
+            loc.err(Error::SingletonExpected(tipo))
+        }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.val {
+            Val::Integer(value) => value.fmt(f),
+            Val::Singleton => self.tipo.fmt(f),
+        }
+    }
+}
+
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct Types {
     types: TypeMap,
 }
 
-impl Default for Types {
-    fn default() -> Self {
-        Types {
-            types: builtin::get_builtin_types(),
-        }
-    }
-}
-
 impl Types {
+    fn export(&mut self, tipo: Type) {
+        self.types
+            .insert(tipo.fq(), Visibility::Exported.wrap(tipo));
+    }
+
     pub(crate) fn get(&self, symbol: &FQType) -> Option<&V<Type>> {
         self.types.get(symbol)
     }
@@ -135,15 +279,16 @@ impl Types {
         self.types.contains_key(symbol)
     }
 
-    fn add(&mut self, fq: &FQType, visibility: Visibility, tipo: Type) {
-        self.types.insert(fq.clone(), visibility.wrap(tipo));
+    fn add(&mut self, fq: &FQType, visibility: Visibility, data: TypeData) {
+        self.types
+            .insert(fq.clone(), visibility.wrap(Type { data }));
     }
 
     fn add_singleton(&mut self, fq: &FQType, visibility: Visibility) {
         self.add(
             fq,
             visibility,
-            Type::Singleton(Singleton { symbol: fq.clone() }),
+            TypeData::Singleton(Singleton { symbol: fq.clone() }),
         );
     }
 
@@ -164,5 +309,19 @@ impl Types {
             }
         }
         errors.to_result(result)
+    }
+}
+
+impl Default for Types {
+    fn default() -> Self {
+        let mut types = Types {
+            types: Default::default(),
+        };
+        types.export(Type::type_none());
+        types.export(Type::type_true());
+        types.export(Type::type_false());
+        types.export(Type::type_boolean());
+        types.export(Type::type_integer());
+        types
     }
 }

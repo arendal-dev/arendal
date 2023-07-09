@@ -3,7 +3,7 @@ use im::HashMap;
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::Symbol;
 use crate::tst::{Block, Expr, Package, TwoInts};
-use crate::values::Value;
+use crate::types::Value;
 use crate::Integer;
 
 use super::Env;
@@ -46,7 +46,7 @@ impl<'a> Interpreter<'a> {
     fn run(mut self) -> Result<Value> {
         self.env.types = self.package.types.clone();
         self.env.symbols = self.package.symbols.clone();
-        let mut value = Value::None;
+        let mut value = Value::v_none();
         let mut scope = Scope::default();
         for a in &self.package.assignments {
             value = self.expression(&mut scope, &a.it.expr)?;
@@ -61,7 +61,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn block(&self, scope: &mut Scope, block: &Block) -> Result<Value> {
-        let mut value = Value::None;
+        let mut value = Value::v_none();
         for a in &block.assignments {
             value = self.expression(scope, &a.it.expr)?;
             scope.set(&a.loc, a.it.symbol.clone(), value.clone())?;
@@ -94,14 +94,14 @@ impl<'a> Interpreter<'a> {
             }
             Expr::IntAdd(t) => self
                 .eval_two_ints(&expr.loc, scope, t)
-                .map(|(v1, v2)| Value::Integer(v1 + v2)),
+                .map(|(v1, v2)| Value::v_integer(&expr.loc, expr.get_type(), v1 + v2))?,
             Expr::IntSub(t) => self
                 .eval_two_ints(&expr.loc, scope, t)
-                .map(|(v1, v2)| Value::Integer(v1 - v2)),
+                .map(|(v1, v2)| Value::v_integer(&expr.loc, expr.get_type(), v1 - v2))?,
             Expr::IntMul(t) => self
                 .eval_two_ints(&expr.loc, scope, t)
-                .map(|(v1, v2)| Value::Integer(v1 * v2)),
-            Expr::IntDiv(t) => self.div(&expr.loc, scope, t),
+                .map(|(v1, v2)| Value::v_integer(&expr.loc, expr.get_type(), v1 * v2))?,
+            Expr::IntDiv(t) => self.div(&expr, scope, t),
             Expr::LogicalAnd(t) => self.and(&expr.loc, scope, &t.expr1, &t.expr2),
             Expr::LogicalOr(t) => self.or(&expr.loc, scope, &t.expr1, &t.expr2),
             Expr::Block(block) => self.block(&mut scope.clone(), block),
@@ -125,29 +125,29 @@ impl<'a> Interpreter<'a> {
         self.expression(scope, expr)?.as_boolean(loc)
     }
 
-    fn div(&self, loc: &Loc, scope: &mut Scope, t: &TwoInts) -> Result<Value> {
-        let (v1, v2) = self.eval_two_ints(loc, scope, t)?;
+    fn div(&self, expr: &L<Expr>, scope: &mut Scope, t: &TwoInts) -> Result<Value> {
+        let (v1, v2) = self.eval_two_ints(&expr.loc, scope, t)?;
         // We only have integers for now
         if v2.is_zero() {
-            loc.err(Error::DivisionByZero)
+            expr.err(Error::DivisionByZero)
         } else {
-            Ok(Value::Integer(v1 / v2))
+            Value::v_integer(&expr.loc, expr.get_type(), v1 / v2)
         }
     }
 
     fn and(&self, loc: &Loc, scope: &mut Scope, expr1: &L<Expr>, expr2: &L<Expr>) -> Result<Value> {
         if self.eval_bool(loc, scope, expr1)? {
-            Ok(Value::boolean(self.eval_bool(loc, scope, expr2)?))
+            Ok(Value::v_bool(self.eval_bool(loc, scope, expr2)?))
         } else {
-            Ok(Value::False) // short-circuit
+            Ok(Value::v_false()) // short-circuit
         }
     }
 
     fn or(&self, loc: &Loc, scope: &mut Scope, expr1: &L<Expr>, expr2: &L<Expr>) -> Result<Value> {
         if self.eval_bool(loc, scope, expr1)? {
-            Ok(Value::True) // short-circuit
+            Ok(Value::v_true()) // short-circuit
         } else {
-            Ok(Value::boolean(self.eval_bool(loc, scope, expr2)?))
+            Ok(Value::v_bool(self.eval_bool(loc, scope, expr2)?))
         }
     }
 }

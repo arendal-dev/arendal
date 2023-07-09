@@ -6,8 +6,7 @@ use crate::{
     error::{Error, Loc, Result},
     symbol::FQSym,
     tst,
-    types::{Type, Types},
-    values::Value,
+    types::{Type, Types, Value},
     visibility::{Visibility, V},
 };
 

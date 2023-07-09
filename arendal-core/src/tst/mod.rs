@@ -4,8 +4,7 @@ use crate::ast::UnaryOp;
 use crate::env::{Env, Symbols};
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQSym, Pkg, Symbol};
-use crate::types::{Type, Types};
-use crate::values::Value;
+use crate::types::{Type, Types, Value};
 use crate::Integer;
 use std::fmt;
 use std::sync::Arc;
@@ -71,15 +70,15 @@ impl Conditional {
     }
 
     fn same_types(then: &L<Expr>, otherwise: &L<Expr>) -> Result<()> {
-        if then.borrow_type() == otherwise.borrow_type() {
+        if then.get_type() == otherwise.get_type() {
             Ok(())
         } else {
-            otherwise.type_mismatch(then.clone_type())
+            otherwise.type_mismatch(then.get_type())
         }
     }
 
-    fn borrow_type(&self) -> &Type {
-        self.then.borrow_type()
+    fn get_type(&self) -> Type {
+        self.then.get_type()
     }
 }
 
@@ -108,13 +107,13 @@ pub struct Block {
 }
 
 impl Block {
-    fn borrow_type(&self) -> &Type {
+    fn get_type(&self) -> Type {
         if let Some(e) = &self.expr {
-            e.borrow_type()
+            e.get_type()
         } else if let Some(a) = self.assignments.last() {
-            a.it.expr.borrow_type()
+            a.it.expr.get_type()
         } else {
-            &Type::None
+            Type::type_none()
         }
     }
 }
@@ -137,57 +136,53 @@ pub enum Expr {
 }
 
 impl Expr {
-    fn borrow_type(&self) -> &Type {
+    fn get_type(&self) -> Type {
         match self {
-            Self::Value(v) => v.borrow_type(),
-            Self::Local(l) => &l.tipo,
-            Self::Global(g) => &g.tipo,
-            Self::Seq(s) => s.then.borrow_type(),
-            Self::Conditional(c) => c.borrow_type(),
-            Self::Unary(u) => u.expr.borrow_type(),
-            Self::IntAdd(t) => t.expr1.borrow_type(),
-            Self::IntSub(t) => t.expr1.borrow_type(),
-            Self::IntMul(t) => t.expr1.borrow_type(),
-            Self::IntDiv(t) => t.expr1.borrow_type(),
-            Self::LogicalAnd(_) | Self::LogicalOr(_) => &Type::Boolean,
-            Self::Block(b) => b.borrow_type(),
+            Self::Value(v) => v.get_type(),
+            Self::Local(l) => l.tipo.clone(),
+            Self::Global(g) => g.tipo.clone(),
+            Self::Seq(s) => s.then.get_type(),
+            Self::Conditional(c) => c.get_type(),
+            Self::Unary(u) => u.expr.get_type(),
+            Self::IntAdd(t) => t.expr1.get_type(),
+            Self::IntSub(t) => t.expr1.get_type(),
+            Self::IntMul(t) => t.expr1.get_type(),
+            Self::IntDiv(t) => t.expr1.get_type(),
+            Self::LogicalAnd(_) | Self::LogicalOr(_) => Type::type_boolean(),
+            Self::Block(b) => b.get_type(),
         }
     }
 }
 
 impl L<Expr> {
-    fn borrow_type(&self) -> &Type {
-        self.it.borrow_type()
-    }
-
-    fn clone_type(&self) -> Type {
-        self.borrow_type().clone()
+    pub fn get_type(&self) -> Type {
+        self.it.get_type()
     }
 
     fn check_integer(&self) -> Result<()> {
-        if self.borrow_type().is_integer() {
+        if self.get_type().is_integer() {
             Ok(())
         } else {
-            self.type_mismatch(Type::Integer)
+            self.type_mismatch(Type::type_integer())
         }
     }
 
     fn check_boolean(&self) -> Result<()> {
-        if self.borrow_type().is_boolean() {
+        if self.get_type().is_boolean() {
             Ok(())
         } else {
-            self.type_mismatch(Type::Boolean)
+            self.type_mismatch(Type::type_boolean())
         }
     }
 
     fn type_mismatch<T>(&self, expected: Type) -> Result<T> {
-        self.err(Error::type_mismatch(expected, self.clone_type()))
+        self.err(Error::type_mismatch(expected, self.get_type()))
     }
 }
 
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} : {:?}", self, self.borrow_type())
+        write!(f, "{:?} : {:?}", self, self.get_type())
     }
 }
 
@@ -219,11 +214,11 @@ impl Builder {
     }
 
     fn v_none(&self) -> L<Expr> {
-        self.value(Value::None)
+        self.value(Value::v_none())
     }
 
     fn val_integer(&self, value: Integer) -> L<Expr> {
-        self.value(Value::Integer(value))
+        self.value(Value::v_integer(&self.loc, Type::type_integer(), value).unwrap())
     }
 
     fn local0(&self, local: Local) -> L<Expr> {
