@@ -1,10 +1,10 @@
 mod typecheck;
 
 use crate::ast::UnaryOp;
+use crate::context::{Context, Type, Value};
 use crate::env::{Env, Symbols};
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::{FQSym, Pkg, Symbol};
-use crate::types::{Type, Types, Value};
 use crate::Integer;
 use std::fmt;
 use std::sync::Arc;
@@ -293,7 +293,7 @@ impl Builder {
 #[derive(Debug)]
 pub(super) struct Package {
     pub(crate) pkg: Pkg,
-    pub(crate) types: Types,
+    pub(crate) types: Context,
     pub(crate) symbols: Symbols,
     pub(crate) assignments: Vec<L<TLAssignment>>,
     pub(crate) expr: Option<L<Expr>>,

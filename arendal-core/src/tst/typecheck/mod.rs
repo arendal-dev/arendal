@@ -7,9 +7,9 @@ use std::sync::Arc;
 use im::HashMap;
 
 use crate::ast::{self, ExprRef, Q};
+use crate::context::{Context, Type};
 use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol};
-use crate::types::{Type, Types};
 
 use crate::env::{Env, Symbols};
 
@@ -36,7 +36,7 @@ struct ECandidate {
 
 #[derive(Debug)]
 struct Input {
-    types: Types,
+    types: Context,
     symbols: Symbols,
     pkg: Pkg,
     paths: Vec<FQPath>,
@@ -97,14 +97,14 @@ impl Input {
 struct Checker {
     input: InputRef,
     fqresolvers: FQResolvers,
-    types: Types,
+    types: Context,
     symbols: Symbols,
     assignments: Vec<L<TLAssignment>>,
     expr: Option<L<Expr>>,
 }
 
 impl Checker {
-    fn new(input: InputRef, fqresolvers: FQResolvers, types: Types) -> Self {
+    fn new(input: InputRef, fqresolvers: FQResolvers, types: Context) -> Self {
         let symbols = input.symbols.clone();
         Self {
             input,

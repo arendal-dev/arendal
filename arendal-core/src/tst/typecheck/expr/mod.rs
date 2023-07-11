@@ -1,8 +1,8 @@
 use crate::ast::{self, BinaryOp, Q};
+use crate::context::Type;
 use crate::error::{Error, Errors, Result, L};
 use crate::symbol::{Symbol, TSymbol};
 use crate::tst::Assignment;
-use crate::types::Type;
 
 use super::{Builder, Expr, Resolved, Scope, Value};
 

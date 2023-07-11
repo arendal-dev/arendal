@@ -261,11 +261,11 @@ impl fmt::Debug for Value {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Types {
+pub(crate) struct Context {
     types: TypeMap,
 }
 
-impl Types {
+impl Context {
     fn export(&mut self, tipo: Type) {
         self.types
             .insert(tipo.fq(), Visibility::Exported.wrap(tipo));
@@ -292,7 +292,7 @@ impl Types {
         );
     }
 
-    pub(crate) fn add_types(&self, candidates: &TypeDfnMap) -> Result<Types> {
+    pub(crate) fn add_types(&self, candidates: &TypeDfnMap) -> Result<Context> {
         let mut result = self.clone();
         if candidates.is_empty() {
             return Ok(result);
@@ -312,9 +312,9 @@ impl Types {
     }
 }
 
-impl Default for Types {
+impl Default for Context {
     fn default() -> Self {
-        let mut types = Types {
+        let mut types = Context {
             types: Default::default(),
         };
         types.export(Type::type_none());

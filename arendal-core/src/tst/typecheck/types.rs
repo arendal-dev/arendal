@@ -1,12 +1,12 @@
 use crate::{
     ast,
+    context::{Context, TypeDfn, TypeDfnMap},
     error::{Errors, Result},
-    types::{TypeDfn, TypeDfnMap, Types},
 };
 
 use super::{FQResolvers, Input};
 
-pub(super) fn check(input: &Input, fqresolvers: &FQResolvers) -> Result<Types> {
+pub(super) fn check(input: &Input, fqresolvers: &FQResolvers) -> Result<Context> {
     let errors = Errors::default();
     let mut dfns = TypeDfnMap::default();
     for (symbol, new_type) in &input.new_types {

@@ -1,6 +1,6 @@
 use core::{
+    context::{Type, Value},
     error::Loc,
-    types::{Type, Value},
 };
 
 fn eval_ok(input: &str, result: Value) {

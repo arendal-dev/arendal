@@ -1,6 +1,6 @@
+use crate::context::Type;
 use crate::env::Env;
 use crate::error::{Loc, Result};
-use crate::types::Type;
 
 use super::Value;
 

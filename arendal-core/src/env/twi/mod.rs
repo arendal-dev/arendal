@@ -1,9 +1,9 @@
 use im::HashMap;
 
+use crate::context::Value;
 use crate::error::{Error, Loc, Result, L};
 use crate::symbol::Symbol;
 use crate::tst::{Block, Expr, Package, TwoInts};
-use crate::types::Value;
 use crate::Integer;
 
 use super::Env;

@@ -3,10 +3,10 @@ mod twi;
 use im::HashMap;
 
 use crate::{
+    context::{Context, Type, Value},
     error::{Error, Loc, Result},
     symbol::FQSym,
     tst,
-    types::{Type, Types, Value},
     visibility::{Visibility, V},
 };
 
@@ -66,7 +66,7 @@ impl Values {
 
 #[derive(Debug, Clone, Default)]
 pub struct Env {
-    pub(crate) types: Types,
+    pub(crate) types: Context,
     pub(crate) symbols: Symbols,
     values: Values,
 }
