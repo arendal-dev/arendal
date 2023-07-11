@@ -86,17 +86,23 @@ impl Type {
         }
     }
 
-    pub fn fq(&self) -> FQType {
-        match &self.data {
-            TypeData::None => symbol::FQ_NONE.clone(),
-            TypeData::True => symbol::FQ_TRUE.clone(),
-            TypeData::False => symbol::FQ_FALSE.clone(),
-            TypeData::Boolean => symbol::FQ_BOOLEAN.clone(),
-            TypeData::Integer => symbol::FQ_INTEGER.clone(),
-            TypeData::Singleton(s) => s.symbol.clone(),
-            TypeData::Tuple(t) => t.symbol.clone(),
-        }
-        .clone()
+    pub fn is_anonymous(&self) -> bool {
+        false
+    }
+
+    pub fn fq(&self) -> Option<FQType> {
+        Some(
+            match &self.data {
+                TypeData::None => &symbol::FQ_NONE,
+                TypeData::True => &symbol::FQ_TRUE,
+                TypeData::False => &symbol::FQ_FALSE,
+                TypeData::Boolean => &symbol::FQ_BOOLEAN,
+                TypeData::Integer => &symbol::FQ_INTEGER,
+                TypeData::Singleton(s) => &s.symbol,
+                TypeData::Tuple(t) => &t.symbol,
+            }
+            .clone(),
+        )
     }
 
     pub fn is_none(&self) -> bool {
@@ -132,7 +138,10 @@ impl Type {
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fq().fmt(f)
+        match self.fq() {
+            Some(fq) => fq.fmt(f),
+            None => f.write_str("Anonymous - TODO!"),
+        }
     }
 }
 
@@ -268,7 +277,7 @@ pub(crate) struct Context {
 impl Context {
     fn export(&mut self, tipo: Type) {
         self.types
-            .insert(tipo.fq(), Visibility::Exported.wrap(tipo));
+            .insert(tipo.fq().unwrap(), Visibility::Exported.wrap(tipo));
     }
 
     pub(crate) fn get(&self, symbol: &FQType) -> Option<&V<Type>> {
