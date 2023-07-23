@@ -20,39 +20,37 @@ enum TypeData {
     False,
     Boolean,
     Integer,
-    Singleton(Singleton),
-    Tuple(Arc<Tuple>),
+    Singleton(FQType),
+    NamedTuple(Arc<NamedTuple>),
+    AnonTuple(Arc<Tuple>),
+}
+
+impl TypeData {
+    fn named_tuple(symbol: &FQType, types: Vec<TypeRef>) -> Self {
+        TypeData::NamedTuple(Arc::new(NamedTuple {
+            symbol: symbol.clone(),
+            types: Tuple { types },
+        }))
+    }
 }
 
 // We need some kind of indirection to reference types
 // to allow for recursive type definitions.
 #[derive(Clone, PartialEq, Eq)]
-enum Ref {
+enum TypeRef {
     Type(Type),
     Symbol(FQType),
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Singleton {
-    symbol: FQType,
-}
-
-impl fmt::Display for Singleton {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.symbol.fmt(f)
-    }
-}
-
-impl fmt::Debug for Singleton {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self, f)
-    }
+struct Tuple {
+    types: Vec<TypeRef>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Tuple {
+struct NamedTuple {
     symbol: FQType,
-    types: Vec<Ref>,
+    types: Tuple,
 }
 
 impl Type {
@@ -98,11 +96,23 @@ impl Type {
                 TypeData::False => &symbol::FQ_FALSE,
                 TypeData::Boolean => &symbol::FQ_BOOLEAN,
                 TypeData::Integer => &symbol::FQ_INTEGER,
-                TypeData::Singleton(s) => &s.symbol,
-                TypeData::Tuple(t) => &t.symbol,
+                TypeData::Singleton(fq) => fq,
+                TypeData::NamedTuple(t) => &t.symbol,
+                TypeData::AnonTuple(_) => return None,
             }
             .clone(),
         )
+    }
+
+    pub fn is_builtin(&self) -> bool {
+        match &self.data {
+            TypeData::None
+            | TypeData::True
+            | TypeData::False
+            | TypeData::Boolean
+            | TypeData::Integer => true,
+            _ => false,
+        }
     }
 
     pub fn is_none(&self) -> bool {
@@ -151,22 +161,115 @@ impl fmt::Debug for Type {
     }
 }
 
-// We need this level of indirection to add refinements in the future.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypeRef {
-    fq_type: FQType,
+pub(crate) enum TypeDfnRef {
+    Symbol(FQType),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum TypeDfn {
     Singleton,
-    Tuple(Vec<TypeRef>),
+    Tuple(Vec<L<TypeDfnRef>>),
 }
 
 pub(crate) type LVTypeDfn = L<V<TypeDfn>>;
 pub(crate) type TypeDfnMap = HashMap<FQType, LVTypeDfn>;
 
 type TypeMap = HashMap<FQType, V<Type>>;
+
+#[derive(Debug, Clone, Default)]
+struct Types {
+    types: TypeMap,
+}
+
+impl Types {
+    fn add(&self, candidates: &TypeDfnMap) -> Result<Types> {
+        if candidates.is_empty() {
+            return Ok(self.clone());
+        }
+        let added = NewTypes::get(&self.types, candidates)?;
+        Ok(Types {
+            types: self.types.clone().union(added),
+        })
+    }
+}
+
+struct NewTypes<'a> {
+    types: &'a TypeMap,
+    candidates: &'a TypeDfnMap,
+    added: TypeMap,
+}
+
+impl<'a> NewTypes<'a> {
+    fn get(types: &TypeMap, candidates: &TypeDfnMap) -> Result<TypeMap> {
+        NewTypes {
+            types,
+            candidates,
+            added: Default::default(),
+        }
+        .validate()
+    }
+
+    fn add(&mut self, fq: &FQType, visibility: Visibility, data: TypeData) {
+        self.added
+            .insert(fq.clone(), visibility.wrap(Type { data }));
+    }
+
+    fn validate(mut self) -> Result<TypeMap> {
+        let mut errors = Errors::default();
+        for (fq, lvdfn) in self.candidates {
+            if let Some(data) = errors.add_result(self.validate_dfn(fq, lvdfn)) {
+                self.add(fq, lvdfn.it.visibility, data)
+            }
+        }
+        errors.to_result(self.added)
+    }
+
+    fn validate_dfn(&self, fq: &FQType, lvdfn: &LVTypeDfn) -> Result<TypeData> {
+        if self.types.contains_key(fq) {
+            lvdfn.err(Error::DuplicateType(fq.clone()))
+        } else {
+            match &lvdfn.it.it {
+                TypeDfn::Singleton => Ok(TypeData::Singleton(fq.clone())),
+                TypeDfn::Tuple(types) => {
+                    if types.is_empty() {
+                        Ok(TypeData::None)
+                    } else {
+                        let mut errors = Errors::default();
+                        let mut refs = Vec::<TypeRef>::with_capacity(types.len());
+                        for dfnref in types {
+                            errors
+                                .add_result(self.validate_ref(dfnref))
+                                .map(|r| refs.push(r));
+                        }
+                        errors.to_lazy_result(|| TypeData::named_tuple(fq, refs))
+                    }
+                }
+                _ => todo!(),
+            }
+        }
+    }
+
+    fn validate_ref(&self, dfnref: &L<TypeDfnRef>) -> Result<TypeRef> {
+        match &dfnref.it {
+            TypeDfnRef::Symbol(s) => {
+                if let Some(t) = self.types.get(s) {
+                    // TODO: check visibility
+                    if t.it.is_builtin() || t.it.is_singleton() {
+                        Ok(TypeRef::Type(t.it.clone()))
+                    } else {
+                        Ok(TypeRef::Symbol(s.clone()))
+                    }
+                } else if let Some(t) = self.candidates.get(s) {
+                    // TODO: check visibility
+                    Ok(TypeRef::Symbol(s.clone()))
+                } else {
+                    dfnref.err(Error::InvalidType) // TODO
+                }
+            }
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Value {
@@ -271,53 +374,37 @@ impl fmt::Debug for Value {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Context {
-    types: TypeMap,
+    types: Types,
 }
 
 impl Context {
     fn export(&mut self, tipo: Type) {
         self.types
+            .types
             .insert(tipo.fq().unwrap(), Visibility::Exported.wrap(tipo));
     }
 
     pub(crate) fn get(&self, symbol: &FQType) -> Option<&V<Type>> {
-        self.types.get(symbol)
+        self.types.types.get(symbol)
     }
 
     pub(crate) fn contains(&self, symbol: &FQType) -> bool {
-        self.types.contains_key(symbol)
+        self.types.types.contains_key(symbol)
     }
 
     fn add(&mut self, fq: &FQType, visibility: Visibility, data: TypeData) {
         self.types
+            .types
             .insert(fq.clone(), visibility.wrap(Type { data }));
     }
 
-    fn add_singleton(&mut self, fq: &FQType, visibility: Visibility) {
-        self.add(
-            fq,
-            visibility,
-            TypeData::Singleton(Singleton { symbol: fq.clone() }),
-        );
-    }
-
     pub(crate) fn add_types(&self, candidates: &TypeDfnMap) -> Result<Context> {
-        let mut result = self.clone();
         if candidates.is_empty() {
-            return Ok(result);
+            return Ok(self.clone());
         }
-        let mut errors = Errors::default();
-        for (fq, lvdfn) in candidates {
-            if self.types.contains_key(fq) {
-                errors.add(lvdfn.error(Error::DuplicateType(fq.clone())));
-            } else {
-                match &lvdfn.it.it {
-                    TypeDfn::Singleton => result.add_singleton(fq, lvdfn.it.visibility),
-                    _ => todo!(),
-                }
-            }
-        }
-        errors.to_result(result)
+        Ok(Context {
+            types: self.types.add(candidates)?,
+        })
     }
 }
 
