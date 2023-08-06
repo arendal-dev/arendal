@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use im::HashMap;
+use im::{HashMap, HashSet};
 use num::Integer;
 
 use crate::error::{Error, Errors, Loc, Result, L};
@@ -210,44 +210,46 @@ impl<'a> NewTypes<'a> {
         .validate()
     }
 
-    fn add(&mut self, fq: &FQType, visibility: Visibility, data: TypeData) {
+    fn add(&mut self, fq: &FQType, lvdfn: &LVTypeDfn, data: TypeData) {
         self.added
-            .insert(fq.clone(), visibility.wrap(Type { data }));
+            .insert(fq.clone(), lvdfn.it.visibility.wrap(Type { data }));
     }
 
     fn validate(mut self) -> Result<TypeMap> {
         let mut errors = Errors::default();
+        let mut pending = HashSet::<FQType>::default();
+        // First pass: look for duplicates and add singletons
         for (fq, lvdfn) in self.candidates {
-            if let Some(data) = errors.add_result(self.validate_dfn(fq, lvdfn)) {
-                self.add(fq, lvdfn.it.visibility, data)
+            if self.types.contains_key(fq) {
+                errors.add(lvdfn.error(Error::DuplicateType(fq.clone())));
+            } else if let TypeDfn::Singleton = lvdfn.it.it {
+                self.add(fq, lvdfn, TypeData::Singleton(fq.clone()));
+            } else {
+                pending.insert(fq.clone());
             }
         }
-        errors.to_result(self.added)
-    }
-
-    fn validate_dfn(&self, fq: &FQType, lvdfn: &LVTypeDfn) -> Result<TypeData> {
-        if self.types.contains_key(fq) {
-            lvdfn.err(Error::DuplicateType(fq.clone()))
-        } else {
+        // Second pass: tuples
+        pending.retain(|fq| {
+            let lvdfn = self.candidates.get(fq).unwrap();
             match &lvdfn.it.it {
-                TypeDfn::Singleton => Ok(TypeData::Singleton(fq.clone())),
                 TypeDfn::Tuple(types) => {
                     if types.is_empty() {
-                        Ok(TypeData::None)
+                        self.add(fq, lvdfn, TypeData::None);
                     } else {
-                        let mut errors = Errors::default();
                         let mut refs = Vec::<TypeRef>::with_capacity(types.len());
                         for dfnref in types {
                             errors
                                 .add_result(self.validate_ref(dfnref))
                                 .map(|r| refs.push(r));
                         }
-                        errors.to_lazy_result(|| TypeData::named_tuple(fq, refs))
+                        self.add(fq, lvdfn, TypeData::named_tuple(fq, refs));
                     }
+                    false
                 }
-                _ => todo!(),
+                _ => true,
             }
-        }
+        });
+        errors.to_result(self.added)
     }
 
     fn validate_ref(&self, dfnref: &L<TypeDfnRef>) -> Result<TypeRef> {
@@ -256,6 +258,13 @@ impl<'a> NewTypes<'a> {
                 if let Some(t) = self.types.get(s) {
                     // TODO: check visibility
                     if t.it.is_builtin() || t.it.is_singleton() {
+                        Ok(TypeRef::Type(t.it.clone()))
+                    } else {
+                        Ok(TypeRef::Symbol(s.clone()))
+                    }
+                } else if let Some(t) = self.added.get(s) {
+                    // TODO: check visibility
+                    if t.it.is_singleton() {
                         Ok(TypeRef::Type(t.it.clone()))
                     } else {
                         Ok(TypeRef::Symbol(s.clone()))
