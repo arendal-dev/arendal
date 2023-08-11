@@ -11,7 +11,11 @@ module -> statement*
 statement -> (vstatement | expression) EOS
 vstatement -> ("pub" | "pkg" | "") (typedef | assignment)
 
-typedef -> "type" TypeSymbol
+typedef -> "type" TypeSymbol ("" | typedesc)
+typedesc -> tupledesc
+tupledesc -> "(" tupledescitems? ")"
+tupledescitems -> tupledescitem ( "," tupledescitem )* ("" | ",")
+tupledescitem -> qtsymbol
 
 assignment -> "let" symbol "=" expression
 expression -> expr ( "then" expr )*
