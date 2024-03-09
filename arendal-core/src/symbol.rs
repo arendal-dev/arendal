@@ -278,24 +278,24 @@ pub struct FQPath {
 }
 
 impl FQPath {
+    #[inline]
+    const fn std_empty() -> FQPath {
+        FQPath {
+            pkg: Pkg::Std,
+            path: Path::empty(),
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.path.is_empty()
     }
 
     pub fn fq_sym(&self, symbol: Symbol) -> FQSym {
-        FQ {
-            path: self.clone(),
-            enclosing: None,
-            symbol,
-        }
+        FQ::top_level(self.clone(), symbol)
     }
 
     pub fn fq_type(&self, symbol: TSymbol) -> FQType {
-        FQ {
-            path: self.clone(),
-            enclosing: None,
-            symbol,
-        }
+        FQ::top_level(self.clone(), symbol)
     }
 
     pub fn can_see(&self, visibility: Visibility, path: &FQPath) -> bool {
@@ -321,31 +321,57 @@ impl fmt::Debug for FQPath {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
+enum FQData<T> {
+    TopLevel(FQPath, T),
+    Enclosed(Arc<FQType>, T),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct FQ<T> {
-    pub path: FQPath,
-    pub enclosing: Option<TSymbol>,
-    pub symbol: T,
+    data: FQData<T>,
 }
 
 impl<T> FQ<T> {
+    #[inline]
+    const fn top_level(path: FQPath, symbol: T) -> FQ<T> {
+        FQ {
+            data: FQData::TopLevel(path, symbol),
+        }
+    }
+
     pub fn is_top_level(&self) -> bool {
-        self.enclosing.is_none()
+        match self.data {
+            FQData::TopLevel(_, _) => true,
+            FQData::Enclosed(_, _) => false,
+        }
+    }
+
+    pub fn path(&self) -> FQPath {
+        match &self.data {
+            FQData::TopLevel(path, _) => path.clone(),
+            FQData::Enclosed(parent, _) => parent.path(),
+        }
     }
 
     pub fn can_see<O>(&self, visibility: Visibility, symbol: &FQ<O>) -> bool {
-        self.path.can_see(visibility, &symbol.path)
+        self.path().can_see(visibility, &symbol.path())
     }
 }
 
 impl<T: Display> fmt::Display for FQ<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.path.fmt(f)?;
-        separator(f)?;
-        if let Some(enclosing) = &self.enclosing {
-            enclosing.fmt(f)?;
-            separator(f)?;
+        match &self.data {
+            FQData::TopLevel(path, symbol) => {
+                path.fmt(f)?;
+                separator(f)?;
+                symbol.fmt(f)
+            }
+            FQData::Enclosed(parent, symbol) => {
+                parent.fmt(f)?;
+                separator(f)?;
+                symbol.fmt(f)
+            }
         }
-        self.symbol.fmt(f)
     }
 }
 
@@ -365,14 +391,7 @@ pub static BOOLEAN: TSymbol = TSymbol::known(KnownTSymbol::Boolean);
 pub static INTEGER: TSymbol = TSymbol::known(KnownTSymbol::Integer);
 
 const fn std_type(symbol: KnownTSymbol) -> FQType {
-    FQ {
-        path: FQPath {
-            pkg: Pkg::Std,
-            path: Path::empty(),
-        },
-        enclosing: None,
-        symbol: TSymbol::known(symbol),
-    }
+    FQ::top_level(FQPath::std_empty(), TSymbol::known(symbol))
 }
 
 pub static FQ_NONE: FQType = std_type(KnownTSymbol::None);

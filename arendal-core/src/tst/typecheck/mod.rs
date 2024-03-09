@@ -187,7 +187,7 @@ impl Checker {
     }
 
     fn check_assignment(&mut self, fq: &FQSym, a: &ast::GAssignmentRef) -> Result<()> {
-        let expr = expr::check(&self.new_scope(&fq.path), &a.it.it.expr)?;
+        let expr = expr::check(&self.new_scope(&fq.path()), &a.it.it.expr)?;
         self.symbols
             .set(&a.loc, fq.clone(), a.it.visibility, expr.get_type())?;
         self.assignments.push(a.loc.wrap(TLAssignment {

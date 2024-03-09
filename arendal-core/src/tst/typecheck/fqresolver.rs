@@ -34,7 +34,7 @@ impl FQResolvers {
     }
 
     pub(super) fn for_symbol<T>(&self, symbol: &FQ<T>) -> &FQResolver {
-        self.resolvers.get(&symbol.path).unwrap()
+        self.resolvers.get(&symbol.path()).unwrap()
     }
 }
 
@@ -82,7 +82,7 @@ impl FQResolver {
         let mut errors = Errors::default();
         for f in self.get_type_candidates(q) {
             if let Some(visibility) = self.get_type_visibility(&f) {
-                if self.can_see(visibility, &f.path) {
+                if self.can_see(visibility, &f.path()) {
                     return Ok(f);
                 } else {
                     errors.add(loc.wrap(Error::TypeNotVisible(f)))
@@ -103,7 +103,7 @@ impl FQResolver {
         let mut errors = Errors::default();
         for f in self.get_symbol_candidates(q) {
             if let Some(visibility) = self.get_symbol_visibility(&f) {
-                if self.can_see(visibility, &f.path) {
+                if self.can_see(visibility, &f.path()) {
                     return Ok(f);
                 } else {
                     errors.add(loc.wrap(Error::SymbolNotVisible(f)))
