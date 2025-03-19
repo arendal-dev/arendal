@@ -1,5 +1,5 @@
 use crate::{
-    ast,
+    ast0,
     context::{Context, TypeDfn, TypeDfnMap},
     error::{Errors, Result},
 };
@@ -11,7 +11,7 @@ pub(super) fn check(input: &Input, fqresolvers: &FQResolvers) -> Result<Context>
     let mut dfns = TypeDfnMap::default();
     for (symbol, new_type) in &input.new_types {
         let maybe = match new_type.it.it.dfn {
-            ast::TypeDfn::Singleton => Some(TypeDfn::Singleton),
+            ast0::TypeDfn::Singleton => Some(TypeDfn::Singleton),
         };
         if let Some(checked) = maybe {
             dfns.insert(

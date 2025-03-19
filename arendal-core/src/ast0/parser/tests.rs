@@ -1,5 +1,5 @@
-use crate::ast::{BinaryOp, ExprRef, LAssignmentRef, Module, NewTypeRef};
-use crate::ast::{Builder, Segment};
+use crate::ast0::{BinaryOp, ExprRef, LAssignmentRef, Module, NewTypeRef};
+use crate::ast0::{Builder, Segment};
 use crate::error::Loc;
 use crate::symbol::{self, Pkg, Symbol, TSymbol};
 use crate::visibility::Visibility;

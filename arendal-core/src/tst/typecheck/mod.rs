@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use im::HashMap;
 
-use crate::ast::{self, ExprRef, Q};
+use crate::ast0::{self, ExprRef, Q};
 use crate::context::{Context, Type};
 use crate::error::{Error, Errors, Loc, Result, L};
 use crate::symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol};
@@ -17,16 +17,16 @@ use self::fqresolver::FQResolvers;
 
 use super::{Builder, Expr, Global, Local, Package, TLAssignment, Value};
 
-pub(super) fn check(env: &Env, ast: &ast::Package) -> Result<Package> {
+pub(super) fn check(env: &Env, ast: &ast0::Package) -> Result<Package> {
     let input = Input::new(env, ast)?;
     let fqresolvers = fqresolver::get(&input)?;
     let types = types::check(&input, &fqresolvers)?;
     Checker::new(input, fqresolvers, types).check()
 }
 
-type TCandidates = HashMap<FQType, ast::NewTypeRef>;
+type TCandidates = HashMap<FQType, ast0::NewTypeRef>;
 
-type ACandidates = HashMap<FQSym, ast::GAssignmentRef>;
+type ACandidates = HashMap<FQSym, ast0::GAssignmentRef>;
 
 #[derive(Debug)]
 struct ECandidate {
@@ -48,7 +48,7 @@ struct Input {
 type InputRef = Arc<Input>;
 
 impl Input {
-    fn new(env: &Env, ast: &ast::Package) -> Result<InputRef> {
+    fn new(env: &Env, ast: &ast0::Package) -> Result<InputRef> {
         let mut input = Self {
             types: env.types.clone(),
             symbols: env.symbols.clone(),
@@ -186,7 +186,7 @@ impl Checker {
         }
     }
 
-    fn check_assignment(&mut self, fq: &FQSym, a: &ast::GAssignmentRef) -> Result<()> {
+    fn check_assignment(&mut self, fq: &FQSym, a: &ast0::GAssignmentRef) -> Result<()> {
         let expr = expr::check(&self.new_scope(&fq.path()), &a.it.it.expr)?;
         self.symbols
             .set(&a.loc, fq.clone(), a.it.visibility, expr.get_type())?;

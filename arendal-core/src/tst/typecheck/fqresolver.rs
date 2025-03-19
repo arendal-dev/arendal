@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::Q,
+    ast0::Q,
     error::{Error, Errors, Loc, Result},
     symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol, FQ},
     visibility::Visibility,

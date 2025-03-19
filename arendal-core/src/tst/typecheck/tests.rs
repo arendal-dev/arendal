@@ -4,7 +4,7 @@ use crate::error::{Error, Result};
 use crate::symbol::Pkg;
 
 fn check_module(input: &str) -> Result<Package> {
-    let parsed = crate::ast::parser::parse(Pkg::Local, input)?;
+    let parsed = crate::ast0::parser::parse(Pkg::Local, input)?;
     let env = Env::default();
     super::check(&env, &parsed)
 }

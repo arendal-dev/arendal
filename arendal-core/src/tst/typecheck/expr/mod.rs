@@ -1,4 +1,4 @@
-use crate::ast::{self, BinaryOp, Q};
+use crate::ast0::{self, BinaryOp, Q};
 use crate::context::Type;
 use crate::error::{Error, Errors, Result, L};
 use crate::symbol::{Symbol, TSymbol};
@@ -6,19 +6,19 @@ use crate::tst::Assignment;
 
 use super::{Builder, Expr, Resolved, Scope, Value};
 
-pub(super) fn check(scope: &Scope, input: &ast::ExprRef) -> Result<L<Expr>> {
+pub(super) fn check(scope: &Scope, input: &ast0::ExprRef) -> Result<L<Expr>> {
     match &input.it {
-        ast::Expr::LitInteger(value) => Ok(builder(input).val_integer(value.clone())),
-        ast::Expr::Symbol(q) => resolve_symbol(scope, input, &q),
-        ast::Expr::TSymbol(q) => {
+        ast0::Expr::LitInteger(value) => Ok(builder(input).val_integer(value.clone())),
+        ast0::Expr::Symbol(q) => resolve_symbol(scope, input, &q),
+        ast0::Expr::TSymbol(q) => {
             let tipo = resolve_type(scope, input, &q)?;
             let value = Value::v_singleton(&input.loc, tipo)?;
             Ok(builder(&input).value(value))
         }
-        ast::Expr::Seq(s) => {
+        ast0::Expr::Seq(s) => {
             merge2(scope, &s.expr, &s.then).and_then(|(e1, e2)| Ok(builder(input).seq(e1, e2)))
         }
-        ast::Expr::Conditional(c) => {
+        ast0::Expr::Conditional(c) => {
             let (expr, then, otherwise) = Error::merge3(
                 check(scope, &c.expr),
                 check(scope, &c.then),
@@ -26,9 +26,9 @@ pub(super) fn check(scope: &Scope, input: &ast::ExprRef) -> Result<L<Expr>> {
             )?;
             builder(&input).conditional(expr, then, otherwise)
         }
-        ast::Expr::Binary(b) => merge2(scope, &b.expr1, &b.expr2)
+        ast0::Expr::Binary(b) => merge2(scope, &b.expr1, &b.expr2)
             .and_then(|(t1, t2)| check_binary(scope, input, b.op, t1, t2)),
-        ast::Expr::Block(b) => {
+        ast0::Expr::Block(b) => {
             let result = check_block(scope, input, &b);
             result
         }
@@ -36,11 +36,11 @@ pub(super) fn check(scope: &Scope, input: &ast::ExprRef) -> Result<L<Expr>> {
     }
 }
 
-fn resolve_type(scope: &Scope, input: &ast::ExprRef, symbol: &Q<TSymbol>) -> Result<Type> {
+fn resolve_type(scope: &Scope, input: &ast0::ExprRef, symbol: &Q<TSymbol>) -> Result<Type> {
     scope.resolve_type(&input.loc, symbol)
 }
 
-fn resolve_symbol(scope: &Scope, input: &ast::ExprRef, symbol: &Q<Symbol>) -> Result<L<Expr>> {
+fn resolve_symbol(scope: &Scope, input: &ast0::ExprRef, symbol: &Q<Symbol>) -> Result<L<Expr>> {
     Ok(match scope.resolve_symbol(&input.loc, symbol)? {
         Resolved::Local(local) => builder(input).local0(local),
         Resolved::Global(global) => builder(input).global0(global),
@@ -49,7 +49,7 @@ fn resolve_symbol(scope: &Scope, input: &ast::ExprRef, symbol: &Q<Symbol>) -> Re
 
 fn check_binary(
     scope: &Scope,
-    input: &ast::ExprRef,
+    input: &ast0::ExprRef,
     op: BinaryOp,
     expr1: L<Expr>,
     expr2: L<Expr>,
@@ -65,7 +65,7 @@ fn check_binary(
     }
 }
 
-fn check_block(scope: &Scope, input: &ast::ExprRef, block: &ast::Block) -> Result<L<Expr>> {
+fn check_block(scope: &Scope, input: &ast0::ExprRef, block: &ast0::Block) -> Result<L<Expr>> {
     let mut child_scope = scope.child();
     let assignments = check_assignments(&mut child_scope, &block.assignments)?;
     let mut expr: Option<L<Expr>> = None;
@@ -81,7 +81,7 @@ fn check_block(scope: &Scope, input: &ast::ExprRef, block: &ast::Block) -> Resul
 
 fn check_assignments(
     scope: &mut Scope,
-    ast: &Vec<ast::LAssignmentRef>,
+    ast: &Vec<ast0::LAssignmentRef>,
 ) -> Result<Vec<L<Assignment>>> {
     add_assignment_candidates(scope, ast)?;
     let mut assignments = Vec::default();
@@ -107,7 +107,7 @@ fn check_assignments(
     }
 }
 
-fn add_assignment_candidates(scope: &mut Scope, ast: &Vec<ast::LAssignmentRef>) -> Result<()> {
+fn add_assignment_candidates(scope: &mut Scope, ast: &Vec<ast0::LAssignmentRef>) -> Result<()> {
     let mut errors = Errors::default();
     for a in ast {
         errors.add_result(scope.add_current(&a.loc, a.it.symbol.clone()));
@@ -115,21 +115,21 @@ fn add_assignment_candidates(scope: &mut Scope, ast: &Vec<ast::LAssignmentRef>) 
     errors.to_unit_result()
 }
 
-fn check_assignment(scope: &mut Scope, a: &L<ast::Assignment>) -> Result<L<Assignment>> {
+fn check_assignment(scope: &mut Scope, a: &L<ast0::Assignment>) -> Result<L<Assignment>> {
     let typed = check(scope, &a.it.expr)?;
     scope.set(&a.loc, a.it.symbol.clone(), typed.get_type())?;
     Ok(Builder::new(a.loc.clone()).assignment(a.it.symbol.clone(), typed))
 }
 
-fn merge2(scope: &Scope, e1: &ast::ExprRef, e2: &ast::ExprRef) -> Result<(L<Expr>, L<Expr>)> {
+fn merge2(scope: &Scope, e1: &ast0::ExprRef, e2: &ast0::ExprRef) -> Result<(L<Expr>, L<Expr>)> {
     Error::merge(check(scope, e1), check(scope, e2))
 }
 
-fn builder(input: &ast::ExprRef) -> Builder {
+fn builder(input: &ast0::ExprRef) -> Builder {
     Builder::new(input.loc.clone())
 }
 
 // Creates and returns an error
-fn error(input: &ast::ExprRef, error: Error) -> Result<L<Expr>> {
+fn error(input: &ast0::ExprRef, error: Error) -> Result<L<Expr>> {
     input.loc.err(error)
 }

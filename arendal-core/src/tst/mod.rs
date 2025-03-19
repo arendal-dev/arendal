@@ -1,6 +1,6 @@
 mod typecheck;
 
-use crate::ast::UnaryOp;
+use crate::ast0::UnaryOp;
 use crate::context::{Context, Type, Value};
 use crate::env::{Env, Symbols};
 use crate::error::{Error, Loc, Result, L};
@@ -10,7 +10,7 @@ use std::fmt;
 use std::sync::Arc;
 
 pub(crate) fn check(env: &Env, input: &str) -> Result<Package> {
-    let parsed = crate::ast::parser::parse(Pkg::Local, input)?;
+    let parsed = crate::ast0::parser::parse(Pkg::Local, input)?;
     typecheck::check(&env, &parsed)
 }
 
