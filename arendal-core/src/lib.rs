@@ -4,6 +4,7 @@ pub mod context;
 pub mod env;
 pub mod error;
 pub mod id;
+pub mod input;
 pub mod keyword;
 pub mod problem;
 pub mod symbol;
