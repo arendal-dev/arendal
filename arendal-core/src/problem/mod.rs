@@ -118,6 +118,19 @@ impl<P: Position, T> Output<P, T> {
 
 pub type Result<P, T> = std::result::Result<Output<P, T>, Problems<P>>;
 
+// Creates a result with a single error
+pub fn error<P: Position, T>(position: P, code: ErrorCode, message: ArcStr) -> Result<P, T> {
+    let error = Error {
+        position,
+        code,
+        message,
+    };
+    Err(Problems {
+        errors: vec![error],
+        warnings: Vec::default(),
+    })
+}
+
 pub struct ResultBuilder<P: Position> {
     problems: Problems<P>,
 }
