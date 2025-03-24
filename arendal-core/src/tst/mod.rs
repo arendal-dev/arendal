@@ -1,11 +1,11 @@
 mod typecheck;
 
+use crate::Integer;
 use crate::ast0::UnaryOp;
 use crate::context::{Context, Type, Value};
 use crate::env::{Env, Symbols};
-use crate::error::{Error, Loc, Result, L};
+use crate::error::{Error, L, Loc, Result};
 use crate::symbol::{FQSym, Pkg, Symbol};
-use crate::Integer;
 use std::fmt;
 use std::sync::Arc;
 
@@ -108,12 +108,12 @@ pub struct Block {
 
 impl Block {
     fn get_type(&self) -> Type {
-        if let Some(e) = &self.expr {
-            e.get_type()
-        } else if let Some(a) = self.assignments.last() {
-            a.it.expr.get_type()
-        } else {
-            Type::type_none()
+        match &self.expr {
+            Some(e) => e.get_type(),
+            _ => match self.assignments.last() {
+                Some(a) => a.it.expr.get_type(),
+                _ => Type::type_none(),
+            },
         }
     }
 }

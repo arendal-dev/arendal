@@ -1,5 +1,5 @@
 use super::Enclosure;
-use crate::error::{Error, Errors, Loc, Result, L};
+use crate::error::{Error, Errors, L, Loc, Result};
 use crate::{ArcStr, Substr};
 
 pub(super) fn tokenize(input: &str) -> Result<Tokens> {

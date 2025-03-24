@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     ast0::Q,
     error::{Error, Errors, Loc, Result},
-    symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol, FQ},
+    symbol::{FQ, FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
     visibility::Visibility,
 };
 

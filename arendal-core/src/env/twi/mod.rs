@@ -1,10 +1,10 @@
 use im::HashMap;
 
+use crate::Integer;
 use crate::context::Value;
-use crate::error::{Error, Loc, Result, L};
+use crate::error::{Error, L, Loc, Result};
 use crate::symbol::Symbol;
 use crate::tst::{Block, Expr, Package, TwoInts};
-use crate::Integer;
 
 use super::Env;
 
@@ -66,10 +66,9 @@ impl<'a> Interpreter<'a> {
             value = self.expression(scope, &a.it.expr)?;
             scope.set(&a.loc, a.it.symbol.clone(), value.clone())?;
         }
-        if let Some(e) = &block.expr {
-            self.expression(scope, e)
-        } else {
-            Ok(value)
+        match &block.expr {
+            Some(e) => self.expression(scope, e),
+            _ => Ok(value),
         }
     }
 

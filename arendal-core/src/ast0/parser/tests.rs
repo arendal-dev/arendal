@@ -4,7 +4,7 @@ use crate::error::Loc;
 use crate::symbol::{self, Pkg, Symbol, TSymbol};
 use crate::visibility::Visibility;
 
-use super::{parse, Enclosure, Error};
+use super::{Enclosure, Error, parse};
 
 const B: Builder = Builder::none();
 

@@ -12,5 +12,5 @@ pub mod tst;
 pub mod vectree;
 pub mod visibility;
 
-pub use arcstr::{literal, ArcStr, Substr};
+pub use arcstr::{ArcStr, Substr, literal};
 pub use num::Integer;

@@ -3,11 +3,11 @@ mod tokenizer;
 use std::fmt;
 
 use super::Enclosure;
-use crate::error::{Error, Errors, Loc, Result, L};
+use crate::error::{Error, Errors, L, Loc, Result};
 use crate::keyword::Keyword;
 use crate::symbol::{Symbol, TSymbol};
 use crate::{Integer, Substr};
-use tokenizer::{tokenize, Token, Tokens};
+use tokenizer::{Token, Tokens, tokenize};
 
 pub(super) fn lex(input: &str) -> Result<Lexemes> {
     let tokens = tokenize(input)?;
@@ -231,14 +231,19 @@ impl Lexer {
     fn add_word(&mut self, loc: &Loc, word: &Substr) {
         if let Some(k) = Keyword::parse(word) {
             self.add_lexeme(LexemeKind::Keyword(k), 1);
-        } else if let Ok(name) = TSymbol::new(loc, word.as_str().into()) {
-            self.add_lexeme(LexemeKind::TSymbol(name), 1);
         } else {
-            if let Some(symbol) = self
-                .errors
-                .add_result(Symbol::new(loc, word.as_str().into()))
-            {
-                self.add_lexeme(LexemeKind::Symbol(symbol), 1);
+            match TSymbol::new(loc, word.as_str().into()) {
+                Ok(name) => {
+                    self.add_lexeme(LexemeKind::TSymbol(name), 1);
+                }
+                _ => {
+                    if let Some(symbol) = self
+                        .errors
+                        .add_result(Symbol::new(loc, word.as_str().into()))
+                    {
+                        self.add_lexeme(LexemeKind::Symbol(symbol), 1);
+                    }
+                }
             }
         }
     }

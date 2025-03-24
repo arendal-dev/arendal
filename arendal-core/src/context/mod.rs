@@ -4,9 +4,9 @@ use std::sync::Arc;
 use im::{HashMap, HashSet};
 use num::Integer;
 
-use crate::error::{Error, Errors, Loc, Result, L};
+use crate::error::{Error, Errors, L, Loc, Result};
 use crate::symbol::{self, FQType};
-use crate::visibility::{Visibility, V};
+use crate::visibility::{V, Visibility};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Type {
@@ -222,10 +222,15 @@ impl<'a> NewTypes<'a> {
         for (fq, lvdfn) in self.candidates {
             if self.types.contains_key(fq) {
                 errors.add(lvdfn.error(Error::DuplicateType(fq.clone())));
-            } else if let TypeDfn::Singleton = lvdfn.it.it {
-                self.add(fq, lvdfn, TypeData::Singleton(fq.clone()));
             } else {
-                pending.insert(fq.clone());
+                match lvdfn.it.it {
+                    TypeDfn::Singleton => {
+                        self.add(fq, lvdfn, TypeData::Singleton(fq.clone()));
+                    }
+                    _ => {
+                        pending.insert(fq.clone());
+                    }
+                }
             }
         }
         // Second pass: tuples
@@ -262,18 +267,25 @@ impl<'a> NewTypes<'a> {
                     } else {
                         Ok(TypeRef::Symbol(s.clone()))
                     }
-                } else if let Some(t) = self.added.get(s) {
-                    // TODO: check visibility
-                    if t.it.is_singleton() {
-                        Ok(TypeRef::Type(t.it.clone()))
-                    } else {
-                        Ok(TypeRef::Symbol(s.clone()))
-                    }
-                } else if let Some(t) = self.candidates.get(s) {
-                    // TODO: check visibility
-                    Ok(TypeRef::Symbol(s.clone()))
                 } else {
-                    dfnref.err(Error::InvalidType) // TODO
+                    match self.added.get(s) {
+                        Some(t) => {
+                            // TODO: check visibility
+                            if t.it.is_singleton() {
+                                Ok(TypeRef::Type(t.it.clone()))
+                            } else {
+                                Ok(TypeRef::Symbol(s.clone()))
+                            }
+                        }
+                        _ => {
+                            if let Some(t) = self.candidates.get(s) {
+                                // TODO: check visibility
+                                Ok(TypeRef::Symbol(s.clone()))
+                            } else {
+                                dfnref.err(Error::InvalidType) // TODO
+                            }
+                        }
+                    }
                 }
             }
         }

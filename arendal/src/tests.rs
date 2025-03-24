@@ -4,10 +4,13 @@ use core::{
 };
 
 fn eval_ok(input: &str, result: Value) {
-    if let Ok(v) = super::REPL::new().eval(input) {
-        assert_eq!(v, result);
-    } else {
-        panic!("Error evaluating expression");
+    match super::REPL::new().eval(input) {
+        Ok(v) => {
+            assert_eq!(v, result);
+        }
+        _ => {
+            panic!("Error evaluating expression");
+        }
     }
 }
 

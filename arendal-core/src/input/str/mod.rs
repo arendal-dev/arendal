@@ -1,5 +1,5 @@
-use crate::problem;
 use crate::ArcStr;
+use crate::problem;
 
 #[derive(Clone, Debug)]
 pub enum Origin {

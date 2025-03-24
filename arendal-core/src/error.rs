@@ -1,9 +1,9 @@
 use crate::{
-    ast0::{parser::Enclosure, Q},
+    ast0::{Q, parser::Enclosure},
     context::Type,
     keyword::Keyword,
     symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol},
-    visibility::{Visibility, V},
+    visibility::{V, Visibility},
 };
 
 use super::ArcStr;

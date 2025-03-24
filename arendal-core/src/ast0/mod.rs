@@ -5,9 +5,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::Integer;
-use crate::error::{Error, Loc, Result, L};
+use crate::error::{Error, L, Loc, Result};
 use crate::symbol::{FQPath, Pkg, Symbol, TSymbol};
-use crate::visibility::{Visibility, V};
+use crate::visibility::{V, Visibility};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Segment {

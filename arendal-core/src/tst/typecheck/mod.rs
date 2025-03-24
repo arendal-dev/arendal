@@ -8,7 +8,7 @@ use im::HashMap;
 
 use crate::ast0::{self, ExprRef, Q};
 use crate::context::{Context, Type};
-use crate::error::{Error, Errors, Loc, Result, L};
+use crate::error::{Error, Errors, L, Loc, Result};
 use crate::symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol};
 
 use crate::env::{Env, Symbols};
@@ -130,10 +130,9 @@ impl Checker {
             .fqresolvers
             .for_path(path)
             .resolve_fq_type(loc, symbol)?;
-        if let Some(tipo) = self.types.get(&fq) {
-            Ok(tipo.it.clone())
-        } else {
-            loc.err(Error::UnableToResolveType(symbol.clone()))
+        match self.types.get(&fq) {
+            Some(tipo) => Ok(tipo.it.clone()),
+            _ => loc.err(Error::UnableToResolveType(symbol.clone())),
         }
     }
 
@@ -142,13 +141,12 @@ impl Checker {
             .fqresolvers
             .for_path(path)
             .resolve_fq_symbol(loc, symbol)?;
-        if let Some(t) = self.symbols.get(&fq) {
-            Ok(Resolved::Global(Global {
+        match self.symbols.get(&fq) {
+            Some(t) => Ok(Resolved::Global(Global {
                 symbol: fq,
                 tipo: t.it.clone(),
-            }))
-        } else {
-            loc.err(Error::MissingSymbolDependency(fq))
+            })),
+            _ => loc.err(Error::MissingSymbolDependency(fq)),
         }
     }
 

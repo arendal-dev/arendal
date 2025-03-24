@@ -1,7 +1,7 @@
 use std::cmp::{Eq, PartialEq};
 
 use super::Integer;
-use crate::problem::{error, ok, NoPosition, Position, Result};
+use crate::problem::{NoPosition, Position, Result, error, ok};
 use crate::symbol::{FQPath, Pkg, Symbol, TSymbol};
 use crate::vectree;
 

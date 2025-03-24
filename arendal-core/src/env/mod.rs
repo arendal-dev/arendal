@@ -7,7 +7,7 @@ use crate::{
     error::{Error, Loc, Result},
     symbol::FQSym,
     tst,
-    visibility::{Visibility, V},
+    visibility::{V, Visibility},
 };
 
 #[derive(Debug, Default, Clone)]

@@ -6,7 +6,7 @@ use crate::error::{Error, Loc, Result};
 use crate::id::Id;
 use crate::keyword::Keyword;
 use crate::visibility::Visibility;
-use crate::{literal, ArcStr};
+use crate::{ArcStr, literal};
 
 static STD: ArcStr = literal!("std");
 static PKG: ArcStr = literal!("pkg");
@@ -134,23 +134,24 @@ impl TSymbol {
         if name.is_empty() {
             return loc.err(Error::TSymbolEmpty);
         }
-        if let Some(s) = T_SYMBOLS.get(&name) {
-            Ok(s.clone())
-        } else {
-            for (i, c) in name.char_indices() {
-                if i == 0 {
-                    if !c.is_ascii_alphabetic() || !c.is_ascii_uppercase() {
-                        return loc.err(Error::TSymbolInvalidInitial(c));
-                    }
-                } else {
-                    if !c.is_ascii_alphanumeric() {
-                        return loc.err(Error::SymbolInvalidChar(i, c));
+        match T_SYMBOLS.get(&name) {
+            Some(s) => Ok(s.clone()),
+            _ => {
+                for (i, c) in name.char_indices() {
+                    if i == 0 {
+                        if !c.is_ascii_alphabetic() || !c.is_ascii_uppercase() {
+                            return loc.err(Error::TSymbolInvalidInitial(c));
+                        }
+                    } else {
+                        if !c.is_ascii_alphanumeric() {
+                            return loc.err(Error::SymbolInvalidChar(i, c));
+                        }
                     }
                 }
+                Ok(Self {
+                    symbol: Sym::Other(name),
+                })
             }
-            Ok(Self {
-                symbol: Sym::Other(name),
-            })
         }
     }
 

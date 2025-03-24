@@ -18,7 +18,7 @@ use crate::visibility::Visibility;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use lexer::{lex, Lexeme, LexemeKind, Lexemes, Separator};
+use lexer::{Lexeme, LexemeKind, Lexemes, Separator, lex};
 
 // Parses the input as a package
 pub fn parse(pkg: Pkg, input: &str) -> Result<Package> {

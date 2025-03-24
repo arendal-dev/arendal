@@ -1,6 +1,6 @@
 use crate::ast0::{self, BinaryOp, Q};
 use crate::context::Type;
-use crate::error::{Error, Errors, Result, L};
+use crate::error::{Error, Errors, L, Result};
 use crate::symbol::{Symbol, TSymbol};
 use crate::tst::Assignment;
 

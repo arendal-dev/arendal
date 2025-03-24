@@ -2,8 +2,8 @@ use core::context::Value;
 use core::env::Env;
 use core::error::Result;
 
-use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use rustyline::error::ReadlineError;
 
 fn main() -> rustyline::Result<()> {
     let mut repl = REPL::new();
