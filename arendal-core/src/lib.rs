@@ -9,6 +9,7 @@ pub mod keyword;
 pub mod problem;
 pub mod symbol;
 pub mod tst;
+pub mod vectree;
 pub mod visibility;
 
 pub use arcstr::{literal, ArcStr, Substr};

@@ -1,5 +1,4 @@
 use super::ArcStr;
-use std::fmt;
 
 pub trait Position: Clone {}
 
@@ -15,53 +14,25 @@ impl NoPosition {
     }
 }
 
-pub trait ProblemCode: Clone + PartialEq + Eq + fmt::Display {}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ErrorCode {
-    code: ArcStr,
-}
-
-impl fmt::Display for ErrorCode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.code.fmt(f)
-    }
-}
-
-impl ProblemCode for ErrorCode {}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WarningCode {
-    code: ArcStr,
-}
-
-impl fmt::Display for WarningCode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.code.fmt(f)
-    }
-}
-
-impl ProblemCode for WarningCode {}
-
-pub trait Problem<P: Position, C: ProblemCode> {
+pub trait Problem<P: Position> {
     fn position(&self) -> P;
-    fn code(&self) -> C;
+    fn code(&self) -> ArcStr;
     fn message(&self) -> ArcStr;
 }
 
 #[derive(Clone, Debug)]
 pub struct Error<P: Position> {
     pub position: P,
-    pub code: ErrorCode,
+    pub code: ArcStr,
     pub message: ArcStr,
 }
 
-impl<P: Position> Problem<P, ErrorCode> for Error<P> {
+impl<P: Position> Problem<P> for Error<P> {
     fn position(&self) -> P {
         self.position.clone()
     }
 
-    fn code(&self) -> ErrorCode {
+    fn code(&self) -> ArcStr {
         self.code.clone()
     }
 
@@ -73,16 +44,16 @@ impl<P: Position> Problem<P, ErrorCode> for Error<P> {
 #[derive(Clone, Debug)]
 pub struct Warning<P: Position> {
     pub position: P,
-    pub code: WarningCode,
+    pub code: ArcStr,
     pub message: ArcStr,
 }
 
-impl<P: Position> Problem<P, WarningCode> for Warning<P> {
+impl<P: Position> Problem<P> for Warning<P> {
     fn position(&self) -> P {
         self.position.clone()
     }
 
-    fn code(&self) -> WarningCode {
+    fn code(&self) -> ArcStr {
         self.code.clone()
     }
 
@@ -118,8 +89,16 @@ impl<P: Position, T> Output<P, T> {
 
 pub type Result<P, T> = std::result::Result<Output<P, T>, Problems<P>>;
 
+// Creates an ok result with no warnings
+pub fn ok<P: Position, T>(value: T) -> Result<P, T> {
+    Ok(Output {
+        value,
+        warnings: Vec::default(),
+    })
+}
+
 // Creates a result with a single error
-pub fn error<P: Position, T>(position: P, code: ErrorCode, message: ArcStr) -> Result<P, T> {
+pub fn error<P: Position, T>(position: P, code: ArcStr, message: ArcStr) -> Result<P, T> {
     let error = Error {
         position,
         code,
@@ -136,7 +115,7 @@ pub struct ResultBuilder<P: Position> {
 }
 
 impl<P: Position> ResultBuilder<P> {
-    pub fn add_error(&mut self, position: P, code: ErrorCode, message: ArcStr) {
+    pub fn add_error(&mut self, position: P, code: ArcStr, message: ArcStr) {
         self.problems.errors.push(Error {
             position,
             code,
@@ -144,7 +123,7 @@ impl<P: Position> ResultBuilder<P> {
         });
     }
 
-    pub fn add_warning(&mut self, position: P, code: WarningCode, message: ArcStr) {
+    pub fn add_warning(&mut self, position: P, code: ArcStr, message: ArcStr) {
         self.problems.warnings.push(Warning {
             position,
             code,
