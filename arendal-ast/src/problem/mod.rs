@@ -1,96 +1,44 @@
+use crate::position::Position;
 use arcstr::ArcStr;
 
-pub trait Position: Clone {}
-
-#[derive(Clone)]
-pub struct NoPosition {}
-
-impl Position for NoPosition {}
-
-impl NoPosition {
-    #[inline]
-    pub fn get() -> NoPosition {
-        NoPosition {}
-    }
-}
-
-pub trait Problem<P: Position> {
-    fn position(&self) -> P;
-    fn code(&self) -> ArcStr;
-    fn message(&self) -> ArcStr;
+#[derive(Clone, Debug)]
+pub enum Severity {
+    Warning,
+    Error,
 }
 
 #[derive(Clone, Debug)]
-pub struct Error<P: Position> {
-    pub position: P,
+pub struct Problem {
+    pub severity: Severity,
+    pub position: Position,
     pub code: ArcStr,
     pub message: ArcStr,
 }
 
-impl<P: Position> Problem<P> for Error<P> {
-    fn position(&self) -> P {
-        self.position.clone()
-    }
+pub type Problems = Vec<Problem>;
 
-    fn code(&self) -> ArcStr {
-        self.code.clone()
-    }
-
-    fn message(&self) -> ArcStr {
-        self.message.clone()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Warning<P: Position> {
-    pub position: P,
-    pub code: ArcStr,
-    pub message: ArcStr,
-}
-
-impl<P: Position> Problem<P> for Warning<P> {
-    fn position(&self) -> P {
-        self.position.clone()
-    }
-
-    fn code(&self) -> ArcStr {
-        self.code.clone()
-    }
-
-    fn message(&self) -> ArcStr {
-        self.message.clone()
-    }
-}
-
-pub type Errors<P> = Vec<Error<P>>;
-
-pub type Warnings<P> = Vec<Warning<P>>;
-
-pub struct Problems<P: Position> {
-    pub errors: Errors<P>,
-    pub warnings: Warnings<P>,
-}
-
-pub struct Output<P: Position, T> {
+pub struct Output<T> {
     pub value: T,
-    pub warnings: Warnings<P>,
+    pub warnings: Vec<Problem>,
 }
 
-impl<P: Position, T> Output<P, T> {
-    pub fn builder() -> ResultBuilder<P> {
+pub trait AResult<T> {
+    fn builder() -> ResultBuilder;
+}
+
+pub type Result<T> = std::result::Result<Output<T>, Problems>;
+
+impl<T> AResult<T> for Result<T> {
+    fn builder() -> ResultBuilder {
         ResultBuilder {
-            problems: Problems {
-                errors: Vec::default(),
-                warnings: Vec::default(),
-            },
+            problems: Vec::default(),
+            has_error: false,
         }
     }
 }
 
-pub type Result<P, T> = std::result::Result<Output<P, T>, Problems<P>>;
-
 // Creates an ok result with no warnings
-pub fn ok<P: Position, T>(value: T) -> Result<P, T> {
+pub fn ok<T>(value: T) -> Result<T> {
     Ok(Output {
         value,
         warnings: Vec::default(),
@@ -98,65 +46,67 @@ pub fn ok<P: Position, T>(value: T) -> Result<P, T> {
 }
 
 // Creates a result with a single error
-pub fn error<P: Position, T>(position: P, code: ArcStr, message: ArcStr) -> Result<P, T> {
-    let error = Error {
+pub fn error<T>(position: Position, code: &str, message: &str) -> Result<T> {
+    let error = Problem {
+        severity: Severity::Error,
         position,
-        code,
-        message,
+        code: code.into(),
+        message: message.into(),
     };
-    Err(Problems {
-        errors: vec![error],
-        warnings: Vec::default(),
-    })
+    Err(vec![error])
 }
 
-pub struct ResultBuilder<P: Position> {
-    problems: Problems<P>,
+pub struct ResultBuilder {
+    problems: Problems,
+    has_error: bool,
 }
 
-impl<P: Position> ResultBuilder<P> {
-    pub fn add_error(&mut self, position: P, code: ArcStr, message: ArcStr) {
-        self.problems.errors.push(Error {
+impl ResultBuilder {
+    pub fn add_error(&mut self, position: Position, code: &str, message: &str) {
+        self.problems.push(Problem {
+            severity: Severity::Error,
             position,
-            code,
-            message,
+            code: code.into(),
+            message: message.into(),
+        });
+        self.has_error = true;
+    }
+
+    pub fn add_warning(&mut self, position: Position, code: &str, message: &str) {
+        self.problems.push(Problem {
+            severity: Severity::Warning,
+            position,
+            code: code.into(),
+            message: message.into(),
         });
     }
 
-    pub fn add_warning(&mut self, position: P, code: ArcStr, message: ArcStr) {
-        self.problems.warnings.push(Warning {
-            position,
-            code,
-            message,
-        });
-    }
-
-    pub fn to_result<T>(self, value: T) -> Result<P, T> {
-        if self.problems.errors.is_empty() {
+    pub fn to_result<T>(self, value: T) -> Result<T> {
+        if self.has_error {
+            Err(self.problems)
+        } else {
             Ok(Output {
                 value,
-                warnings: self.problems.warnings,
+                warnings: self.problems,
             })
-        } else {
-            Err(self.problems)
         }
     }
 
-    pub fn to_unit_result(self) -> Result<P, ()> {
+    pub fn to_unit_result(self) -> Result<()> {
         self.to_result(())
     }
 
-    pub fn to_lazy_result<T, F>(self, supplier: F) -> Result<P, T>
+    pub fn to_lazy_result<T, F>(self, supplier: F) -> Result<T>
     where
         F: FnOnce() -> T,
     {
-        if self.problems.errors.is_empty() {
+        if self.has_error {
+            Err(self.problems)
+        } else {
             Ok(Output {
                 value: supplier(),
-                warnings: self.problems.warnings,
+                warnings: self.problems,
             })
-        } else {
-            Err(self.problems)
         }
     }
 }
