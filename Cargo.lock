@@ -28,6 +28,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "arendal-id"
+version = "0.1.0"
+
+[[package]]
 name = "arendal-num"
 version = "0.1.0"
 
