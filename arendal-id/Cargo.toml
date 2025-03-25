@@ -5,5 +5,3 @@ edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-# num = "0.4.0" # We will decide the library to use in the future

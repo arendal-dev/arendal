@@ -8,3 +8,7 @@ members = [
     "arendal-core",
     "arendal"
 ]
+
+[workspace.dependencies]
+arcstr = "1.2.0"
+
