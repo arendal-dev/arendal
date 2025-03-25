@@ -4,6 +4,7 @@ resolver = "3"
 members = [
     "arendal-num",
     "arendal-id",
+    "arendal-ast",
     "arendal-core",
     "arendal"
 ]
