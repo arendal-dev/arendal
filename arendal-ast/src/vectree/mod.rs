@@ -11,6 +11,7 @@ pub trait Node {
 }
 
 struct InternalNode<T: Node> {
+    id: NodeRef,
     node: T,
     parent: Option<NodeRef>,
 }
@@ -19,6 +20,7 @@ type NodeVec<T> = Vec<InternalNode<T>>;
 
 pub struct VecTree<T: Node> {
     nodes: NodeVec<T>,
+    top_level: Vec<NodeRef>,
 }
 
 pub enum Error {
@@ -50,17 +52,34 @@ impl<T: Node> Builder<T> {
                 return Err(Error::ChildHasParent(n.clone()));
             }
         }
-        let new_ref = NodeRef {
+        let id = NodeRef {
             tree: self.tree,
             index: self.nodes.len(),
         };
         // First pass: Update children
         for n in &mut self.children {
             let node = &mut self.nodes[n.index];
-            node.parent = Some(new_ref.clone());
+            node.parent = Some(id.clone());
         }
-        self.nodes.push(InternalNode { node, parent: None });
-        Ok(new_ref)
+        self.nodes.push(InternalNode {
+            id: id.clone(),
+            node,
+            parent: None,
+        });
+        Ok(id)
+    }
+
+    pub fn build(self) -> VecTree<T> {
+        let mut top_level = Vec::<NodeRef>::default();
+        for node in &self.nodes {
+            if node.parent.is_none() {
+                top_level.push(node.id.clone());
+            }
+        }
+        VecTree {
+            nodes: self.nodes,
+            top_level,
+        }
     }
 }
 
