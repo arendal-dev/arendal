@@ -11,4 +11,5 @@ members = [
 
 [workspace.dependencies]
 arcstr = "1.2.0"
+rand = "0.9.0"
 

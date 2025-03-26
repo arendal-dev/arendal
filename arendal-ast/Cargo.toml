@@ -7,4 +7,5 @@ edition = "2024"
 
 [dependencies]
 arcstr = { workspace = true }
+rand = { workspace = true }
 id = { path = "../arendal-id", package = "arendal-id" }
