@@ -23,6 +23,22 @@ pub struct VecTree<T: Node> {
     top_level: Vec<NodeRef>,
 }
 
+pub struct TopLevelIter<'a, T: Node> {
+    tree: &'a VecTree<T>,
+    iter: std::slice::Iter<'a, NodeRef>,
+}
+
+impl<'a, T: Node> Iterator for TopLevelIter<'a, T> {
+    type Item = (NodeRef, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next() {
+            Some(id) => Some((id.clone(), &self.tree.nodes[id.index].node)),
+            None => None,
+        }
+    }
+}
+
 pub enum Error {
     ChildNotFound(NodeRef),
     ChildHasParent(NodeRef),
