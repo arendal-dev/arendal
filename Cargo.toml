@@ -5,6 +5,7 @@ members = [
     "arendal-num",
     "arendal-id",
     "arendal-ast",
+    "arendal-parser",
     "arendal-core",
     "arendal"
 ]
@@ -12,4 +13,7 @@ members = [
 [workspace.dependencies]
 arcstr = "1.2.0"
 rand = "0.9.0"
+phf = { version = "0.11.3", features = ["macros"] }
+data-encoding = "2.8.0"
+
 

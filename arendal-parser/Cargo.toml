@@ -1,5 +1,5 @@
 [package]
-name = "arendal-core"
+name = "arendal-parser"
 version = "0.1.0"
 edition = "2024"
 
@@ -7,8 +7,6 @@ edition = "2024"
 
 [dependencies]
 arcstr = { workspace = true }
-data-encoding = { workspace = true }
-im = "15.1.0"
 num = { path = "../arendal-num", package = "arendal-num" }
-phf = { workspace = true }
-# unicode-segmentation = "1.10.0"
+id = { path = "../arendal-id", package = "arendal-id" }
+ast = { path = "../arendal-ast", package = "arendal-ast" }

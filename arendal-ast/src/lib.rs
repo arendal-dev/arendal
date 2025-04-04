@@ -1,10 +1,13 @@
+pub mod input;
 pub mod position;
 pub mod problem;
 pub mod vectree;
+pub mod keyword;
+pub mod symbol;
 
-use id::{Symbol, TSymbol};
 use position::Position;
 use problem::Result;
+use symbol::{Symbol, TSymbol};
 use vectree::{NodeId, VecTree};
 
 pub enum NodeData {

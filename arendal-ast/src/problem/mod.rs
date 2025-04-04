@@ -15,34 +15,17 @@ pub struct Problem {
     pub message: ArcStr,
 }
 
-pub type Problems = Vec<Problem>;
-
-pub struct Output<T> {
-    pub value: T,
-    pub warnings: Vec<Problem>,
-}
-
 pub trait AResult<T> {
-    fn builder() -> ResultBuilder;
 }
 
-pub type Result<T> = std::result::Result<Output<T>, Problems>;
+pub type Result<T> = std::result::Result<(T, Problems), Problems>;
 
 impl<T> AResult<T> for Result<T> {
-    fn builder() -> ResultBuilder {
-        ResultBuilder {
-            problems: Vec::default(),
-            has_error: false,
-        }
-    }
 }
 
 // Creates an ok result with no warnings
 pub fn ok<T>(value: T) -> Result<T> {
-    Ok(Output {
-        value,
-        warnings: Vec::default(),
-    })
+    Ok((value, Problems::default()))
 }
 
 // Creates a result with a single error
@@ -53,23 +36,22 @@ pub fn error<T>(position: Position, code: &str, message: &str) -> Result<T> {
         code: code.into(),
         message: message.into(),
     };
-    Err(vec![error])
+    Err(Problems { problems: vec![error] })
 }
 
-pub struct ResultBuilder {
-    problems: Problems,
-    has_error: bool,
+#[derive(Default)]
+pub struct Problems {
+    problems: Vec<Problem>,
 }
 
-impl ResultBuilder {
-    pub fn add_error(&mut self, position: Position, code: &str, message: &str) {
+impl Problems {
+    pub fn add_error(&mut self, position: Position, code: &str, message: String) {
         self.problems.push(Problem {
             severity: Severity::Error,
             position,
             code: code.into(),
             message: message.into(),
         });
-        self.has_error = true;
     }
 
     pub fn add_warning(&mut self, position: Position, code: &str, message: &str) {
@@ -81,14 +63,19 @@ impl ResultBuilder {
         });
     }
 
+    pub fn add_problems(&mut self, mut problems: Problems) {
+        self.problems.append(&mut problems.problems);
+    }
+
+    fn has_error(&self) -> bool {
+        self.problems.iter().any(|p| matches!(p.severity, Severity::Error))
+    }
+
     pub fn to_result<T>(self, value: T) -> Result<T> {
-        if self.has_error {
-            Err(self.problems)
+        if self.has_error() {
+            Err(self)
         } else {
-            Ok(Output {
-                value,
-                warnings: self.problems,
-            })
+            Ok((value, self))
         }
     }
 
@@ -100,13 +87,10 @@ impl ResultBuilder {
     where
         F: FnOnce() -> T,
     {
-        if self.has_error {
-            Err(self.problems)
+        if self.has_error() {
+            Err(self)
         } else {
-            Ok(Output {
-                value: supplier(),
-                warnings: self.problems,
-            })
+            Ok((supplier(), self))
         }
     }
 }
