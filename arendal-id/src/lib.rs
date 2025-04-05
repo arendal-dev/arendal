@@ -1,4 +1,7 @@
-use std::{fmt::{self, Write}, sync::Arc};
+use std::{
+    fmt::{self, Write},
+    sync::Arc,
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct RawId {
@@ -47,4 +50,3 @@ impl fmt::Debug for Id {
         self.id.fmt(f)
     }
 }
-

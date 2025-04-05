@@ -1,13 +1,16 @@
 use arcstr::{ArcStr, Substr};
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StringInput {
-    input: ArcStr
+    input: ArcStr,
 }
 
 impl StringInput {
     pub fn from_str(input: &str) -> StringInput {
-        StringInput { input: input.into() }
+        StringInput {
+            input: input.into(),
+        }
     }
 
     pub fn from_arcstr(input: ArcStr) -> StringInput {
@@ -25,66 +28,10 @@ pub struct StrLen {
     chars: usize,
 }
 
-impl StrLen {
-    fn validate(bytes: usize, chars: usize) {
-        if chars < bytes {
-            panic!("A char takes at least one byte");
-        } 
-    }
-
-    pub fn new(bytes: usize, chars: usize) -> StrLen {
-        Self::validate(bytes, chars);
-        StrLen { bytes, chars }
-    }
-
-    pub fn of_str(str: &str) -> StrLen {
-        Self::new(str.len(), str.chars().count())
-    }
-
-    pub fn of_char(c: char) -> StrLen {
-        Self::new(c.len_utf8(), 1)
-    }
-
-    pub fn bytes(&self) -> usize {
-        self.bytes
-    }
-
-    pub fn chars(&self) -> usize {
-        self.chars
-    }
-
-    pub fn add(&mut self, other: StrLen) {
-        self.bytes += other.bytes;
-        self.chars += other.chars;
-    }
-
-    pub fn add_char(&mut self, other: char) {
-        self.bytes += other.len_utf8();
-        self.chars += 1;
-    }
-
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NewLine {
-    LF,
-    CRLF,
-}
-
-impl NewLine {
-    pub fn len(self) -> StrLen {
-        let len = match self {
-            Self::LF => 1,
-            Self::CRLF => 2,
-        };
-        StrLen::new(len, len)
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Line {
-    line_number: usize,
-    start_bytes: usize
+    line_number: usize, // starts with 1
+    bytes: usize,       // bytes from the beginning of the string to the beginning of the line
 }
 
 impl Line {
@@ -92,39 +39,52 @@ impl Line {
         self.line_number
     }
 
-    pub fn start_bytes(&self) -> usize {
-        self.start_bytes
+    pub fn bytes(&self) -> usize {
+        self.bytes
     }
 }
 
 impl Default for Line {
     fn default() -> Self {
-        Line { line_number: 1, start_bytes: 0 }
-    }  
+        Line {
+            line_number: 1,
+            bytes: 0,
+        }
+    }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StrPos {
+    bytes: usize, // bytes from the beginning of the string
     line: Line,
-    from_start_bytes: usize,
-    from_line_chars: usize,
+    column: usize, // chars from the beginning of the line
+}
+
+impl Default for StrPos {
+    fn default() -> Self {
+        StrPos {
+            bytes: 0,
+            line: Line::default(),
+            column: 1,
+        }
+    }
 }
 
 impl StrPos {
+    pub fn bytes(&self) -> usize {
+        self.bytes
+    }
+
     pub fn line(&self) -> Line {
         self.line
     }
 
-    pub fn from_start_bytes(&self) -> usize {
-        self.from_start_bytes
-    }
-
-    pub fn from_line_chars(&self) -> usize {
-        self.from_line_chars
+    pub fn column(&self) -> usize {
+        self.column
     }
 }
 
-
+#[derive(Debug)]
 pub enum StrRangeError {
     DifferentInput,
 }
@@ -133,14 +93,14 @@ pub enum StrRangeError {
 pub struct StrRange {
     input: StringInput,
     from: StrPos,
-    to: StrPos
+    to: StrPos,
 }
 
 // Merges two ranges. Assumptions:
 // - Both ranges are valid and from the same input.
 // - r1.from.from_start_bytes <= r2.from.from_start_bytes
 fn merge_ranges(r1: &StrRange, r2: &StrRange) -> StrRange {
-    if r1.to.from_start_bytes >= r2.to.from_start_bytes {
+    if r1.to.bytes >= r2.to.bytes {
         r1.clone()
     } else {
         StrRange {
@@ -149,7 +109,6 @@ fn merge_ranges(r1: &StrRange, r2: &StrRange) -> StrRange {
             to: r2.to,
         }
     }
-
 }
 
 impl StrRange {
@@ -161,52 +120,57 @@ impl StrRange {
         }
     }
 
-    pub fn from_bytes(&self) -> usize {
-        self.from.from_start_bytes
+    pub fn from(&self) -> &StrPos {
+        &self.from
+    }
+
+    pub fn to(&self) -> &StrPos {
+        &self.to
     }
 
     pub fn catch_up(&mut self) {
         self.from = self.to;
-    } 
-
-    pub fn new_line(&mut self, new_line: NewLine) {
-        self.to.from_start_bytes += new_line.len().bytes;
-        self.to.line.line_number += 1;
-        self.to.line.start_bytes = self.to.from_start_bytes;
-        self.to.from_line_chars = 0;
     }
 
-    // Advance the to position in the same line
-    pub fn advance(&mut self, len: StrLen) {
-        self.to.from_start_bytes += len.bytes;
-        self.to.from_line_chars += len.chars;
-    }
-
-    // Returns a substring starting in the from position of this range
-    pub fn get_substr_len(&self, len: StrLen) -> Substr {
-        let from = self.from.from_start_bytes;
-        let to = from + len.bytes;
-        self.input.input.substr(from..to)
+    // Advance one char
+    // TODO: check if it is the right char, at least in debug mode.
+    pub fn advance(&mut self, c: char) {
+        self.to.bytes += c.len_utf8();
+        if c == '\n' {
+            self.to.line.line_number += 1;
+            self.to.line.bytes = self.to.bytes;
+            self.to.column = 1;
+        } else {
+            self.to.column += 1;
+        }
     }
 
     // Returns the substring represented by this range
     pub fn substr(&self) -> Substr {
-        let from = self.from.from_start_bytes;
-        let to = self.to.from_start_bytes;
+        let from = self.from.bytes;
+        let to = self.to.bytes;
         self.input.input.substr(from..to)
     }
 
     pub fn merge(&self, other: &StrRange) -> Result<StrRange, StrRangeError> {
         if self.input != other.input {
             Err(StrRangeError::DifferentInput)
-        } else if self.from.from_start_bytes <= other.from.from_start_bytes {
+        } else if self.from.bytes <= other.from.bytes {
             Ok(merge_ranges(self, other))
         } else {
             Ok(merge_ranges(other, self))
         }
     }
-
-
 }
 
-
+impl fmt::Display for StrRange {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let from = self.from.bytes;
+        let to = self.to.bytes;
+        if from == to {
+            write!(f, "{}", from)
+        } else {
+            write!(f, "{}-{}", from, to)
+        }
+    }
+}

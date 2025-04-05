@@ -2,9 +2,9 @@ use std::fmt::{self, Write};
 use std::hash::Hash;
 use std::sync::Arc;
 
-use id::Id;
 use crate::keyword::Keyword;
 use arcstr::ArcStr;
+use id::Id;
 
 fn separator(f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.write_str("::")
@@ -32,7 +32,7 @@ pub enum Error {
     Empty,
     Keyword(Keyword),
     InvalidInitial(char),
-    InvalidChar(usize, char)
+    InvalidChar(usize, char),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -98,7 +98,6 @@ impl TSymbol {
         }
         Ok(Self { name: name.into() })
     }
-
 }
 
 impl fmt::Display for TSymbol {
@@ -153,7 +152,9 @@ pub struct ModulePath {
 
 impl ModulePath {
     pub fn new(path: Vec<Symbol>) -> Self {
-        Self { path: Arc::new(path) }
+        Self {
+            path: Arc::new(path),
+        }
     }
 
     pub fn empty() -> Self {
@@ -203,7 +204,9 @@ pub struct FQPath {
 
 impl FQPath {
     pub fn new(lib: Lib, path: ModulePath) -> Self {
-        FQPath { data: Arc::new(FQPathData { lib, path }) }
+        FQPath {
+            data: Arc::new(FQPathData { lib, path }),
+        }
     }
 
     pub fn std_empty() -> FQPath {
@@ -221,7 +224,6 @@ impl FQPath {
     pub fn fq_type(&self, symbol: TSymbol) -> FQType {
         FQ::top_level(self.clone(), symbol)
     }
-
 }
 
 impl fmt::Display for FQPath {
@@ -292,4 +294,3 @@ impl<T: fmt::Display> fmt::Debug for FQ<T> {
 
 pub type FQSym = FQ<Symbol>;
 pub type FQType = FQ<TSymbol>;
-

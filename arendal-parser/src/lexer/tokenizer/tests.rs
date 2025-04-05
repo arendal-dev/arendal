@@ -1,162 +1,160 @@
-use arcstr::ArcStr;
-use super::{Enclosure, NewLine, TokenData, Tokenizer};
+use super::{Enclosure, TokenKind, Tokenizer};
 use ast::input::StringInput;
-use NewLine::*;
 
 struct TestCase {
     input: StringInput,
     tokenizer: Tokenizer,
 }
 
-impl TestCase {
-    fn new(input: &str) -> TestCase {
-        let input = StringInput::from_str(input);
-        let tokenizer = Tokenizer::new(input.clone());
-        TestCase {
-            input,
-            tokenizer,
-        }
-    }
+fn test(input: &str) -> TestCase {
+    let input = StringInput::from_str(input);
+    let tokenizer = Tokenizer::new(input.clone());
+    TestCase { input, tokenizer }
+}
 
-    fn token(mut self, data: TokenData) -> Self {
-        self.tokenizer.add_token(data);
+impl TestCase {
+    fn token(mut self, content: &str, kind: TokenKind) -> Self {
+        for c in content.chars() {
+            self.tokenizer.advance(c);
+        }
+        self.tokenizer.add_token(kind);
         self
     }
 
-    fn newline(self, nl: NewLine) -> Self {
-        self.token(TokenData::EndOfLine(nl))
+    fn lf(self) -> Self {
+        self.token("\n", TokenKind::NewLine)
     }
 
-    fn spaces(self, n: usize) -> Self {
-        self.token(TokenData::Spaces(n))
+    fn crlf(self) -> Self {
+        self.token("\r\n", TokenKind::NewLine)
     }
 
-    fn tabs(self, n: usize) -> Self {
-        self.token(TokenData::Tabs(n))
+    fn spaces(mut self, n: usize) -> Self {
+        for _ in 0..n {
+            self.tokenizer.advance(' ');
+        }
+        self.tokenizer.add_token(TokenKind::Spaces);
+        self
+    }
+
+    fn tabs(mut self, n: usize) -> Self {
+        for _ in 0..n {
+            self.tokenizer.advance('\t');
+        }
+        self.tokenizer.add_token(TokenKind::Tabs);
+        self
     }
 
     fn digits(self, digits: &str) -> Self {
-        self.token(TokenData::Digits(ArcStr::from(digits).substr(0..)))
+        self.token(digits, TokenKind::Digits)
     }
 
     fn word(self, word: &str) -> Self {
-        self.token(TokenData::Word(ArcStr::from(word).substr(0..)))
+        self.token(word, TokenKind::Word)
     }
 
-    fn ok(&self) {
-        match super::tokenize(self.input.clone()) {
-            Ok(output) => assert_eq!(*output.0.tokens, self.tokenizer.tokens),
-            Err(_) => panic!(),
-        }
+    fn ok(self) {
+        assert_eq!(
+            *super::tokenize(self.input.clone()).tokens,
+            self.tokenizer.tokens
+        )
     }
 }
 
 #[test]
 fn empty() {
-    TestCase::new("").ok();
+    test("").ok();
 }
 
 #[test]
 fn spaces() {
-    TestCase::new("   ").spaces(3).ok();
+    test("   ").spaces(3).ok();
 }
 
 #[test]
 fn tabs() {
-    TestCase::new("\t\t\t").tabs(3).ok();
+    test("\t\t\t").tabs(3).ok();
 }
 
 #[test]
 fn lf() {
-    TestCase::new("\n").newline(LF).ok();
+    test("\n").lf().ok();
 }
 
 #[test]
 fn crlf() {
-    TestCase::new("\r\n").newline(CRLF).ok();
+    test("\r\n").crlf().ok();
 }
 
 #[test]
 fn singles() {
-    TestCase::new("+-*./><!()={}[]_:")
-        .token(TokenData::Plus)
-        .token(TokenData::Minus)
-        .token(TokenData::Star)
-        .token(TokenData::Dot)
-        .token(TokenData::Slash)
-        .token(TokenData::Greater)
-        .token(TokenData::Less)
-        .token(TokenData::Bang)
-        .token(TokenData::Open(Enclosure::Parens))
-        .token(TokenData::Close(Enclosure::Parens))
-        .token(TokenData::Assignment)
-        .token(TokenData::Open(Enclosure::Curly))
-        .token(TokenData::Close(Enclosure::Curly))
-        .token(TokenData::Open(Enclosure::Square))
-        .token(TokenData::Close(Enclosure::Square))
-        .token(TokenData::Underscore)
-        .token(TokenData::Colon)
-        .ok();
-}
-
-#[test]
-fn bang0() {
-    TestCase::new("!a")
-        .token(TokenData::Bang)
-        .word("a")
+    test("+-*./><!()={}[]_:")
+        .token("+", TokenKind::Plus)
+        .token("-", TokenKind::Minus)
+        .token("+", TokenKind::Star)
+        .token(".", TokenKind::Dot)
+        .token("/", TokenKind::Slash)
+        .token(">", TokenKind::Greater)
+        .token("<", TokenKind::Less)
+        .token("!", TokenKind::Bang)
+        .token("(", TokenKind::Open(Enclosure::Parens))
+        .token(")", TokenKind::Close(Enclosure::Parens))
+        .token("=", TokenKind::Assignment)
+        .token("{", TokenKind::Open(Enclosure::Curly))
+        .token("}", TokenKind::Close(Enclosure::Curly))
+        .token("[", TokenKind::Open(Enclosure::Square))
+        .token("]", TokenKind::Close(Enclosure::Square))
+        .token("_", TokenKind::Underscore)
+        .token(":", TokenKind::Colon)
         .ok();
 }
 
 #[test]
 fn bang() {
-    TestCase::new("!a!=b")
-        .token(TokenData::Bang)
+    test("!a!=b")
+        .token("!", TokenKind::Bang)
         .word("a")
-        .token(TokenData::NotEquals)
+        .token("!=", TokenKind::NotEquals)
         .word("b")
         .ok();
 }
 
 #[test]
 fn digits1() {
-    TestCase::new("1234").digits("1234").ok();
+    test("1234").digits("1234").ok();
 }
 
 #[test]
 fn digits2() {
-    TestCase::new("12 34")
-        .digits("12")
-        .spaces(1)
-        .digits("34")
-        .ok();
+    test("12 34").digits("12").spaces(1).digits("34").ok();
 }
 
 #[test]
 fn word1() {
-    TestCase::new("abc").word("abc").ok();
+    test("abc").word("abc").ok();
 }
 
 #[test]
 fn word2() {
-    TestCase::new("abc4e").word("abc4e").ok();
+    test("abc4e").word("abc4e").ok();
 }
 
 #[test]
 fn word3() {
-    TestCase::new("4bc5e").digits("4").word("bc5e").ok();
+    test("4bc5e").digits("4").word("bc5e").ok();
 }
 
 #[test]
 fn harness() {
-    TestCase::new("   \n\t").spaces(3).newline(LF).tabs(1).ok();
+    test("   \n\t").spaces(3).lf().tabs(1).ok();
 }
 
 #[test]
 fn sum() {
-    TestCase::new("1 + 3")
+    test("1 + 3")
         .digits("1")
         .spaces(1)
-        .token(TokenData::Plus)
+        .token("+", TokenKind::Plus)
         .spaces(1)
         .digits("3")
         .ok();
@@ -164,11 +162,11 @@ fn sum() {
 
 #[test]
 fn path() {
-    TestCase::new("a::b::C")
+    test("a::b::C")
         .word("a")
-        .token(TokenData::DoubleColon)
+        .token("::", TokenKind::DoubleColon)
         .word("b")
-        .token(TokenData::DoubleColon)
+        .token("::", TokenKind::DoubleColon)
         .word("C")
         .ok();
 }

@@ -15,13 +15,11 @@ pub struct Problem {
     pub message: ArcStr,
 }
 
-pub trait AResult<T> {
-}
+pub trait AResult<T> {}
 
 pub type Result<T> = std::result::Result<(T, Problems), Problems>;
 
-impl<T> AResult<T> for Result<T> {
-}
+impl<T> AResult<T> for Result<T> {}
 
 // Creates an ok result with no warnings
 pub fn ok<T>(value: T) -> Result<T> {
@@ -36,10 +34,12 @@ pub fn error<T>(position: Position, code: &str, message: &str) -> Result<T> {
         code: code.into(),
         message: message.into(),
     };
-    Err(Problems { problems: vec![error] })
+    Err(Problems {
+        problems: vec![error],
+    })
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Problems {
     problems: Vec<Problem>,
 }
@@ -68,7 +68,9 @@ impl Problems {
     }
 
     fn has_error(&self) -> bool {
-        self.problems.iter().any(|p| matches!(p.severity, Severity::Error))
+        self.problems
+            .iter()
+            .any(|p| matches!(p.severity, Severity::Error))
     }
 
     pub fn to_result<T>(self, value: T) -> Result<T> {

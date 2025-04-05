@@ -1,21 +1,42 @@
 use std::rc::Rc;
 
 use super::{
-    Enclosure, Keyword, Level, Lexeme, LexemeData, Lexemes, Position, Result, Separator, Symbol, TSymbol};
+    Enclosure, Keyword, Level, Lexeme, LexemeData, Lexemes, Position, Result, Separator, Symbol,
+    TSymbol,
+};
 use arcstr::ArcStr;
 use ast::input::StringInput;
 
 fn assert_eq_noloc(actual: &Vec<Lexeme>, expected: &Vec<Lexeme>) {
+    // println!("Actual:   {:?}\nExpected: {:?}", actual, expected);
     assert_eq!(actual.len(), expected.len());
-    for (actual_lexeme, expected_lexeme) in actual.iter().zip(expected.iter()) {
+    for (i, (actual_lexeme, expected_lexeme)) in actual.iter().zip(expected.iter()).enumerate() {
         assert_eq!(
             actual_lexeme.separator, expected_lexeme.separator,
-            "(Separator) Left=actual, Right=expected"
+            "(Separator) Left=actual, Right=expected - Index {}",
+            i
         );
-        assert_eq!(
-            actual_lexeme.data, expected_lexeme.data,
-            "(Kind) Left=actual, Right=expected"
-        );
+        match &actual_lexeme.data {
+            LexemeData::Level(actual_level) => match &expected_lexeme.data {
+                LexemeData::Level(expected_level) => {
+                    assert_eq!(actual_level.enclosure, expected_level.enclosure);
+                    assert_eq_noloc(
+                        &actual_level.lexemes.lexemes,
+                        &expected_level.lexemes.lexemes,
+                    );
+                }
+                _ => assert_eq!(
+                    actual_lexeme.data, expected_lexeme.data,
+                    "(Data) Left=actual, Right=expected - Index {}",
+                    i
+                ),
+            },
+            _ => assert_eq!(
+                actual_lexeme.data, expected_lexeme.data,
+                "(Data) Left=actual, Right=expected - Index {}",
+                i
+            ),
+        }
     }
 }
 
@@ -24,7 +45,6 @@ struct Parent {
     enclosure: Enclosure,
     parent: TestCase,
 }
-
 
 struct TestCase {
     parent: Option<Box<Parent>>,
@@ -41,12 +61,11 @@ fn test(input: &str) -> TestCase {
 }
 
 impl TestCase {
-
     fn token(mut self, separator: Separator, data: LexemeData) -> Self {
         self.lexemes.push(Lexeme {
             position: Position::NoPosition,
             separator,
-            data
+            data,
         });
         self
     }
@@ -60,7 +79,7 @@ impl TestCase {
         let parent = Parent {
             separator,
             enclosure,
-            parent: self
+            parent: self,
         };
         TestCase {
             parent: Some(Box::new(parent)),
@@ -73,12 +92,18 @@ impl TestCase {
         match self.parent {
             None => panic!("Missing parent enclosure"),
             Some(mut parent) => {
-                let lexemes = Lexemes { lexemes: Rc::new(self.lexemes) };
+                let lexemes = Lexemes {
+                    lexemes: Rc::new(self.lexemes),
+                };
                 let level = Level {
                     enclosure: parent.enclosure,
-                    lexemes
+                    lexemes,
                 };
-                parent.parent.lexemes.push(Lexeme { position: Position::NoPosition, separator: parent.separator, data: LexemeData::Level(level) });
+                parent.parent.lexemes.push(Lexeme {
+                    position: Position::NoPosition,
+                    separator: parent.separator,
+                    data: LexemeData::Level(level),
+                });
                 parent.parent
             }
         }
@@ -105,7 +130,7 @@ impl TestCase {
         match self.parent {
             None => match self.lex() {
                 Ok(lexemes) => assert_eq_noloc(&lexemes.0.lexemes, &self.lexemes),
-                Err(_) => panic!(),
+                Err(problems) => panic!("{:?}", problems),
             },
             _ => self.close().ok_without_pos(),
         }
@@ -119,7 +144,6 @@ impl TestCase {
             },
             _ => self.close().err(),
         }
-        
     }
 }
 
@@ -131,28 +155,28 @@ fn empty() {
 #[test]
 fn digits1() {
     test("1234")
-        .integer(Separator::NewLine, 1234)
+        .integer(Separator::Start, 1234)
         .ok_without_pos();
 }
 
 #[test]
 fn digits2() {
     test("\t1234")
-        .integer(Separator::NewLine, 1234)
+        .integer(Separator::Whitespace, 1234)
         .ok_without_pos();
 }
 
 #[test]
 fn digits3() {
     test("\t 1234")
-        .integer(Separator::NewLine, 1234)
+        .integer(Separator::Whitespace, 1234)
         .ok_without_pos();
 }
 
 #[test]
 fn add1() {
     test("1234+456")
-        .integer(Separator::NewLine, 1234)
+        .integer(Separator::Start, 1234)
         .token(Separator::Nothing, LexemeData::Plus)
         .integer(Separator::Nothing, 456)
         .ok_without_pos();
@@ -161,7 +185,7 @@ fn add1() {
 #[test]
 fn add2() {
     test("  1234 +  456")
-        .integer(Separator::NewLine, 1234)
+        .integer(Separator::Whitespace, 1234)
         .token(Separator::Whitespace, LexemeData::Plus)
         .integer(Separator::Whitespace, 456)
         .ok_without_pos();
@@ -170,7 +194,7 @@ fn add2() {
 #[test]
 fn add3() {
     test("  1234 +\n\t456")
-        .integer(Separator::NewLine, 1234)
+        .integer(Separator::Whitespace, 1234)
         .token(Separator::Whitespace, LexemeData::Plus)
         .integer(Separator::NewLine, 456)
         .ok_without_pos();
@@ -208,14 +232,14 @@ fn remove_empty_lines4() {
 #[test]
 fn parens1() {
     test("()")
-        .level(Separator::NewLine, Enclosure::Parens)
+        .level(Separator::Start, Enclosure::Parens)
         .ok_without_pos();
 }
 
 #[test]
 fn parens2() {
     test("((()))")
-        .level(Separator::NewLine, Enclosure::Parens)
+        .level(Separator::Start, Enclosure::Parens)
         .level(Separator::Nothing, Enclosure::Parens)
         .level(Separator::Nothing, Enclosure::Parens)
         .ok_without_pos();
@@ -234,7 +258,7 @@ fn parens_err2() {
 #[test]
 fn enclosures_mixed_ok() {
     test("[{(1234)}]")
-        .level(Separator::NewLine, Enclosure::Square)
+        .level(Separator::Start, Enclosure::Square)
         .level(Separator::Nothing, Enclosure::Curly)
         .level(Separator::Nothing, Enclosure::Parens)
         .integer(Separator::Nothing, 1234)
@@ -244,7 +268,7 @@ fn enclosures_mixed_ok() {
 #[test]
 fn assignment() {
     test("let x = True")
-        .keyword(Separator::NewLine, Keyword::Let)
+        .keyword(Separator::Start, Keyword::Let)
         .symbol(Separator::Whitespace, "x")
         .token(Separator::Whitespace, LexemeData::Assignment)
         .tsymbol(Separator::Whitespace, "True")
@@ -254,7 +278,7 @@ fn assignment() {
 #[test]
 fn path() {
     test("a::b::C")
-        .symbol(Separator::NewLine, "a")
+        .symbol(Separator::Start, "a")
         .token(Separator::Nothing, LexemeData::PathSeparator)
         .symbol(Separator::Nothing, "b")
         .token(Separator::Nothing, LexemeData::PathSeparator)

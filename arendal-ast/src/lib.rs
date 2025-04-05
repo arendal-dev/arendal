@@ -1,9 +1,9 @@
 pub mod input;
+pub mod keyword;
 pub mod position;
 pub mod problem;
-pub mod vectree;
-pub mod keyword;
 pub mod symbol;
+pub mod vectree;
 
 use position::Position;
 use problem::Result;
