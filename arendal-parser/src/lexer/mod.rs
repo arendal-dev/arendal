@@ -67,6 +67,12 @@ pub(super) struct Lexemes {
     lexemes: Rc<Vec<Lexeme>>,
 }
 
+impl Lexemes {
+    pub(super) fn get(&self, index: usize) -> Option<&Lexeme> {
+        self.lexemes.get(index)
+    }
+}
+
 impl fmt::Debug for Lexemes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         (*self.lexemes).fmt(f)

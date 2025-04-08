@@ -1,3 +1,4 @@
+pub mod common;
 pub mod input;
 pub mod keyword;
 pub mod position;
