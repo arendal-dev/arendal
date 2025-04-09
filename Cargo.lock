@@ -22,6 +22,7 @@ version = "0.1.0"
 dependencies = [
  "arcstr",
  "arendal-id",
+ "arendal-num",
  "phf",
  "rand 0.9.0",
 ]

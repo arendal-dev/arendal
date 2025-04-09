@@ -10,3 +10,4 @@ arcstr = { workspace = true }
 phf = { workspace = true }
 rand = { workspace = true }
 id = { path = "../arendal-id", package = "arendal-id" }
+num = { path = "../arendal-num", package = "arendal-num" }
