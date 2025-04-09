@@ -1,18 +1,21 @@
-use crate::position::Position;
-use arcstr::ArcStr;
+use std::sync::Arc;
 
-#[derive(Clone, Debug)]
+use crate::position::Position;
+
+#[derive(Clone, Copy, Debug)]
 pub enum Severity {
     Warning,
     Error,
 }
 
 #[derive(Clone, Debug)]
-pub struct Problem {
-    pub severity: Severity,
-    pub position: Position,
-    pub code: ArcStr,
-    pub message: ArcStr,
+pub struct ProblemInstance {
+    position: Position,
+    problem: Arc<dyn Problem>,
+}
+
+pub trait Problem: std::fmt::Debug {
+    fn severity(&self) -> Severity;
 }
 
 pub trait AResult<T> {}
@@ -27,12 +30,10 @@ pub fn ok<T>(value: T) -> Result<T> {
 }
 
 // Creates a result with a single error
-pub fn error<T>(position: Position, code: &str, message: &str) -> Result<T> {
-    let error = Problem {
-        severity: Severity::Error,
+pub fn error<T, P: Problem + 'static>(position: Position, problem: P) -> Result<T> {
+    let error = ProblemInstance {
         position,
-        code: code.into(),
-        message: message.into(),
+        problem: Arc::new(problem) as Arc<dyn Problem>,
     };
     Err(Problems {
         problems: vec![error],
@@ -41,25 +42,14 @@ pub fn error<T>(position: Position, code: &str, message: &str) -> Result<T> {
 
 #[derive(Default, Debug)]
 pub struct Problems {
-    problems: Vec<Problem>,
+    problems: Vec<ProblemInstance>,
 }
 
 impl Problems {
-    pub fn add_error(&mut self, position: Position, code: &str, message: String) {
-        self.problems.push(Problem {
-            severity: Severity::Error,
+    pub fn add<P: Problem + 'static>(&mut self, position: Position, problem: P) {
+        self.problems.push(ProblemInstance {
             position,
-            code: code.into(),
-            message: message.into(),
-        });
-    }
-
-    pub fn add_warning(&mut self, position: Position, code: &str, message: &str) {
-        self.problems.push(Problem {
-            severity: Severity::Warning,
-            position,
-            code: code.into(),
-            message: message.into(),
+            problem: Arc::new(problem) as Arc<dyn Problem>,
         });
     }
 
@@ -70,7 +60,7 @@ impl Problems {
     fn has_error(&self) -> bool {
         self.problems
             .iter()
-            .any(|p| matches!(p.severity, Severity::Error))
+            .any(|p| matches!(p.problem.severity(), Severity::Error))
     }
 
     pub fn to_result<T>(self, value: T) -> Result<T> {

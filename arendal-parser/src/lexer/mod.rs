@@ -6,7 +6,7 @@ use std::rc::Rc;
 use ast::input::StringInput;
 use ast::keyword::Keyword;
 use ast::position::Position;
-use ast::problem::{Problems, Result};
+use ast::problem::{Problem, Problems, Result, Severity};
 use ast::symbol::{Symbol, TSymbol};
 use num::Integer;
 use tokenizer::{Token, TokenKind, Tokens, tokenize};
@@ -119,6 +119,19 @@ struct Lexer {
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
     enclosed_by: Option<Enclosure>,
+}
+
+#[derive(Debug)]
+enum Error {
+    InvalidWord,
+    NoOpenEnclosure,
+    InvalidOpenEnclosure,
+}
+
+impl Problem for Error {
+    fn severity(&self) -> Severity {
+        Severity::Error
+    }
 }
 
 impl Lexer {
@@ -246,10 +259,10 @@ impl Lexer {
 
     fn close(mut self, token: Token, enclosure: Enclosure) -> (Result<Lexemes>, usize) {
         match self.enclosed_by {
-            None => self.add_error(&token, "TODO", format!("No open enclosure"), 0),
+            None => self.add_error(&token, Error::NoOpenEnclosure, 0),
             Some(e) => {
                 if enclosure != e {
-                    self.add_error(&token, "TODO", format!("Invalid close enclosure"), 1);
+                    self.add_error(&token, Error::InvalidOpenEnclosure, 1);
                     // Advance until the right close token
                     let mut n = 0;
                     while let Some(t) = self.peek_ahead(n) {
@@ -283,14 +296,14 @@ impl Lexer {
             } else if let Ok(s) = Symbol::new(name) {
                 self.add_lexeme(LexemeData::Symbol(s), 1);
             } else {
-                self.add_error(&token, "TODO", format!("Invalid word"), 1)
+                self.add_error(&token, Error::InvalidWord, 1)
             }
         }
     }
 
-    fn add_error(&mut self, token: &Token, code: &str, message: String, tokens: usize) {
+    fn add_error(&mut self, token: &Token, error: Error, tokens: usize) {
         self.problems
-            .add_error(Position::String(token.range.clone()), code, message);
+            .add(Position::String(token.range.clone()), error);
         self.advance(tokens)
     }
 }

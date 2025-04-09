@@ -66,6 +66,10 @@ impl ExprRef {
     }
 }
 
+pub enum Statement {
+    Expression(ExprRef),
+}
+
 struct Parser {
     lexemes: Lexemes,
     index: usize,
