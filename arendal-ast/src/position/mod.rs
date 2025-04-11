@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, Debug};
 
 use crate::input::StrRange;
 
@@ -29,5 +29,33 @@ impl fmt::Display for Position {
             Position::NoPosition => Ok(()),
             Position::String(range) => write!(f, "@{}", range),
         }
+    }
+}
+
+// Used mostly for testing, for types that skip the position when testing equality
+pub trait EqNoPosition: Debug {
+    fn eq_nopos(&self, other: &Self) -> bool;
+
+    fn assert_eq_nopos(&self, expected: &Self) {
+        if !self.eq_nopos(expected) {
+            panic!(
+                "Equality (no position) assertion failed!\nActual: {:?}\nExpected: {:?}",
+                self, expected
+            )
+        }
+    }
+}
+
+impl<T: EqNoPosition> EqNoPosition for Vec<T> {
+    fn eq_nopos(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        for (s, o) in self.iter().zip(other.iter()) {
+            if !s.eq_nopos(o) {
+                return false;
+            }
+        }
+        true
     }
 }

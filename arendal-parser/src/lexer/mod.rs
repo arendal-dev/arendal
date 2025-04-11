@@ -71,6 +71,10 @@ impl Lexemes {
     pub(super) fn get(&self, index: usize) -> Option<&Lexeme> {
         self.lexemes.get(index)
     }
+
+    pub(super) fn len(&self) -> usize {
+        self.lexemes.len()
+    }
 }
 
 impl fmt::Debug for Lexemes {
