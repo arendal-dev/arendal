@@ -42,8 +42,8 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn to_expression(self, position: &Position) -> Expression {
-        Expression::new(position.clone(), self)
+    pub fn to_expression(self, position: Position) -> Expression {
+        Expression::new(position, self)
     }
 }
 

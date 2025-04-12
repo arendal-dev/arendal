@@ -1,9 +1,10 @@
 mod lexer;
 
 use ast::{
+    common::BinaryOp,
     input::StringInput,
     problem::{Problem, Problems, Result, Severity},
-    stmt::{Expr, Expression, Statement},
+    stmt::{Binary, Expr, Expression, Statement},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
 
@@ -56,14 +57,18 @@ impl Parser {
         self.lexemes.get(self.index)
     }
 
+    fn advance(&mut self) {
+        self.index += 1;
+    }
+
     fn get_and_advance(&mut self) -> Option<&Lexeme> {
         let current = self.index;
-        self.index += 1;
+        self.advance();
         self.lexemes.get(current)
     }
 
     fn rule_statement(&mut self) -> PResult<Statement> {
-        let result = self.rule_primary().map(Expression::to_statement);
+        let result = self.rule_expression().map(Expression::to_statement);
         if !self.is_eos() {
             self.problems.add(
                 self.peek().unwrap().position.clone(),
@@ -73,11 +78,101 @@ impl Parser {
         result
     }
 
+    fn rule_expression(&mut self) -> EResult {
+        self.rule_logfactor()
+    }
+
+    fn binary_rule<O, F>(&mut self, op: O, rule: F) -> EResult
+    where
+        O: Fn(&LexemeData) -> Option<BinaryOp>,
+        F: Fn(&mut Parser) -> EResult,
+    {
+        let mut left = rule(self)?;
+        while let Some(bop) = self.peek().and_then(|l| op(&l.data)) {
+            let position = self.peek().unwrap().position.clone();
+            self.advance();
+            let right = rule(self)?;
+            left = Expr::Binary(Binary {
+                op: bop,
+                expr1: left,
+                expr2: right,
+            })
+            .to_expression(position)
+        }
+        Ok(left)
+    }
+
+    fn rule_logterm(&mut self) -> EResult {
+        self.binary_rule(
+            |k| match k {
+                LexemeData::LogicalOr => Some(BinaryOp::Or),
+                _ => None,
+            },
+            Self::rule_logfactor,
+        )
+    }
+
+    fn rule_logfactor(&mut self) -> EResult {
+        self.binary_rule(
+            |k| match k {
+                LexemeData::LogicalAnd => Some(BinaryOp::And),
+                _ => None,
+            },
+            Self::rule_equality,
+        )
+    }
+
+    fn rule_equality(&mut self) -> EResult {
+        self.binary_rule(
+            |k| match k {
+                LexemeData::Equals => Some(BinaryOp::Eq),
+                LexemeData::NotEquals => Some(BinaryOp::NEq),
+                _ => None,
+            },
+            Self::rule_comparison,
+        )
+    }
+
+    fn rule_comparison(&mut self) -> EResult {
+        self.binary_rule(
+            |k| match k {
+                LexemeData::Greater => Some(BinaryOp::GT),
+                LexemeData::GreaterOrEq => Some(BinaryOp::GE),
+                LexemeData::Less => Some(BinaryOp::LT),
+                LexemeData::LessOrEq => Some(BinaryOp::LE),
+                _ => None,
+            },
+            Self::rule_term,
+        )
+    }
+
+    fn rule_term(&mut self) -> EResult {
+        self.binary_rule(
+            |k| match k {
+                LexemeData::Plus => Some(BinaryOp::Add),
+                LexemeData::Minus => Some(BinaryOp::Sub),
+                _ => None,
+            },
+            Self::rule_factor,
+        )
+    }
+
+    fn rule_factor(&mut self) -> EResult {
+        self.binary_rule(
+            |k| match k {
+                LexemeData::Star => Some(BinaryOp::Mul),
+                LexemeData::Slash => Some(BinaryOp::Div),
+                _ => None,
+            },
+            Self::rule_primary,
+        )
+    }
+
     fn rule_primary(&mut self) -> EResult {
         if let Some(lexeme) = self.get_and_advance() {
             match &lexeme.data {
                 LexemeData::Integer(n) => {
-                    Ok(Expr::LitInteger(n.clone()).to_expression(&lexeme.position))
+                    Ok(Expr::LitInteger(n.clone()).to_expression(lexeme.position.clone()))
                 }
                 _ => panic!("TODO: error"),
             }

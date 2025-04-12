@@ -20,9 +20,8 @@ tupledescitem -> qtsymbol
 statement -> assignment | expression
 assignment -> "let" symbol "=" expression
 expression -> expr ( "then" expr )*
-expr -> conditional | subexpr
+expr -> conditional | logterm
 conditional -> "if" expr "then" expr "else" expr
-subexpr -> logterm
 logterm -> logfactor ( "||" logfactor )*
 logfactor -> equality ( "&&" equality )*
 equality -> comparison ( ("==" | "!=") comparison )*
