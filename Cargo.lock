@@ -32,6 +32,7 @@ name = "arendal-core"
 version = "0.1.0"
 dependencies = [
  "arcstr",
+ "arendal-ast",
  "arendal-num",
  "data-encoding",
  "im",
