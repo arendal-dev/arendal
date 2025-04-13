@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use ast::input::StringInput;
 use ast::keyword::Keyword;
-use ast::position::Position;
+use ast::position::{EqNoPosition, Position};
 use ast::problem::{Problem, Problems, Result, Severity};
 use ast::symbol::{Symbol, TSymbol};
 use num::Integer;
@@ -59,6 +59,22 @@ pub(super) struct Lexeme {
 impl fmt::Debug for Lexeme {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}:{:?}{}]", self.separator, self.data, self.position)
+    }
+}
+
+impl EqNoPosition for Lexeme {
+    fn eq_nopos(&self, other: &Self) -> bool {
+        self.separator == other.separator
+            && match &self.data {
+                LexemeData::Level(level1) => match &other.data {
+                    LexemeData::Level(level2) => {
+                        level1.enclosure == level2.enclosure
+                            && level1.lexemes.lexemes.eq_nopos(&level2.lexemes.lexemes)
+                    }
+                    _ => false,
+                },
+                _ => self.data == other.data,
+            }
     }
 }
 

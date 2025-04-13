@@ -5,40 +5,7 @@ use super::{
     TSymbol,
 };
 use arcstr::ArcStr;
-use ast::input::StringInput;
-
-fn assert_eq_noloc(actual: &Vec<Lexeme>, expected: &Vec<Lexeme>) {
-    // println!("Actual:   {:?}\nExpected: {:?}", actual, expected);
-    assert_eq!(actual.len(), expected.len());
-    for (i, (actual_lexeme, expected_lexeme)) in actual.iter().zip(expected.iter()).enumerate() {
-        assert_eq!(
-            actual_lexeme.separator, expected_lexeme.separator,
-            "(Separator) Left=actual, Right=expected - Index {}",
-            i
-        );
-        match &actual_lexeme.data {
-            LexemeData::Level(actual_level) => match &expected_lexeme.data {
-                LexemeData::Level(expected_level) => {
-                    assert_eq!(actual_level.enclosure, expected_level.enclosure);
-                    assert_eq_noloc(
-                        &actual_level.lexemes.lexemes,
-                        &expected_level.lexemes.lexemes,
-                    );
-                }
-                _ => assert_eq!(
-                    actual_lexeme.data, expected_lexeme.data,
-                    "(Data) Left=actual, Right=expected - Index {}",
-                    i
-                ),
-            },
-            _ => assert_eq!(
-                actual_lexeme.data, expected_lexeme.data,
-                "(Data) Left=actual, Right=expected - Index {}",
-                i
-            ),
-        }
-    }
-}
+use ast::{input::StringInput, position::EqNoPosition};
 
 struct Parent {
     separator: Separator,
@@ -129,7 +96,7 @@ impl TestCase {
     fn ok_without_pos(self) {
         match self.parent {
             None => match self.lex() {
-                Ok(lexemes) => assert_eq_noloc(&lexemes.0.lexemes, &self.lexemes),
+                Ok(lexemes) => lexemes.0.lexemes.assert_eq_nopos(&self.lexemes),
                 Err(problems) => panic!("{:?}", problems),
             },
             _ => self.close().ok_without_pos(),
