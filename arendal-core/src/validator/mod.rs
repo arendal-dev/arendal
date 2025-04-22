@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use ast::{
-    NodeComponent,
+    Payload,
     position::Position,
     problem::{Problems, Result},
     stmt::{self, Statement},
@@ -30,7 +30,7 @@ impl PartialEq for Valid {
     }
 }
 
-impl NodeComponent for Valid {}
+impl Payload for Valid {}
 
 type Expression = ast::Expression<Valid>;
 type Expr = ast::Expr<Valid>;
