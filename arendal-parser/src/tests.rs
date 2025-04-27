@@ -18,7 +18,7 @@ fn check_expression(input: &str, expected: Expression) {
 }
 
 fn e(expr: Expr) -> Expression {
-    expr.to_expression(ast::position::Position::NoPosition, EMPTY)
+    expr.to_expression(ast::position::Position::NoPosition, EMPTY, EMPTY)
 }
 
 fn e_i64(value: i64) -> Expression {

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use ast::{
-    Payload,
+    EMPTY, Empty, Payload,
     position::Position,
     problem::{Problems, Result},
     stmt::{self, Statement},
@@ -32,10 +32,10 @@ impl PartialEq for Valid {
 
 impl Payload for Valid {}
 
-type Expression = ast::Expression<Valid>;
-type Expr = ast::Expr<Valid>;
-type AST = ast::AST<Valid>;
-type Binary = ast::Binary<Valid>;
+type Expression = ast::Expression<Empty, Valid>;
+type Expr = ast::Expr<Empty, Valid>;
+pub type AST = ast::AST<Empty, Valid>;
+type Binary = ast::Binary<Empty, Valid>;
 
 trait Lift<T> {
     fn lift(self, position: &Position) -> T;
@@ -43,7 +43,7 @@ trait Lift<T> {
 
 impl Lift<Expression> for Expr {
     fn lift(self, position: &Position) -> Expression {
-        self.to_expression(position.clone(), Valid::new())
+        self.to_expression(position.clone(), EMPTY, Valid::new())
     }
 }
 

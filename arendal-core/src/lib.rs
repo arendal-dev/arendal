@@ -17,7 +17,7 @@ mod validator;
 pub struct Env {}
 
 impl Env {
-    pub fn validate(statements: Vec<Statement>) -> Result<AST<validator::Valid>> {
+    pub fn validate(statements: Vec<Statement>) -> Result<validator::AST> {
         validator::validate(statements)
     }
 }

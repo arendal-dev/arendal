@@ -97,7 +97,7 @@ impl Parser {
                 expr1: left,
                 expr2: right,
             })
-            .to_expression(position, EMPTY)
+            .to_expression(position, EMPTY, EMPTY)
         }
         Ok(left)
     }
@@ -171,9 +171,11 @@ impl Parser {
     fn rule_primary(&mut self) -> EResult {
         if let Some(lexeme) = self.get_and_advance() {
             match &lexeme.data {
-                LexemeData::Integer(n) => {
-                    Ok(Expr::LitInteger(n.clone()).to_expression(lexeme.position.clone(), EMPTY))
-                }
+                LexemeData::Integer(n) => Ok(Expr::LitInteger(n.clone()).to_expression(
+                    lexeme.position.clone(),
+                    EMPTY,
+                    EMPTY,
+                )),
                 _ => panic!("TODO: error"),
             }
         } else {

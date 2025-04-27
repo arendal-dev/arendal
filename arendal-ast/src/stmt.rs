@@ -16,9 +16,9 @@ pub struct Q<T> {
     pub symbol: T,
 }
 
-pub type Binary = super::Binary<Empty>;
-pub type Expr = super::Expr<Empty>;
-pub type Expression = super::Expression<Empty>;
+pub type Binary = super::Binary<Empty, Empty>;
+pub type Expr = super::Expr<Empty, Empty>;
+pub type Expression = super::Expression<Empty, Empty>;
 
 /*
 #[derive(Debug, Clone, PartialEq, Eq)]
