@@ -1,5 +1,5 @@
 use ast::{
-    common::BinaryOp,
+    BinaryOp, EMPTY,
     position::EqNoPosition,
     stmt::{Binary, Expr, Expression, Statement},
 };
@@ -14,11 +14,11 @@ fn check_statement(input: &str, expected: Statement) {
 }
 
 fn check_expression(input: &str, expected: Expression) {
-    check_statement(input, expected.to_statement());
+    check_statement(input, Statement::Expression(expected));
 }
 
 fn e(expr: Expr) -> Expression {
-    expr.to_expression(ast::position::Position::NoPosition)
+    expr.to_expression(ast::position::Position::NoPosition, EMPTY)
 }
 
 fn e_i64(value: i64) -> Expression {

@@ -1,11 +1,8 @@
-use std::rc::Rc;
-
 use crate::{
+    EMPTY, Empty,
     position::{EqNoPosition, Position},
     symbol::{Symbol, TSymbol},
 };
-
-use num::Integer;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Segment {
@@ -19,11 +16,11 @@ pub struct Q<T> {
     pub symbol: T,
 }
 
-pub type Unary = crate::common::Unary<Expression>;
-pub type Binary = crate::common::Binary<Expression>;
-pub type Seq = crate::common::Seq<Expression>;
-pub type Conditional = crate::common::Conditional<Expression>;
+pub type Binary = super::Binary<Empty>;
+pub type Expr = super::Expr<Empty>;
+pub type Expression = super::Expression<Empty>;
 
+/*
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Block {
     pub exprs: Vec<Expression>,
@@ -106,6 +103,8 @@ impl EqNoPosition for Expression {
         }
     }
 }
+
+*/
 
 #[derive(Debug)]
 pub enum Statement {

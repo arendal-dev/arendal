@@ -35,7 +35,7 @@ impl Payload for Valid {}
 type Expression = ast::Expression<Valid>;
 type Expr = ast::Expr<Valid>;
 type AST = ast::AST<Valid>;
-type Binary = ast::common::Binary<Expression>;
+type Binary = ast::Binary<Valid>;
 
 trait Lift<T> {
     fn lift(self, position: &Position) -> T;

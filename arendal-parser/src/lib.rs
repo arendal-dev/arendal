@@ -1,7 +1,7 @@
 mod lexer;
 
 use ast::{
-    common::BinaryOp,
+    BinaryOp, EMPTY,
     input::StringInput,
     problem::{Problem, Problems, Result, Severity},
     stmt::{Binary, Expr, Expression, Statement},
@@ -68,7 +68,7 @@ impl Parser {
     }
 
     fn rule_statement(&mut self) -> PResult<Statement> {
-        let result = self.rule_expression().map(Expression::to_statement);
+        let result = self.rule_expression().map(|e| Statement::Expression(e));
         if !self.is_eos() {
             self.problems.add(
                 self.peek().unwrap().position.clone(),
@@ -97,7 +97,7 @@ impl Parser {
                 expr1: left,
                 expr2: right,
             })
-            .to_expression(position)
+            .to_expression(position, EMPTY)
         }
         Ok(left)
     }
@@ -172,7 +172,7 @@ impl Parser {
         if let Some(lexeme) = self.get_and_advance() {
             match &lexeme.data {
                 LexemeData::Integer(n) => {
-                    Ok(Expr::LitInteger(n.clone()).to_expression(lexeme.position.clone()))
+                    Ok(Expr::LitInteger(n.clone()).to_expression(lexeme.position.clone(), EMPTY))
                 }
                 _ => panic!("TODO: error"),
             }
