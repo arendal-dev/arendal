@@ -4,7 +4,7 @@ use ast::{
     EMPTY, Empty, Payload,
     position::Position,
     problem::{Problems, Result},
-    stmt::{self, Statement},
+    stmt::{self, Statement, TypeAnnotation},
 };
 
 pub(super) fn validate(statements: Vec<Statement>) -> Result<AST> {
@@ -32,10 +32,10 @@ impl PartialEq for Valid {
 
 impl Payload for Valid {}
 
-type Expression = ast::Expression<Empty, Valid>;
-type Expr = ast::Expr<Empty, Valid>;
-pub type AST = ast::AST<Empty, Valid>;
-type Binary = ast::Binary<Empty, Valid>;
+type Expression = ast::Expression<TypeAnnotation, Valid>;
+type Expr = ast::Expr<TypeAnnotation, Valid>;
+pub type AST = ast::AST<TypeAnnotation, Valid>;
+type Binary = ast::Binary<TypeAnnotation, Valid>;
 
 trait Lift<T> {
     fn lift(self, position: &Position) -> T;
@@ -43,7 +43,7 @@ trait Lift<T> {
 
 impl Lift<Expression> for Expr {
     fn lift(self, position: &Position) -> Expression {
-        self.to_expression(position.clone(), EMPTY, Valid::new())
+        self.to_expression(position.clone(), TypeAnnotation::None, Valid::new())
     }
 }
 

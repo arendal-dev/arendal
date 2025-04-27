@@ -1,5 +1,5 @@
 use crate::{
-    EMPTY, Empty,
+    EMPTY, Empty, Payload,
     position::{EqNoPosition, Position},
     symbol::{Symbol, TSymbol},
 };
@@ -16,9 +16,17 @@ pub struct Q<T> {
     pub symbol: T,
 }
 
-pub type Binary = super::Binary<Empty, Empty>;
-pub type Expr = super::Expr<Empty, Empty>;
-pub type Expression = super::Expression<Empty, Empty>;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TypeAnnotation {
+    None,
+    LocalType(TSymbol),
+}
+
+impl Payload for TypeAnnotation {}
+
+pub type Binary = super::Binary<TypeAnnotation, Empty>;
+pub type Expr = super::Expr<TypeAnnotation, Empty>;
+pub type Expression = super::Expression<TypeAnnotation, Empty>;
 
 /*
 #[derive(Debug, Clone, PartialEq, Eq)]

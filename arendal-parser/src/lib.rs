@@ -4,7 +4,7 @@ use ast::{
     BinaryOp, EMPTY,
     input::StringInput,
     problem::{Problem, Problems, Result, Severity},
-    stmt::{Binary, Expr, Expression, Statement},
+    stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
 
@@ -97,7 +97,7 @@ impl Parser {
                 expr1: left,
                 expr2: right,
             })
-            .to_expression(position, EMPTY, EMPTY)
+            .to_expression(position, TypeAnnotation::None, EMPTY)
         }
         Ok(left)
     }
@@ -173,7 +173,7 @@ impl Parser {
             match &lexeme.data {
                 LexemeData::Integer(n) => Ok(Expr::LitInteger(n.clone()).to_expression(
                     lexeme.position.clone(),
-                    EMPTY,
+                    TypeAnnotation::None,
                     EMPTY,
                 )),
                 _ => panic!("TODO: error"),

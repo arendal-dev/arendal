@@ -1,7 +1,7 @@
 use ast::{
     BinaryOp, EMPTY,
     position::EqNoPosition,
-    stmt::{Binary, Expr, Expression, Statement},
+    stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
 };
 
 fn check_statements(input: &str, expected: Vec<Statement>) {
@@ -18,7 +18,11 @@ fn check_expression(input: &str, expected: Expression) {
 }
 
 fn e(expr: Expr) -> Expression {
-    expr.to_expression(ast::position::Position::NoPosition, EMPTY, EMPTY)
+    expr.to_expression(
+        ast::position::Position::NoPosition,
+        TypeAnnotation::None,
+        EMPTY,
+    )
 }
 
 fn e_i64(value: i64) -> Expression {
