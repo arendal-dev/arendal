@@ -11,6 +11,16 @@ pub struct Q<T> {
     pub symbol: T,
 }
 
+impl<T> Q<T> {
+    pub fn of(symbol: T) -> Q<T> {
+        Q {
+            path: Vec::default(),
+            types: Vec::default(),
+            symbol,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnnotation {
     None,

@@ -3,6 +3,7 @@ mod lexer;
 use ast::{
     BinaryOp, EMPTY,
     input::StringInput,
+    position::Position,
     problem::{Problem, Problems, Result, Severity},
     stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
 };
@@ -164,18 +165,38 @@ impl Parser {
                 LexemeData::Slash => Some(BinaryOp::Div),
                 _ => None,
             },
-            Self::rule_primary,
+            Self::rule_ann_primary,
         )
     }
 
-    fn rule_primary(&mut self) -> EResult {
+    fn rule_ann_primary(&mut self) -> EResult {
+        let (position, expr) = self.rule_primary()?;
+        let mut type_ann = TypeAnnotation::None;
+        if let Some(seplex) = self.peek().cloned() {
+            if LexemeData::TypeAnnSeparator == seplex.data {
+                self.advance();
+                if let Some(lexeme) = self.peek().cloned() {
+                    if let LexemeData::TSymbol(s) = lexeme.data {
+                        type_ann = TypeAnnotation::LocalType(s);
+                    } else {
+                        self.add_problem_at(&lexeme, Error::TypeAnnotationExpected);
+                        return Err(());
+                    }
+                } else {
+                    self.add_problem_at(&seplex, Error::TypeAnnotationExpected);
+                    return Err(());
+                }
+            }
+        }
+        Ok(expr.to_expression(position, type_ann, EMPTY))
+    }
+
+    fn rule_primary(&mut self) -> PResult<(Position, Expr)> {
         if let Some(lexeme) = self.get_and_advance() {
             match &lexeme.data {
-                LexemeData::Integer(n) => Ok(Expr::LitInteger(n.clone()).to_expression(
-                    lexeme.position.clone(),
-                    TypeAnnotation::None,
-                    EMPTY,
-                )),
+                LexemeData::Integer(n) => {
+                    Ok((lexeme.position.clone(), Expr::LitInteger(n.clone())))
+                }
                 _ => panic!("TODO: error"),
             }
         } else {
@@ -191,6 +212,7 @@ impl Parser {
 #[derive(Debug)]
 enum Error {
     EndOfStatementExpected,
+    TypeAnnotationExpected,
 }
 
 impl Problem for Error {
