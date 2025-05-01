@@ -5,14 +5,9 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Segment {
-    Symbol(Symbol),
-    Type(TSymbol),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Q<T> {
-    pub segments: Vec<Segment>,
+    pub path: Vec<Symbol>,
+    pub types: Vec<TSymbol>,
     pub symbol: T,
 }
 
