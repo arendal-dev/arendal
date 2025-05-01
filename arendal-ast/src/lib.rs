@@ -142,20 +142,11 @@ struct ExprData<T: Payload, P: Payload, Q: Debug, QT: Debug> {
 }
 
 #[derive(Debug)]
-pub enum SymRef<L, Q> {
-    Local(L),
-    Qualified(Q),
-}
-
-pub type SymbolRef<Q> = SymRef<Symbol, Q>;
-pub type TSymbolRef<Q> = SymRef<TSymbol, Q>;
-
-#[derive(Debug)]
 pub enum Expr<T: Payload, P: Payload, Q: Debug, QT: Debug> {
     LitInteger(Integer),
     Binary(Binary<T, P, Q, QT>),
-    SymbolRef(SymbolRef<Q>),
-    TypeRef(TSymbolRef<QT>),
+    Symbol(Q),
+    Type(QT),
 }
 
 impl<T: Payload, P: Payload, Q: Debug, QT: Debug> Expr<T, P, Q, QT> {

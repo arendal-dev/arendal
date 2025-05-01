@@ -27,9 +27,11 @@ logfactor -> equality ( "&&" equality )*
 equality -> comparison ( ("==" | "!=") comparison )*
 comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
-factor -> primary ( ("*" | "/") primary )*
+factor -> ann_primary ( ("*" | "/") ann_primary )*
+ann_primary -> primary ("" | type_ann)
 primary -> IntLiteral | TypeSymbol | Symbol | "(" expression ")" | "{" ( bstatement (EOS bstatement)* )?   "}" 
 qsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
 qtsymbol -> ( ((Symbol | TypeSymbol ))"::" )* TSymbol
+type_ann -> ":" qtsymbol
 
 ```

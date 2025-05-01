@@ -147,14 +147,12 @@ impl fmt::Debug for Lib {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ModulePath {
-    path: Arc<Vec<Symbol>>,
+    path: Vec<Symbol>,
 }
 
 impl ModulePath {
     pub fn new(path: Vec<Symbol>) -> Self {
-        Self {
-            path: Arc::new(path),
-        }
+        Self { path }
     }
 
     pub fn empty() -> Self {
@@ -218,11 +216,11 @@ impl FQPath {
     }
 
     pub fn fq_sym(&self, symbol: Symbol) -> FQSym {
-        FQ::top_level(self.clone(), symbol)
+        FQSym::top_level(self.clone(), symbol)
     }
 
     pub fn fq_type(&self, symbol: TSymbol) -> FQType {
-        FQ::top_level(self.clone(), symbol)
+        FQType::top_level(self.clone(), symbol)
     }
 }
 
@@ -240,57 +238,123 @@ impl fmt::Debug for FQPath {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-enum FQData<T> {
-    TopLevel(FQPath, T),
-    Enclosed(Arc<FQType>, T),
+pub struct TopLevel<T> {
+    path: FQPath,
+    symbol: T,
+}
+
+impl<T: fmt::Display> fmt::Display for TopLevel<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.path.fmt(f)?;
+        separator(f)?;
+        self.symbol.fmt(f)
+    }
+}
+
+impl<T: fmt::Display> fmt::Debug for TopLevel<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        debug(f, "TopLevel", self)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
-pub struct FQ<T> {
-    data: FQData<T>,
+pub struct Nested<T> {
+    parent: Arc<FQType>,
+    symbol: T,
 }
 
-impl<T> FQ<T> {
-    fn top_level(path: FQPath, symbol: T) -> FQ<T> {
-        FQ {
-            data: FQData::TopLevel(path, symbol),
-        }
+impl<T: fmt::Display> fmt::Display for Nested<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.parent.fmt(f)?;
+        separator(f)?;
+        self.symbol.fmt(f)
+    }
+}
+
+impl<T: fmt::Display> fmt::Debug for Nested<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        debug(f, "Nested", self)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum FQSym {
+    Local(Symbol),
+    TopLevel(TopLevel<Symbol>),
+    Nested(Nested<Symbol>),
+}
+
+impl FQSym {
+    fn top_level(path: FQPath, symbol: Symbol) -> Self {
+        FQSym::TopLevel(TopLevel { path, symbol })
     }
 
     pub fn is_top_level(&self) -> bool {
-        matches!(self.data, FQData::TopLevel(_, _))
+        matches!(self, FQSym::TopLevel(_))
     }
 
-    pub fn path(&self) -> FQPath {
-        match &self.data {
-            FQData::TopLevel(path, _) => path.clone(),
-            FQData::Enclosed(parent, _) => parent.path(),
+    pub fn path(&self) -> Option<FQPath> {
+        match &self {
+            FQSym::Local(_) => None,
+            FQSym::TopLevel(tl) => Some(tl.path.clone()),
+            FQSym::Nested(n) => n.parent.path(),
         }
     }
 }
 
-impl<T: fmt::Display> fmt::Display for FQ<T> {
+impl fmt::Display for FQSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.data {
-            FQData::TopLevel(path, symbol) => {
-                path.fmt(f)?;
-                separator(f)?;
-                symbol.fmt(f)
-            }
-            FQData::Enclosed(parent, symbol) => {
-                parent.fmt(f)?;
-                separator(f)?;
-                symbol.fmt(f)
-            }
+        match &self {
+            FQSym::Local(s) => s.fmt(f),
+            FQSym::TopLevel(tl) => tl.fmt(f),
+            FQSym::Nested(n) => n.fmt(f),
         }
     }
 }
 
-impl<T: fmt::Display> fmt::Debug for FQ<T> {
+impl fmt::Debug for FQSym {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        debug(f, "FQ", self)
+        debug(f, "FQSym", self)
     }
 }
 
-pub type FQSym = FQ<Symbol>;
-pub type FQType = FQ<TSymbol>;
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum FQType {
+    Unit,
+    TopLevel(TopLevel<TSymbol>),
+    Nested(Nested<TSymbol>),
+}
+
+impl FQType {
+    fn top_level(path: FQPath, symbol: TSymbol) -> Self {
+        FQType::TopLevel(TopLevel { path, symbol })
+    }
+
+    pub fn is_top_level(&self) -> bool {
+        matches!(self, FQType::TopLevel(_))
+    }
+
+    pub fn path(&self) -> Option<FQPath> {
+        match &self {
+            FQType::Unit => None,
+            FQType::TopLevel(tl) => Some(tl.path.clone()),
+            FQType::Nested(n) => n.parent.path(),
+        }
+    }
+}
+
+impl fmt::Display for FQType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            FQType::Unit => write!(f, "()"),
+            FQType::TopLevel(tl) => tl.fmt(f),
+            FQType::Nested(n) => n.fmt(f),
+        }
+    }
+}
+
+impl fmt::Debug for FQType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        debug(f, "FQType", self)
+    }
+}
