@@ -24,9 +24,9 @@ pub enum TypeAnnotation {
 
 impl Payload for TypeAnnotation {}
 
-pub type Binary = super::Binary<TypeAnnotation, Empty>;
-pub type Expr = super::Expr<TypeAnnotation, Empty>;
-pub type Expression = super::Expression<TypeAnnotation, Empty>;
+pub type Binary = super::Binary<TypeAnnotation, Empty, Q<Symbol>, Q<TSymbol>>;
+pub type Expr = super::Expr<TypeAnnotation, Empty, Q<Symbol>, Q<TSymbol>>;
+pub type Expression = super::Expression<TypeAnnotation, Empty, Q<Symbol>, Q<TSymbol>>;
 
 /*
 #[derive(Debug, Clone, PartialEq, Eq)]

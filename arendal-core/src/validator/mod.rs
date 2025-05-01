@@ -5,6 +5,7 @@ use ast::{
     position::Position,
     problem::{Problems, Result},
     stmt::{self, Statement, TypeAnnotation},
+    symbol::{FQSym, FQType},
 };
 
 pub(super) fn validate(statements: Vec<Statement>) -> Result<AST> {
@@ -32,10 +33,10 @@ impl PartialEq for Valid {
 
 impl Payload for Valid {}
 
-type Expression = ast::Expression<TypeAnnotation, Valid>;
-type Expr = ast::Expr<TypeAnnotation, Valid>;
-pub type AST = ast::AST<TypeAnnotation, Valid>;
-type Binary = ast::Binary<TypeAnnotation, Valid>;
+type Expression = ast::Expression<TypeAnnotation, Valid, FQSym, FQType>;
+type Expr = ast::Expr<TypeAnnotation, Valid, FQSym, FQType>;
+pub type AST = ast::AST<TypeAnnotation, Valid, FQSym, FQType>;
+type Binary = ast::Binary<TypeAnnotation, Valid, FQSym, FQType>;
 
 trait Lift<T> {
     fn lift(self, position: &Position) -> T;
