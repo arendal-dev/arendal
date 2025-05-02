@@ -60,7 +60,7 @@ impl TestCase {
             None => panic!("Missing parent enclosure"),
             Some(mut parent) => {
                 let lexemes = Lexemes {
-                    lexemes: Rc::new(self.lexemes),
+                    lexemes: self.lexemes,
                 };
                 let level = Level {
                     enclosure: parent.enclosure,

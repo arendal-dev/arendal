@@ -1,7 +1,6 @@
 mod tokenizer;
 
 use std::fmt;
-use std::rc::Rc;
 
 use ast::input::StringInput;
 use ast::keyword::Keyword;
@@ -49,7 +48,7 @@ impl std::ops::Add for Separator {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Eq, PartialEq)]
 pub(super) struct Lexeme {
     pub(super) position: Position,
     pub(super) separator: Separator,
@@ -78,9 +77,9 @@ impl EqNoPosition for Lexeme {
     }
 }
 
-#[derive(Default, Clone, Eq, PartialEq)]
+#[derive(Default, Eq, PartialEq)]
 pub(super) struct Lexemes {
-    lexemes: Rc<Vec<Lexeme>>,
+    lexemes: Vec<Lexeme>,
 }
 
 impl Lexemes {
@@ -99,13 +98,13 @@ impl fmt::Debug for Lexemes {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(super) struct Level {
     pub(super) enclosure: Enclosure,
     pub(super) lexemes: Lexemes,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(super) enum LexemeData {
     Plus,
     Minus,
@@ -186,7 +185,7 @@ impl<'me> Lexer<'me> {
     fn output(self) -> (Result<Lexemes>, usize) {
         (
             self.problems.to_lazy_result(|| Lexemes {
-                lexemes: Rc::new(self.lexemes),
+                lexemes: self.lexemes,
             }),
             self.index,
         )

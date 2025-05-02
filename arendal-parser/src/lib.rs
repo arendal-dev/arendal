@@ -12,16 +12,10 @@ use lexer::{Lexeme, LexemeData, Lexemes, Separator};
 pub fn parse(input: &str) -> Result<Vec<Statement>> {
     let input = StringInput::from_str(input);
     let (lexemes, problems) = lexer::lex(input)?;
-    Parser {
-        lexemes,
-        index: 0,
-        problems,
-    }
-    .parse_statements()
+    Parser { index: 0, problems }.parse_statements(&lexemes)
 }
 
 struct Parser {
-    lexemes: Lexemes,
     index: usize,
     problems: Problems,
 }
@@ -30,22 +24,18 @@ type PResult<T> = std::result::Result<T, ()>;
 type EResult = PResult<Expression>;
 
 impl Parser {
-    fn parse_statements(mut self) -> Result<Vec<Statement>> {
+    fn parse_statements(mut self, lexemes: &Lexemes) -> Result<Vec<Statement>> {
         let mut statements: Vec<Statement> = Vec::default();
-        while !self.is_done() {
-            let _ = self.rule_statement().map(|s| statements.push(s));
+        while self.index < lexemes.len() {
+            let _ = self.rule_statement(lexemes).map(|s| statements.push(s));
         }
         self.problems.to_result(statements)
     }
 
-    fn is_done(&self) -> bool {
-        self.index >= self.lexemes.len()
-    }
-
     // Returns whether the current lexeme is EOS (end of statement)
     // I.e., either end of the input or a newline separator
-    fn is_eos(&self) -> bool {
-        match self.peek() {
+    fn is_eos(&self, lexemes: &Lexemes) -> bool {
+        match lexemes.get(self.index) {
             Some(lexeme) => match lexeme.separator {
                 Separator::Start | Separator::Nothing => false,
                 _ => true,
@@ -54,57 +44,64 @@ impl Parser {
         }
     }
 
-    fn peek(&self) -> Option<&Lexeme> {
-        self.lexemes.get(self.index)
-    }
+    /*
 
     fn advance(&mut self) {
         self.index += 1;
     }
 
-    fn get_and_advance(&mut self) -> Option<&Lexeme> {
+    fn get_and_advance<'a>(&mut self, lexemes: &'a Lexemes) -> Option<&'a Lexeme> {
         let current = self.index;
         self.advance();
-        self.lexemes.get(current)
+        lexemes.get(current)
     }
 
-    fn rule_statement(&mut self) -> PResult<Statement> {
-        let result = self.rule_expression().map(|e| Statement::Expression(e));
-        if !self.is_eos() {
+    */
+
+    fn rule_statement(&mut self, lexemes: &Lexemes) -> PResult<Statement> {
+        let result = self
+            .rule_expression(lexemes)
+            .map(|e| Statement::Expression(e));
+        if !self.is_eos(lexemes) {
             self.problems.add(
-                self.peek().unwrap().position.clone(),
+                lexemes.get(self.index).unwrap().position.clone(),
                 Error::EndOfStatementExpected,
             );
         }
         result
     }
 
-    fn rule_expression(&mut self) -> EResult {
-        self.rule_logfactor()
+    fn rule_expression(&mut self, lexemes: &Lexemes) -> EResult {
+        self.rule_logfactor(lexemes)
     }
 
-    fn binary_rule<O, F>(&mut self, op: O, rule: F) -> EResult
+    fn binary_rule<O, F>(&mut self, lexemes: &Lexemes, op: O, rule: F) -> EResult
     where
         O: Fn(&LexemeData) -> Option<BinaryOp>,
-        F: Fn(&mut Parser) -> EResult,
+        F: Fn(&mut Parser, &Lexemes) -> EResult,
     {
-        let mut left = rule(self)?;
-        while let Some(bop) = self.peek().and_then(|l| op(&l.data)) {
-            let position = self.peek().unwrap().position.clone();
-            self.advance();
-            let right = rule(self)?;
-            left = Expr::Binary(Binary {
-                op: bop,
-                expr1: left,
-                expr2: right,
-            })
-            .to_expression(position, TypeAnnotation::None, EMPTY)
+        let mut left = rule(self, lexemes)?;
+        while let Some(lexeme) = lexemes.get(self.index) {
+            if let Some(bop) = op(&lexeme.data) {
+                let position = lexeme.position.clone();
+                self.index += 1;
+                let right = rule(self, lexemes)?;
+                left = Expr::Binary(Binary {
+                    op: bop,
+                    expr1: left,
+                    expr2: right,
+                })
+                .to_expression(position, TypeAnnotation::None, EMPTY)
+            } else {
+                break;
+            }
         }
         Ok(left)
     }
 
-    fn rule_logterm(&mut self) -> EResult {
+    fn rule_logterm(&mut self, lexemes: &Lexemes) -> EResult {
         self.binary_rule(
+            lexemes,
             |k| match k {
                 LexemeData::LogicalOr => Some(BinaryOp::Or),
                 _ => None,
@@ -113,8 +110,9 @@ impl Parser {
         )
     }
 
-    fn rule_logfactor(&mut self) -> EResult {
+    fn rule_logfactor(&mut self, lexemes: &Lexemes) -> EResult {
         self.binary_rule(
+            lexemes,
             |k| match k {
                 LexemeData::LogicalAnd => Some(BinaryOp::And),
                 _ => None,
@@ -123,8 +121,9 @@ impl Parser {
         )
     }
 
-    fn rule_equality(&mut self) -> EResult {
+    fn rule_equality(&mut self, lexemes: &Lexemes) -> EResult {
         self.binary_rule(
+            lexemes,
             |k| match k {
                 LexemeData::Equals => Some(BinaryOp::Eq),
                 LexemeData::NotEquals => Some(BinaryOp::NEq),
@@ -134,8 +133,9 @@ impl Parser {
         )
     }
 
-    fn rule_comparison(&mut self) -> EResult {
+    fn rule_comparison(&mut self, lexemes: &Lexemes) -> EResult {
         self.binary_rule(
+            lexemes,
             |k| match k {
                 LexemeData::Greater => Some(BinaryOp::GT),
                 LexemeData::GreaterOrEq => Some(BinaryOp::GE),
@@ -147,8 +147,9 @@ impl Parser {
         )
     }
 
-    fn rule_term(&mut self) -> EResult {
+    fn rule_term(&mut self, lexemes: &Lexemes) -> EResult {
         self.binary_rule(
+            lexemes,
             |k| match k {
                 LexemeData::Plus => Some(BinaryOp::Add),
                 LexemeData::Minus => Some(BinaryOp::Sub),
@@ -158,8 +159,9 @@ impl Parser {
         )
     }
 
-    fn rule_factor(&mut self) -> EResult {
+    fn rule_factor(&mut self, lexemes: &Lexemes) -> EResult {
         self.binary_rule(
+            lexemes,
             |k| match k {
                 LexemeData::Star => Some(BinaryOp::Mul),
                 LexemeData::Slash => Some(BinaryOp::Div),
@@ -169,15 +171,15 @@ impl Parser {
         )
     }
 
-    fn rule_ann_primary(&mut self) -> EResult {
-        let (position, expr) = self.rule_primary()?;
+    fn rule_ann_primary(&mut self, lexemes: &Lexemes) -> EResult {
+        let (position, expr) = self.rule_primary(lexemes)?;
         let mut type_ann = TypeAnnotation::None;
-        if let Some(seplex) = self.peek().cloned() {
+        if let Some(seplex) = lexemes.get(self.index) {
             if LexemeData::TypeAnnSeparator == seplex.data {
-                self.advance();
-                if let Some(lexeme) = self.peek().cloned() {
-                    if let LexemeData::TSymbol(s) = lexeme.data {
-                        type_ann = TypeAnnotation::LocalType(s);
+                self.index += 1;
+                if let Some(lexeme) = lexemes.get(self.index) {
+                    if let LexemeData::TSymbol(s) = &lexeme.data {
+                        type_ann = TypeAnnotation::LocalType(s.clone());
                     } else {
                         self.add_problem_at(&lexeme, Error::TypeAnnotationExpected);
                         return Err(());
@@ -191,8 +193,10 @@ impl Parser {
         Ok(expr.to_expression(position, type_ann, EMPTY))
     }
 
-    fn rule_primary(&mut self) -> PResult<(Position, Expr)> {
-        if let Some(lexeme) = self.get_and_advance() {
+    fn rule_primary(&mut self, lexemes: &Lexemes) -> PResult<(Position, Expr)> {
+        let current = lexemes.get(self.index);
+        self.index += 1;
+        if let Some(lexeme) = current {
             match &lexeme.data {
                 LexemeData::Integer(n) => {
                     Ok((lexeme.position.clone(), Expr::LitInteger(n.clone())))
