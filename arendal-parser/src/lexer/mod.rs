@@ -13,7 +13,7 @@ use tokenizer::{Token, TokenKind, Tokens, tokenize};
 
 pub(super) fn lex(input: StringInput) -> Result<Lexemes> {
     let tokens = tokenize(input);
-    Lexer::new(tokens).lex().0
+    Lexer::new(&tokens).lex().0
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -132,9 +132,9 @@ pub(super) enum LexemeData {
     Keyword(Keyword),
 }
 
-struct Lexer {
+struct Lexer<'me> {
     separator: Separator,
-    tokens: Tokens,
+    tokens: &'me Tokens,
     lexemes: Vec<Lexeme>,
     problems: Problems,
     index: usize,        // Index of the current input token
@@ -155,8 +155,8 @@ impl Problem for Error {
     }
 }
 
-impl Lexer {
-    fn new(tokens: Tokens) -> Lexer {
+impl<'me> Lexer<'me> {
+    fn new(tokens: &Tokens) -> Lexer {
         Lexer {
             separator: Separator::Start,
             tokens,
@@ -256,7 +256,7 @@ impl Lexer {
         let start_index = self.index + 1;
         let (result, end_index) = Lexer {
             separator: Separator::Nothing,
-            tokens: self.tokens.clone(),
+            tokens: self.tokens,
             lexemes: Vec::default(),
             problems: Problems::default(),
             index: start_index,

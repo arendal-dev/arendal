@@ -26,9 +26,9 @@ impl fmt::Debug for Token {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(super) struct Tokens {
-    tokens: Rc<Vec<Token>>,
+    tokens: Vec<Token>,
 }
 
 impl Tokens {
@@ -139,7 +139,7 @@ impl Tokenizer {
             }
         }
         Tokens {
-            tokens: Rc::new(self.tokens),
+            tokens: self.tokens,
         }
     }
 
