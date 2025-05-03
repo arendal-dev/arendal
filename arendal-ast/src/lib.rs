@@ -5,14 +5,10 @@ pub mod problem;
 pub mod stmt;
 pub mod symbol;
 
-use std::{
-    fmt::{self, Debug},
-    sync::Arc,
-};
+use std::fmt::{self, Debug};
 
 use num::Integer;
 use position::{EqNoPosition, Position};
-use symbol::{Symbol, TSymbol};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -185,7 +181,7 @@ impl<T: Payload, P: Payload, Q: Debug, QT: Debug> EqNoPosition for Expr<T, P, Q,
 }
 
 pub struct Expression<T: Payload, P: Payload, Q: Debug, QT: Debug> {
-    data: Arc<ExprData<T, P, Q, QT>>,
+    data: Box<ExprData<T, P, Q, QT>>,
 }
 
 impl<T: Payload, P: Payload, Q: Debug, QT: Debug> Expression<T, P, Q, QT> {
@@ -196,7 +192,7 @@ impl<T: Payload, P: Payload, Q: Debug, QT: Debug> Expression<T, P, Q, QT> {
         payload: P,
     ) -> Self {
         Self {
-            data: Arc::new(ExprData {
+            data: Box::new(ExprData {
                 position,
                 expr,
                 type_annotation,
@@ -215,6 +211,15 @@ impl<T: Payload, P: Payload, Q: Debug, QT: Debug> Expression<T, P, Q, QT> {
 
     pub fn payload(&self) -> &P {
         &self.data.payload
+    }
+
+    pub fn annotate(self, type_annotation: T) -> Self {
+        Self::new(
+            self.data.position,
+            self.data.expr,
+            type_annotation,
+            self.data.payload,
+        )
     }
 }
 

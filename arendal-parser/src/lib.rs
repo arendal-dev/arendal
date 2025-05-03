@@ -3,7 +3,6 @@ mod lexer;
 use ast::{
     BinaryOp, EMPTY,
     input::StringInput,
-    position::Position,
     problem::{Problem, Problems, Result, Severity},
     stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
 };
@@ -72,7 +71,7 @@ impl Parser {
     }
 
     fn rule_expression(&mut self, lexemes: &Lexemes) -> EResult {
-        self.rule_logfactor(lexemes)
+        self.rule_logterm(lexemes)
     }
 
     fn binary_rule<O, F>(&mut self, lexemes: &Lexemes, op: O, rule: F) -> EResult
@@ -167,33 +166,11 @@ impl Parser {
                 LexemeData::Slash => Some(BinaryOp::Div),
                 _ => None,
             },
-            Self::rule_ann_primary,
+            Self::rule_primary,
         )
     }
 
-    fn rule_ann_primary(&mut self, lexemes: &Lexemes) -> EResult {
-        let (position, expr) = self.rule_primary(lexemes)?;
-        let mut type_ann = TypeAnnotation::None;
-        if let Some(seplex) = lexemes.get(self.index) {
-            if LexemeData::TypeAnnSeparator == seplex.data {
-                self.index += 1;
-                if let Some(lexeme) = lexemes.get(self.index) {
-                    if let LexemeData::TSymbol(s) = &lexeme.data {
-                        type_ann = TypeAnnotation::LocalType(s.clone());
-                    } else {
-                        self.add_problem_at(&lexeme, Error::TypeAnnotationExpected);
-                        return Err(());
-                    }
-                } else {
-                    self.add_problem_at(&seplex, Error::TypeAnnotationExpected);
-                    return Err(());
-                }
-            }
-        }
-        Ok(expr.to_expression(position, type_ann, EMPTY))
-    }
-
-    fn rule_primary(&mut self, lexemes: &Lexemes) -> PResult<(Position, Expr)> {
+    fn rule_primary(&mut self, lexemes: &Lexemes) -> EResult {
         let current = lexemes.get(self.index);
         self.index += 1;
         if let Some(lexeme) = current {
@@ -206,6 +183,30 @@ impl Parser {
         } else {
             panic!("TODO: error")
         }
+        .and_then(|(position, expr)| {
+            Ok(expr.to_expression(position, self.rule_type_ann(lexemes)?, EMPTY))
+        })
+    }
+
+    fn rule_type_ann(&mut self, lexemes: &Lexemes) -> PResult<TypeAnnotation> {
+        if let Some(seplex) = lexemes.get(self.index) {
+            if LexemeData::TypeAnnSeparator == seplex.data {
+                self.index += 1;
+                if let Some(lexeme) = lexemes.get(self.index) {
+                    if let LexemeData::TSymbol(s) = &lexeme.data {
+                        self.index += 1;
+                        return Ok(TypeAnnotation::LocalType(s.clone()));
+                    } else {
+                        self.add_problem_at(&lexeme, Error::TypeAnnotationExpected);
+                        return Err(());
+                    }
+                } else {
+                    self.add_problem_at(&seplex, Error::TypeAnnotationExpected);
+                    return Err(());
+                }
+            }
+        }
+        Ok(TypeAnnotation::None)
     }
 
     fn add_problem_at<T: Problem + 'static>(&mut self, lexeme: &Lexeme, problem: T) {

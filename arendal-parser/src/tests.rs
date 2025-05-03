@@ -2,6 +2,7 @@ use ast::{
     BinaryOp, EMPTY,
     position::EqNoPosition,
     stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
+    symbol::TSymbol,
 };
 
 fn check_statements(input: &str, expected: Vec<Statement>) {
@@ -41,11 +42,22 @@ fn e_add_i64(v1: i64, v2: i64) -> Expression {
     e_add(e_i64(v1), e_i64(v2))
 }
 
+fn tai(e: Expression) -> Expression {
+    e.annotate(TypeAnnotation::LocalType(TSymbol::new("Integer").unwrap()))
+}
+
 #[test]
 fn int_literal_expr() {
     check_expression("1234", e_i64(1234));
     check_expression("  1234 ", e_i64(1234));
     check_expression("\t \n 1234  \n\t", e_i64(1234));
+}
+
+#[test]
+fn ann_int_literal_expr() {
+    check_expression("1234 : Integer", tai(e_i64(1234)));
+    check_expression("1234 :Integer", tai(e_i64(1234)));
+    check_expression("1234:Integer", tai(e_i64(1234)));
 }
 
 #[test]

@@ -27,9 +27,8 @@ logfactor -> equality ( "&&" equality )*
 equality -> comparison ( ("==" | "!=") comparison )*
 comparison -> term ( (">" | ">=" | "<" | "<=") term )*
 term -> factor ( ("+" | "-") factor )*
-factor -> ann_primary ( ("*" | "/") ann_primary )*
-ann_primary -> primary ("" | type_ann)
-primary -> IntLiteral | TypeSymbol | Symbol | "(" expression ")" | "{" ( bstatement (EOS bstatement)* )?   "}" 
+factor -> primary ( ("*" | "/") primary )*
+primary -> (IntLiteral | TypeSymbol | Symbol | "(" expression ")" | "{" ( bstatement (EOS bstatement)* )? "}") ("" | type_ann) 
 qsymbol -> ( ((Symbol | TypeSymbol ))"::" )* Symbol
 qtsymbol -> ( ((Symbol | TypeSymbol ))"::" )* TSymbol
 type_ann -> ":" qtsymbol
