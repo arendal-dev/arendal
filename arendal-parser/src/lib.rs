@@ -90,7 +90,7 @@ impl Parser {
                     expr1: left,
                     expr2: right,
                 })
-                .to_expression(position, TypeAnnotation::None, EMPTY)
+                .to_expression(position, None, EMPTY)
             } else {
                 break;
             }
@@ -188,14 +188,14 @@ impl Parser {
         })
     }
 
-    fn rule_type_ann(&mut self, lexemes: &Lexemes) -> PResult<TypeAnnotation> {
+    fn rule_type_ann(&mut self, lexemes: &Lexemes) -> PResult<Option<TypeAnnotation>> {
         if let Some(seplex) = lexemes.get(self.index) {
             if LexemeData::TypeAnnSeparator == seplex.data {
                 self.index += 1;
                 if let Some(lexeme) = lexemes.get(self.index) {
                     if let LexemeData::TSymbol(s) = &lexeme.data {
                         self.index += 1;
-                        return Ok(TypeAnnotation::LocalType(s.clone()));
+                        return Ok(Some(TypeAnnotation::LocalType(s.clone())));
                     } else {
                         self.add_problem_at(&lexeme, Error::TypeAnnotationExpected);
                         return Err(());
@@ -206,7 +206,7 @@ impl Parser {
                 }
             }
         }
-        Ok(TypeAnnotation::None)
+        Ok(None)
     }
 
     fn add_problem_at<T: Problem + 'static>(&mut self, lexeme: &Lexeme, problem: T) {

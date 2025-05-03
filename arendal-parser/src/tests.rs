@@ -19,11 +19,7 @@ fn check_expression(input: &str, expected: Expression) {
 }
 
 fn e(expr: Expr) -> Expression {
-    expr.to_expression(
-        ast::position::Position::NoPosition,
-        TypeAnnotation::None,
-        EMPTY,
-    )
+    expr.to_expression(ast::position::Position::NoPosition, None, EMPTY)
 }
 
 fn e_i64(value: i64) -> Expression {
@@ -43,7 +39,9 @@ fn e_add_i64(v1: i64, v2: i64) -> Expression {
 }
 
 fn tai(e: Expression) -> Expression {
-    e.annotate(TypeAnnotation::LocalType(TSymbol::new("Integer").unwrap()))
+    e.annotate(Some(TypeAnnotation::LocalType(
+        TSymbol::new("Integer").unwrap(),
+    )))
 }
 
 #[test]

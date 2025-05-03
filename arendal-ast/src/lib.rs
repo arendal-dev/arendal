@@ -114,6 +114,8 @@ impl Payload for Empty {}
 
 pub const EMPTY: Empty = Empty {};
 
+impl<T: Payload> Payload for Option<T> {}
+
 trait Data: fmt::Debug + EqNoPosition {}
 
 #[derive(Debug, PartialEq, Eq)]

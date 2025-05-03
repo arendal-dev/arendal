@@ -33,10 +33,10 @@ impl PartialEq for Valid {
 
 impl Payload for Valid {}
 
-type Expression = ast::Expression<TypeAnnotation, Valid, FQSym, FQType>;
-type Expr = ast::Expr<TypeAnnotation, Valid, FQSym, FQType>;
-pub type AST = ast::AST<TypeAnnotation, Valid, FQSym, FQType>;
-type Binary = ast::Binary<TypeAnnotation, Valid, FQSym, FQType>;
+type Expression = ast::Expression<Option<TypeAnnotation>, Valid, FQSym, FQType>;
+type Expr = ast::Expr<Option<TypeAnnotation>, Valid, FQSym, FQType>;
+pub type AST = ast::AST<Option<TypeAnnotation>, Valid, FQSym, FQType>;
+type Binary = ast::Binary<Option<TypeAnnotation>, Valid, FQSym, FQType>;
 
 trait Lift<T> {
     fn lift(self, position: &Position) -> T;
@@ -44,7 +44,7 @@ trait Lift<T> {
 
 impl Lift<Expression> for Expr {
     fn lift(self, position: &Position) -> Expression {
-        self.to_expression(position.clone(), TypeAnnotation::None, Valid::new())
+        self.to_expression(position.clone(), None, Valid::new())
     }
 }
 

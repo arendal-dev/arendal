@@ -23,15 +23,14 @@ impl<T> Q<T> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAnnotation {
-    None,
     LocalType(TSymbol),
 }
 
 impl Payload for TypeAnnotation {}
 
-pub type Binary = super::Binary<TypeAnnotation, Empty, Q<Symbol>, Q<TSymbol>>;
-pub type Expr = super::Expr<TypeAnnotation, Empty, Q<Symbol>, Q<TSymbol>>;
-pub type Expression = super::Expression<TypeAnnotation, Empty, Q<Symbol>, Q<TSymbol>>;
+pub type Binary = super::Binary<Option<TypeAnnotation>, Empty, Q<Symbol>, Q<TSymbol>>;
+pub type Expr = super::Expr<Option<TypeAnnotation>, Empty, Q<Symbol>, Q<TSymbol>>;
+pub type Expression = super::Expression<Option<TypeAnnotation>, Empty, Q<Symbol>, Q<TSymbol>>;
 
 /*
 #[derive(Debug, Clone, PartialEq, Eq)]
