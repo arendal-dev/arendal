@@ -8,10 +8,12 @@ pub mod symbol;
 pub mod tst;
 pub mod visibility;
 
-use ::ast::{AST, problem::Result, stmt::Statement};
 pub use arcstr::{ArcStr, Substr, literal};
+use ast::{problem::Result, stmt::Statement};
 pub use num::Integer;
 
+mod typechecker;
+mod types;
 mod validator;
 
 pub struct Env {}
