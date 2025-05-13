@@ -3,14 +3,14 @@ mod lexer;
 use ast::{
     BinaryOp, EMPTY,
     input::StringInput,
-    problem::{Problem, Problems, Result, Severity},
+    problem::{ErrorType, Problems, Result},
     stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
 
 pub fn parse(input: &str) -> Result<Vec<Statement>> {
     let input = StringInput::from_str(input);
-    let (lexemes, problems) = lexer::lex(input)?;
+    let (problems, lexemes) = lexer::lex(input)?.to_problems();
     Parser { index: 0, problems }.parse_statements(&lexemes)
 }
 
@@ -62,7 +62,7 @@ impl Parser {
             .rule_expression(lexemes)
             .map(|e| Statement::Expression(e));
         if !self.is_eos(lexemes) {
-            self.problems.add(
+            self.problems.add_error(
                 lexemes.get(self.index).unwrap().position.clone(),
                 Error::EndOfStatementExpected,
             );
@@ -209,8 +209,8 @@ impl Parser {
         Ok(None)
     }
 
-    fn add_problem_at<T: Problem + 'static>(&mut self, lexeme: &Lexeme, problem: T) {
-        self.problems.add(lexeme.position.clone(), problem);
+    fn add_problem_at<T: ErrorType + 'static>(&mut self, lexeme: &Lexeme, problem: T) {
+        self.problems.add_error(lexeme.position.clone(), problem);
     }
 }
 
@@ -220,11 +220,7 @@ enum Error {
     TypeAnnotationExpected,
 }
 
-impl Problem for Error {
-    fn severity(&self) -> Severity {
-        Severity::Error
-    }
-}
+impl ErrorType for Error {}
 
 #[cfg(test)]
 mod tests;

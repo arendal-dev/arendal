@@ -2,72 +2,167 @@ use std::sync::Arc;
 
 use crate::position::Position;
 
-#[derive(Clone, Copy, Debug)]
-pub enum Severity {
-    Warning,
-    Error,
-}
+pub trait ErrorType: std::fmt::Debug {}
 
 #[derive(Clone, Debug)]
-pub struct ProblemInstance {
+pub struct Error {
     position: Position,
-    problem: Arc<dyn Problem>,
+    error: Arc<dyn ErrorType>,
 }
 
-pub trait Problem: std::fmt::Debug {
-    fn severity(&self) -> Severity;
+#[derive(Debug, Default)]
+pub struct Errors {
+    errors: Vec<Error>,
+    warnings: Vec<Warning>,
 }
 
-pub trait AResult<T> {}
+pub trait WarningType: std::fmt::Debug {}
 
-pub type Result<T> = std::result::Result<(T, Problems), Problems>;
+#[derive(Clone, Debug)]
+pub struct Warning {
+    position: Position,
+    warning: Arc<dyn WarningType>,
+}
 
-impl<T> AResult<T> for Result<T> {}
+#[derive(Debug)]
+pub struct Warnings<T> {
+    pub warnings: Vec<Warning>,
+    pub value: T,
+}
+
+impl<T> Warnings<T> {
+    pub fn to_problems(self) -> (Problems, T) {
+        let problems = Problems {
+            errors: Vec::default(),
+            warnings: self.warnings,
+        };
+        (problems, self.value)
+    }
+}
+
+pub type Result<T> = std::result::Result<Warnings<T>, Errors>;
 
 // Creates an ok result with no warnings
 pub fn ok<T>(value: T) -> Result<T> {
-    Ok((value, Problems::default()))
+    Ok(Warnings {
+        warnings: Vec::default(),
+        value,
+    })
 }
 
 // Creates a result with a single error
-pub fn error<T, P: Problem + 'static>(position: Position, problem: P) -> Result<T> {
-    let error = ProblemInstance {
+pub fn error<T, E: ErrorType + 'static>(position: Position, error: E) -> Result<T> {
+    let error = Error {
         position,
-        problem: Arc::new(problem) as Arc<dyn Problem>,
+        error: Arc::new(error) as Arc<dyn ErrorType>,
     };
-    Err(Problems {
-        problems: vec![error],
+    Err(Errors {
+        errors: vec![error],
+        warnings: Vec::default(),
     })
+}
+
+fn err<T>(errors: Vec<Error>, warnings: Vec<Warning>) -> Result<T> {
+    Err(Errors { errors, warnings })
+}
+
+fn ok_w<T>(warnings: Vec<Warning>, value: T) -> Result<T> {
+    Ok(Warnings { warnings, value })
+}
+
+pub fn merge<T1, T2>(r1: Result<T1>, r2: Result<T2>) -> Result<(T1, T2)> {
+    let mut errors: Vec<Error>;
+    let mut warnings: Vec<Warning>;
+    match r1 {
+        Ok(w1) => {
+            warnings = w1.warnings;
+            match r2 {
+                Ok(mut w2) => {
+                    warnings.append(&mut w2.warnings);
+                    ok_w(warnings, (w1.value, w2.value))
+                }
+                Err(mut e2) => {
+                    warnings.append(&mut e2.warnings);
+                    err(e2.errors, warnings)
+                }
+            }
+        }
+        Err(e1) => {
+            errors = e1.errors;
+            warnings = e1.warnings;
+            match r2 {
+                Ok(mut w2) => {
+                    warnings.append(&mut w2.warnings);
+                }
+                Err(mut e2) => {
+                    errors.append(&mut e2.errors);
+                    warnings.append(&mut e2.warnings);
+                }
+            }
+            err(errors, warnings)
+        }
+    }
 }
 
 #[derive(Default, Debug)]
 pub struct Problems {
-    problems: Vec<ProblemInstance>,
+    errors: Vec<Error>,
+    warnings: Vec<Warning>,
 }
 
 impl Problems {
-    pub fn add<P: Problem + 'static>(&mut self, position: Position, problem: P) {
-        self.problems.push(ProblemInstance {
+    pub fn add_error<E: ErrorType + 'static>(&mut self, position: Position, error: E) {
+        self.errors.push(Error {
             position,
-            problem: Arc::new(problem) as Arc<dyn Problem>,
+            error: Arc::new(error) as Arc<dyn ErrorType>,
+        });
+    }
+
+    pub fn add_warning<W: WarningType + 'static>(&mut self, position: Position, error: W) {
+        self.warnings.push(Warning {
+            position,
+            warning: Arc::new(error) as Arc<dyn WarningType>,
         });
     }
 
     pub fn add_problems(&mut self, mut problems: Problems) {
-        self.problems.append(&mut problems.problems);
+        self.errors.append(&mut problems.errors);
+        self.warnings.append(&mut problems.warnings);
     }
 
-    fn has_error(&self) -> bool {
-        self.problems
-            .iter()
-            .any(|p| matches!(p.problem.severity(), Severity::Error))
+    pub fn add_result<T>(&mut self, mut result: Result<T>) -> Option<T> {
+        match result {
+            Ok(mut w) => {
+                self.warnings.append(&mut w.warnings);
+                Some(w.value)
+            }
+            Err(mut e) => {
+                self.errors.append(&mut e.errors);
+                self.warnings.append(&mut e.warnings);
+                None
+            }
+        }
+    }
+
+    fn to_ok<T>(self, value: T) -> Result<T> {
+        Ok(Warnings {
+            warnings: Vec::default(),
+            value,
+        })
+    }
+
+    fn to_err<T>(self) -> Result<T> {
+        Err(Errors {
+            errors: self.errors,
+            warnings: self.warnings,
+        })
     }
 
     pub fn to_result<T>(self, value: T) -> Result<T> {
-        if self.has_error() {
-            Err(self)
+        if self.errors.is_empty() {
+            self.to_ok(value)
         } else {
-            Ok((value, self))
+            self.to_err()
         }
     }
 
@@ -79,10 +174,10 @@ impl Problems {
     where
         F: FnOnce() -> T,
     {
-        if self.has_error() {
-            Err(self)
+        if self.errors.is_empty() {
+            self.to_ok(supplier())
         } else {
-            Ok((supplier(), self))
+            self.to_err()
         }
     }
 }

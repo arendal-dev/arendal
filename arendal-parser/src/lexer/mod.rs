@@ -5,7 +5,7 @@ use std::fmt;
 use ast::input::StringInput;
 use ast::keyword::Keyword;
 use ast::position::{EqNoPosition, Position};
-use ast::problem::{Problem, Problems, Result, Severity};
+use ast::problem::{ErrorType, Problems, Result};
 use ast::symbol::{Symbol, TSymbol};
 use num::Integer;
 use tokenizer::{Token, TokenKind, Tokens, tokenize};
@@ -148,11 +148,7 @@ enum Error {
     InvalidOpenEnclosure,
 }
 
-impl Problem for Error {
-    fn severity(&self) -> Severity {
-        Severity::Error
-    }
-}
+impl ErrorType for Error {}
 
 impl<'me> Lexer<'me> {
     fn new(tokens: &Tokens) -> Lexer {
@@ -269,9 +265,8 @@ impl<'me> Lexer<'me> {
         // - end_index = 1
         // - Tokens to consume = 1 + (end_index - start_index) + 1
         let ntokens = 2 + end_index - start_index;
-        match result {
-            Ok((lexemes, problems)) => {
-                self.problems.add_problems(problems);
+        match self.problems.add_result(result) {
+            Some(lexemes) => {
                 self.add_lexeme(LexemeData::Level(Level { enclosure, lexemes }), ntokens);
             }
             _ => panic!("TODO"),
@@ -324,7 +319,7 @@ impl<'me> Lexer<'me> {
 
     fn add_error(&mut self, token: &Token, error: Error, tokens: usize) {
         self.problems
-            .add(Position::String(token.range.clone()), error);
+            .add_error(Position::String(token.range.clone()), error);
         self.advance(tokens)
     }
 }

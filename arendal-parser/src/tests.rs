@@ -6,8 +6,8 @@ use ast::{
 };
 
 fn check_statements(input: &str, expected: Vec<Statement>) {
-    let (actual, _) = super::parse(input).unwrap();
-    actual.assert_eq_nopos(&expected);
+    let warnings = super::parse(input).unwrap();
+    warnings.value.assert_eq_nopos(&expected);
 }
 
 fn check_statement(input: &str, expected: Statement) {

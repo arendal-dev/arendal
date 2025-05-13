@@ -96,7 +96,7 @@ impl TestCase {
     fn ok_without_pos(self) {
         match self.parent {
             None => match self.lex() {
-                Ok(lexemes) => lexemes.0.lexemes.assert_eq_nopos(&self.lexemes),
+                Ok(wl) => wl.value.lexemes.assert_eq_nopos(&self.lexemes),
                 Err(problems) => panic!("{:?}", problems),
             },
             _ => self.close().ok_without_pos(),
