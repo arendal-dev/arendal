@@ -38,9 +38,46 @@ impl<T> Warnings<T> {
         };
         (problems, self.value)
     }
+
+    pub fn and_then<U, F: FnOnce(T) -> Result<U>>(mut self, op: F) -> Result<U> {
+        let result = op(self.value);
+        if self.warnings.is_empty() {
+            result
+        } else {
+            match result {
+                Ok(mut w2) => {
+                    self.warnings.append(&mut w2.warnings);
+                    Ok(Warnings {
+                        warnings: self.warnings,
+                        value: w2.value,
+                    })
+                }
+                Err(mut e2) => {
+                    self.warnings.append(&mut e2.warnings);
+                    Err(Errors {
+                        errors: e2.errors,
+                        warnings: self.warnings,
+                    })
+                }
+            }
+        }
+    }
 }
 
 pub type Result<T> = std::result::Result<Warnings<T>, Errors>;
+
+pub trait PResult<T> {
+    fn and_then_wp<U, F: FnOnce(T) -> Result<U>>(self, op: F) -> Result<U>;
+}
+
+impl<T> PResult<T> for Result<T> {
+    fn and_then_wp<U, F: FnOnce(T) -> Result<U>>(self, op: F) -> Result<U> {
+        match self {
+            Ok(w) => w.and_then(op),
+            Err(e) => Err(e),
+        }
+    }
+}
 
 // Creates an ok result with no warnings
 pub fn ok<T>(value: T) -> Result<T> {
