@@ -3,7 +3,7 @@ mod lexer;
 use ast::{
     BinaryOp, EMPTY,
     input::StringInput,
-    problem::{ErrorType, Problems, Result},
+    problem::{self, ErrorType, Problems, ProblemsResult, Result},
     stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
@@ -19,14 +19,14 @@ struct Parser {
     problems: Problems,
 }
 
-type PResult<T> = std::result::Result<T, ()>;
-type EResult = PResult<Expression>;
+type EResult = Result<Expression>;
 
 impl Parser {
     fn parse_statements(mut self, lexemes: &Lexemes) -> Result<Vec<Statement>> {
-        let mut statements: Vec<Statement> = Vec::default();
+        let mut statements = Vec::<Statement>::default();
+        let mut result = problem::ok(());
         while self.index < lexemes.len() {
-            let _ = self.rule_statement(lexemes).map(|s| statements.push(s));
+            result = result.merge(self.rule_statement(lexemes), |_, s| statements.push(s));
         }
         self.problems.to_result(statements)
     }
@@ -57,17 +57,14 @@ impl Parser {
 
     */
 
-    fn rule_statement(&mut self, lexemes: &Lexemes) -> PResult<Statement> {
-        let result = self
-            .rule_expression(lexemes)
-            .map(|e| Statement::Expression(e));
-        if !self.is_eos(lexemes) {
-            self.problems.add_error(
-                lexemes.get(self.index).unwrap().position.clone(),
-                Error::EndOfStatementExpected,
-            );
-        }
-        result
+    fn rule_statement(&mut self, lexemes: &Lexemes) -> Result<Statement> {
+        self.rule_expression(lexemes).and_then_wp(|e| {
+            if !self.is_eos(lexemes) {
+                Error::EndOfStatementExpected.at(lexemes.get(self.index).unwrap())
+            } else {
+                problem::ok(Statement::Expression(e))
+            }
+        })
     }
 
     fn rule_expression(&mut self, lexemes: &Lexemes) -> EResult {
@@ -79,23 +76,28 @@ impl Parser {
         O: Fn(&LexemeData) -> Option<BinaryOp>,
         F: Fn(&mut Parser, &Lexemes) -> EResult,
     {
-        let mut left = rule(self, lexemes)?;
+        let mut left = rule(self, lexemes);
         while let Some(lexeme) = lexemes.get(self.index) {
             if let Some(bop) = op(&lexeme.data) {
                 let position = lexeme.position.clone();
                 self.index += 1;
-                let right = rule(self, lexemes)?;
-                left = Expr::Binary(Binary {
-                    op: bop,
-                    expr1: left,
-                    expr2: right,
-                })
-                .to_expression(position, None, EMPTY)
+                left = left
+                    .merge(rule(self, lexemes), |e1, e2| (e1, e2))
+                    .and_then_wp(|(expr1, expr2)| {
+                        problem::ok(
+                            Expr::Binary(Binary {
+                                op: bop,
+                                expr1,
+                                expr2,
+                            })
+                            .to_expression(position, None, EMPTY),
+                        )
+                    });
             } else {
                 break;
             }
         }
-        Ok(left)
+        left
     }
 
     fn rule_logterm(&mut self, lexemes: &Lexemes) -> EResult {
@@ -184,29 +186,30 @@ impl Parser {
             panic!("TODO: error")
         }
         .and_then(|(position, expr)| {
-            Ok(expr.to_expression(position, self.rule_type_ann(lexemes)?, EMPTY))
+            problem::ok(expr.to_expression(position, self.rule_type_ann(lexemes)?.value, EMPTY))
         })
     }
 
-    fn rule_type_ann(&mut self, lexemes: &Lexemes) -> PResult<Option<TypeAnnotation>> {
+    fn rule_type_ann(&mut self, lexemes: &Lexemes) -> Result<Option<TypeAnnotation>> {
         if let Some(seplex) = lexemes.get(self.index) {
             if LexemeData::TypeAnnSeparator == seplex.data {
                 self.index += 1;
                 if let Some(lexeme) = lexemes.get(self.index) {
                     if let LexemeData::TSymbol(s) = &lexeme.data {
                         self.index += 1;
-                        return Ok(Some(TypeAnnotation::LocalType(s.clone())));
+                        problem::ok(Some(TypeAnnotation::LocalType(s.clone())))
                     } else {
-                        self.add_problem_at(&lexeme, Error::TypeAnnotationExpected);
-                        return Err(());
+                        Error::TypeAnnotationExpected.at(&lexeme)
                     }
                 } else {
-                    self.add_problem_at(&seplex, Error::TypeAnnotationExpected);
-                    return Err(());
+                    Error::TypeAnnotationExpected.at(&seplex)
                 }
+            } else {
+                problem::ok(None)
             }
+        } else {
+            problem::ok(None)
         }
-        Ok(None)
     }
 
     fn add_problem_at<T: ErrorType + 'static>(&mut self, lexeme: &Lexeme, problem: T) {
@@ -218,6 +221,12 @@ impl Parser {
 enum Error {
     EndOfStatementExpected,
     TypeAnnotationExpected,
+}
+
+impl Error {
+    fn at<T>(self, lexeme: &Lexeme) -> Result<T> {
+        problem::error(lexeme.position.clone(), self)
+    }
 }
 
 impl ErrorType for Error {}

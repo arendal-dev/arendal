@@ -66,15 +66,50 @@ impl<T> Warnings<T> {
 
 pub type Result<T> = std::result::Result<Warnings<T>, Errors>;
 
-pub trait PResult<T> {
+pub trait ProblemsResult<T> {
     fn and_then_wp<U, F: FnOnce(T) -> Result<U>>(self, op: F) -> Result<U>;
+    fn merge<U, V, F: FnOnce(T, U) -> V>(self, other: Result<U>, op: F) -> Result<V>;
 }
 
-impl<T> PResult<T> for Result<T> {
+impl<T> ProblemsResult<T> for Result<T> {
     fn and_then_wp<U, F: FnOnce(T) -> Result<U>>(self, op: F) -> Result<U> {
         match self {
             Ok(w) => w.and_then(op),
             Err(e) => Err(e),
+        }
+    }
+
+    fn merge<U, V, F: FnOnce(T, U) -> V>(self, other: Result<U>, op: F) -> Result<V> {
+        let mut errors: Vec<Error>;
+        let mut warnings: Vec<Warning>;
+        match self {
+            Ok(w1) => {
+                warnings = w1.warnings;
+                match other {
+                    Ok(mut w2) => {
+                        warnings.append(&mut w2.warnings);
+                        ok_w(warnings, op(w1.value, w2.value))
+                    }
+                    Err(mut e2) => {
+                        warnings.append(&mut e2.warnings);
+                        err(e2.errors, warnings)
+                    }
+                }
+            }
+            Err(e1) => {
+                errors = e1.errors;
+                warnings = e1.warnings;
+                match other {
+                    Ok(mut w2) => {
+                        warnings.append(&mut w2.warnings);
+                    }
+                    Err(mut e2) => {
+                        errors.append(&mut e2.errors);
+                        warnings.append(&mut e2.warnings);
+                    }
+                }
+                err(errors, warnings)
+            }
         }
     }
 }
@@ -105,40 +140,6 @@ fn err<T>(errors: Vec<Error>, warnings: Vec<Warning>) -> Result<T> {
 
 fn ok_w<T>(warnings: Vec<Warning>, value: T) -> Result<T> {
     Ok(Warnings { warnings, value })
-}
-
-pub fn merge<T1, T2>(r1: Result<T1>, r2: Result<T2>) -> Result<(T1, T2)> {
-    let mut errors: Vec<Error>;
-    let mut warnings: Vec<Warning>;
-    match r1 {
-        Ok(w1) => {
-            warnings = w1.warnings;
-            match r2 {
-                Ok(mut w2) => {
-                    warnings.append(&mut w2.warnings);
-                    ok_w(warnings, (w1.value, w2.value))
-                }
-                Err(mut e2) => {
-                    warnings.append(&mut e2.warnings);
-                    err(e2.errors, warnings)
-                }
-            }
-        }
-        Err(e1) => {
-            errors = e1.errors;
-            warnings = e1.warnings;
-            match r2 {
-                Ok(mut w2) => {
-                    warnings.append(&mut w2.warnings);
-                }
-                Err(mut e2) => {
-                    errors.append(&mut e2.errors);
-                    warnings.append(&mut e2.warnings);
-                }
-            }
-            err(errors, warnings)
-        }
-    }
 }
 
 #[derive(Default, Debug)]
