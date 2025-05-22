@@ -5,7 +5,7 @@ use std::fmt;
 use ast::input::StringInput;
 use ast::keyword::Keyword;
 use ast::position::{EqNoPosition, Position};
-use ast::problem::{ErrorType, Problems, Result};
+use ast::problem::{self, ErrorType, Problems, Result};
 use ast::symbol::{Symbol, TSymbol};
 use num::Integer;
 use tokenizer::{Token, TokenKind, Tokens, tokenize};
@@ -148,7 +148,11 @@ enum Error {
     InvalidOpenEnclosure,
 }
 
-impl ErrorType for Error {}
+impl ErrorType for Error {
+    fn at(self, position: Position) -> problem::Error {
+        problem::Error::new(position, self)
+    }
+}
 
 impl<'me> Lexer<'me> {
     fn new(tokens: &Tokens) -> Lexer {
@@ -319,7 +323,8 @@ impl<'me> Lexer<'me> {
 
     fn add_error(&mut self, token: &Token, error: Error, tokens: usize) {
         self.problems
-            .add_error(Position::String(token.range.clone()), error);
+            .errors
+            .push(error.at(Position::String(token.range.clone())));
         self.advance(tokens)
     }
 }
