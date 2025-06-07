@@ -1,41 +1,13 @@
 use std::fmt::{self, Debug};
 
-use ast::BinaryOp;
+use ast::common::BinaryOp;
 use ast::position::{EqNoPosition, Position};
 use num::Integer;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum UnaryOp {
-    Minus,
-    Not,
-}
-
-#[derive(Debug)]
-pub(crate) struct Unary<T: Payload, P: Payload, Q: Debug, QT: Debug> {
-    pub op: UnaryOp,
-    pub expr: Expression<T, P, Q, QT>,
-}
-
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> EqNoPosition for Unary<T, P, Q, QT> {
-    fn eq_nopos(&self, other: &Self) -> bool {
-        self.op == other.op && self.expr.eq_nopos(&other.expr)
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct Binary<T: Payload, P: Payload, Q: Debug, QT: Debug> {
-    pub op: BinaryOp,
-    pub expr1: Expression<T, P, Q, QT>,
-    pub expr2: Expression<T, P, Q, QT>,
-}
-
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> EqNoPosition for Binary<T, P, Q, QT> {
-    fn eq_nopos(&self, other: &Self) -> bool {
-        self.op == other.op
-            && self.expr1.eq_nopos(&other.expr1)
-            && self.expr2.eq_nopos(&other.expr2)
-    }
-}
+pub(crate) type Unary<T: Payload, P: Payload, Q: Debug, QT: Debug> =
+    ast::common::Unary<Expression<T, P, Q, QT>>;
+pub(crate) type Binary<T: Payload, P: Payload, Q: Debug, QT: Debug> =
+    ast::common::Binary<Expression<T, P, Q, QT>>;
 
 #[derive(Debug)]
 pub(crate) struct Seq<T: Payload, P: Payload, Q: Debug, QT: Debug> {

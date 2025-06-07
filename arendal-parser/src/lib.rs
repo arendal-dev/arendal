@@ -1,7 +1,8 @@
 mod lexer;
 
 use ast::{
-    BinaryOp, EMPTY,
+    EMPTY,
+    common::BinaryOp,
     input::StringInput,
     position::Position,
     problem::{self, ErrorType, Problems, ProblemsResult, Result},

@@ -1,5 +1,6 @@
 use ast::{
-    BinaryOp, EMPTY,
+    EMPTY,
+    common::BinaryOp,
     position::EqNoPosition,
     stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
     symbol::TSymbol,
