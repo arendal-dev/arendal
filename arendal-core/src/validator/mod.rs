@@ -36,13 +36,13 @@ impl PartialEq for Valid {
 
 impl Payload for Valid {}
 
-pub(crate) type Expression = itr::Expression<Option<TypeExpr>, Valid, FQSym, FQType>;
-pub(crate) type Expr = itr::Expr<Option<TypeExpr>, Valid, FQSym, FQType>;
-pub(crate) type ITR = itr::ITR<Option<TypeExpr>, Valid, FQSym, FQType>;
-pub(crate) type Binary = itr::Binary<Option<TypeExpr>, Valid, FQSym, FQType>;
+pub(crate) type Expression = itr::Expression<Valid>;
+pub(crate) type Expr = itr::Expr<Valid>;
+pub(crate) type ITR = itr::ITR<Valid>;
+pub(crate) type Binary = itr::Binary<Valid>;
 
 fn valid(expr: Expr, position: &Position) -> Expression {
-    expr.to_expression(position.clone(), None, Valid::new())
+    expr.to_expression(position.clone(), Valid::new())
 }
 
 #[derive(Default)]

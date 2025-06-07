@@ -1,6 +1,6 @@
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 
-use crate::position::{EqNoPosition, Position};
+use crate::position::EqNoPosition;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
@@ -48,5 +48,32 @@ impl<E: EqNoPosition + Debug> EqNoPosition for Binary<E> {
         self.op == other.op
             && self.expr1.eq_nopos(&other.expr1)
             && self.expr2.eq_nopos(&other.expr2)
+    }
+}
+
+#[derive(Debug)]
+pub struct Seq<E: EqNoPosition + Debug> {
+    pub expr: E,
+    pub then: E,
+}
+
+impl<E: EqNoPosition + Debug> EqNoPosition for Seq<E> {
+    fn eq_nopos(&self, other: &Self) -> bool {
+        self.expr.eq_nopos(&other.expr) && self.then.eq_nopos(&other.then)
+    }
+}
+
+#[derive(Debug)]
+pub struct Conditional<E: EqNoPosition + Debug> {
+    pub expr: E,
+    pub then: E,
+    pub otherwise: E,
+}
+
+impl<E: EqNoPosition + Debug> EqNoPosition for Conditional<E> {
+    fn eq_nopos(&self, other: &Self) -> bool {
+        self.expr.eq_nopos(&other.expr)
+            && self.then.eq_nopos(&other.then)
+            && self.otherwise.eq_nopos(&other.otherwise)
     }
 }

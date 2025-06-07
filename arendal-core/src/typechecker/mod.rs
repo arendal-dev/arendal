@@ -5,7 +5,7 @@ use ast::{
 
 use crate::itr;
 
-use crate::types::Type;
+use crate::types::TypeExpr;
 use crate::validator;
 
 pub(super) fn typecheck(tree: validator::ITR) -> Result<ITR> {
@@ -14,12 +14,12 @@ pub(super) fn typecheck(tree: validator::ITR) -> Result<ITR> {
 
 #[derive(Debug, Eq)]
 pub struct Checked {
-    _nothing: (),
+    checked_type: TypeExpr,
 }
 
 impl Checked {
-    fn new() -> Self {
-        Checked { _nothing: () }
+    fn new(checked_type: TypeExpr) -> Self {
+        Checked { checked_type }
     }
 }
 
@@ -31,10 +31,10 @@ impl PartialEq for Checked {
 
 impl itr::Payload for Checked {}
 
-pub(crate) type Expression = itr::Expression<Type, Checked, FQSym, FQType>;
-pub(crate) type Expr = itr::Expr<Type, Checked, FQSym, FQType>;
-pub(crate) type ITR = itr::ITR<Type, Checked, FQSym, FQType>;
-pub(crate) type Binary = itr::Binary<Type, Checked, FQSym, FQType>;
+pub(crate) type Expression = itr::Expression<Checked>;
+pub(crate) type Expr = itr::Expr<Checked>;
+pub(crate) type ITR = itr::ITR<Checked>;
+pub(crate) type Binary = itr::Binary<Checked>;
 
 #[derive(Default)]
 struct TypeChecker {
@@ -51,7 +51,7 @@ impl TypeChecker {
             validator::Expr::LitInteger(num) => Some(new_e(
                 expression,
                 Expr::LitInteger(num.clone()),
-                Type::Integer,
+                TypeExpr::Type(crate::types::Type::Integer),
             )),
             validator::Expr::Binary(b) => {
                 let option1 = self.typecheck_expression(&b.expr1);
@@ -74,8 +74,8 @@ impl TypeChecker {
     }
 }
 
-fn new_e(from: &validator::Expression, expr: Expr, t: Type) -> Expression {
-    expr.to_expression(from.position().clone(), t, Checked::new())
+fn new_e(from: &validator::Expression, expr: Expr, t: TypeExpr) -> Expression {
+    expr.to_expression(from.position().clone(), Checked::new(t))
 }
 
 pub(crate) enum TypeError {

@@ -1,40 +1,8 @@
 use std::fmt::{self, Debug};
 
-use ast::common::BinaryOp;
 use ast::position::{EqNoPosition, Position};
+use ast::symbol::{Symbol, TSymbol};
 use num::Integer;
-
-pub(crate) type Unary<T: Payload, P: Payload, Q: Debug, QT: Debug> =
-    ast::common::Unary<Expression<T, P, Q, QT>>;
-pub(crate) type Binary<T: Payload, P: Payload, Q: Debug, QT: Debug> =
-    ast::common::Binary<Expression<T, P, Q, QT>>;
-
-#[derive(Debug)]
-pub(crate) struct Seq<T: Payload, P: Payload, Q: Debug, QT: Debug> {
-    pub expr: Expression<T, P, Q, QT>,
-    pub then: Expression<T, P, Q, QT>,
-}
-
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> EqNoPosition for Seq<T, P, Q, QT> {
-    fn eq_nopos(&self, other: &Self) -> bool {
-        self.expr.eq_nopos(&other.expr) && self.then.eq_nopos(&other.then)
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct Conditional<T: Payload, P: Payload, Q: Debug, QT: Debug> {
-    pub expr: Expression<T, P, Q, QT>,
-    pub then: Expression<T, P, Q, QT>,
-    pub otherwise: Expression<T, P, Q, QT>,
-}
-
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> EqNoPosition for Conditional<T, P, Q, QT> {
-    fn eq_nopos(&self, other: &Self) -> bool {
-        self.expr.eq_nopos(&other.expr)
-            && self.then.eq_nopos(&other.then)
-            && self.otherwise.eq_nopos(&other.otherwise)
-    }
-}
 
 pub(crate) trait Payload: fmt::Debug + PartialEq + Eq {}
 
@@ -66,51 +34,33 @@ pub(crate) const EMPTY: Empty = Empty {};
 
 impl<T: Payload> Payload for Option<T> {}
 
-trait Data: fmt::Debug + EqNoPosition {}
-
-#[derive(Debug, PartialEq, Eq)]
-struct Node<D: Data, P: Payload> {
-    position: Position,
-    data: D,
-    payload: P,
-}
-
-impl<D: Data, P: Payload> EqNoPosition for Node<D, P> {
-    fn eq_nopos(&self, other: &Self) -> bool {
-        self.data.eq_nopos(&other.data) && self.payload == other.payload
-    }
-}
+pub(crate) type Unary<P: Payload> = ast::common::Unary<Expression<P>>;
+pub(crate) type Binary<P: Payload> = ast::common::Binary<Expression<P>>;
+pub(crate) type Seq<P: Payload> = ast::common::Seq<Expression<P>>;
+pub(crate) type Conditional<P: Payload> = ast::common::Conditional<Expression<P>>;
 
 #[derive(Debug)]
-struct ExprData<T: Payload, P: Payload, Q: Debug, QT: Debug> {
+struct ExprData<P: Payload> {
     position: Position,
-    expr: Expr<T, P, Q, QT>,
-    type_annotation: T,
+    expr: Expr<P>,
     payload: P,
 }
 
 #[derive(Debug)]
-pub(crate) enum Expr<T: Payload, P: Payload, Q: Debug, QT: Debug> {
+pub(crate) enum Expr<P: Payload> {
     LitInteger(Integer),
-    Binary(Binary<T, P, Q, QT>),
-    Symbol(Q),
-    Type(QT),
+    Binary(Binary<P>),
+    Symbol(Symbol),
+    Type(TSymbol),
 }
 
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> Expr<T, P, Q, QT> {
-    pub fn to_expression(
-        self,
-        position: Position,
-        type_annotation: T,
-        payload: P,
-    ) -> Expression<T, P, Q, QT> {
-        Expression::new(position, self, type_annotation, payload)
+impl<P: Payload> Expr<P> {
+    pub fn to_expression(self, position: Position, payload: P) -> Expression<P> {
+        Expression::new(position, self, payload)
     }
 }
 
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> Data for Expr<T, P, Q, QT> {}
-
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> EqNoPosition for Expr<T, P, Q, QT> {
+impl<P: Payload> EqNoPosition for Expr<P> {
     fn eq_nopos(&self, other: &Self) -> bool {
         match self {
             Expr::LitInteger(n1) => {
@@ -132,22 +82,16 @@ impl<T: Payload, P: Payload, Q: Debug, QT: Debug> EqNoPosition for Expr<T, P, Q,
     }
 }
 
-pub(crate) struct Expression<T: Payload, P: Payload, Q: Debug, QT: Debug> {
-    data: Box<ExprData<T, P, Q, QT>>,
+pub(crate) struct Expression<P: Payload> {
+    data: Box<ExprData<P>>,
 }
 
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> Expression<T, P, Q, QT> {
-    pub fn new(
-        position: Position,
-        expr: Expr<T, P, Q, QT>,
-        type_annotation: T,
-        payload: P,
-    ) -> Self {
+impl<P: Payload> Expression<P> {
+    pub fn new(position: Position, expr: Expr<P>, payload: P) -> Self {
         Self {
             data: Box::new(ExprData {
                 position,
                 expr,
-                type_annotation,
                 payload,
             }),
         }
@@ -157,31 +101,22 @@ impl<T: Payload, P: Payload, Q: Debug, QT: Debug> Expression<T, P, Q, QT> {
         &self.data.position
     }
 
-    pub fn expr(&self) -> &Expr<T, P, Q, QT> {
+    pub fn expr(&self) -> &Expr<P> {
         &self.data.expr
     }
 
     pub fn payload(&self) -> &P {
         &self.data.payload
     }
-
-    pub fn annotate(self, type_annotation: T) -> Self {
-        Self::new(
-            self.data.position,
-            self.data.expr,
-            type_annotation,
-            self.data.payload,
-        )
-    }
 }
 
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> EqNoPosition for Expression<T, P, Q, QT> {
+impl<P: Payload> EqNoPosition for Expression<P> {
     fn eq_nopos(&self, other: &Self) -> bool {
         self.data.expr.eq_nopos(&other.data.expr) && self.data.payload == other.data.payload
     }
 }
 
-impl<T: Payload, P: Payload, Q: Debug, QT: Debug> fmt::Debug for Expression<T, P, Q, QT> {
+impl<P: Payload> fmt::Debug for Expression<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -192,6 +127,6 @@ impl<T: Payload, P: Payload, Q: Debug, QT: Debug> fmt::Debug for Expression<T, P
 }
 
 #[derive(Debug)]
-pub(crate) struct ITR<T: Payload, P: Payload, Q: Debug, QT: Debug> {
-    pub expression: Option<Expression<T, P, Q, QT>>,
+pub(crate) struct ITR<P: Payload> {
+    pub expression: Option<Expression<P>>,
 }

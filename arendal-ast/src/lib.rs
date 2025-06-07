@@ -35,33 +35,8 @@ pub enum TypeAnnotation {
 
 pub type Unary = common::Unary<Expression>;
 pub type Binary = common::Binary<Expression>;
-
-#[derive(Debug)]
-pub struct Seq {
-    pub expr: Expression,
-    pub then: Expression,
-}
-
-impl EqNoPosition for Seq {
-    fn eq_nopos(&self, other: &Self) -> bool {
-        self.expr.eq_nopos(&other.expr) && self.then.eq_nopos(&other.then)
-    }
-}
-
-#[derive(Debug)]
-pub struct Conditional {
-    pub expr: Expression,
-    pub then: Expression,
-    pub otherwise: Expression,
-}
-
-impl EqNoPosition for Conditional {
-    fn eq_nopos(&self, other: &Self) -> bool {
-        self.expr.eq_nopos(&other.expr)
-            && self.then.eq_nopos(&other.then)
-            && self.otherwise.eq_nopos(&other.otherwise)
-    }
-}
+pub type Seq = common::Seq<Expression>;
+pub type Conditional = common::Conditional<Expression>;
 
 #[derive(Debug)]
 struct ExprData {
