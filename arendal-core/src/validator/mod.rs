@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
 use ast::{
+    self, Statement,
     position::Position,
     problem::{Problems, Result},
-    stmt::{self, Statement},
     symbol::{FQSym, FQType},
 };
 
@@ -64,10 +64,10 @@ impl Validator {
         self.problems.to_result(ITR { expression: option })
     }
 
-    fn validate_expression(&mut self, expression: &stmt::Expression) -> Option<Expression> {
+    fn validate_expression(&mut self, expression: &ast::Expression) -> Option<Expression> {
         match expression.expr() {
-            stmt::Expr::LitInteger(num) => ok_expr(Expr::LitInteger(num.clone()), expression),
-            stmt::Expr::Binary(b) => {
+            ast::Expr::LitInteger(num) => ok_expr(Expr::LitInteger(num.clone()), expression),
+            ast::Expr::Binary(b) => {
                 let option1 = self.validate_expression(&b.expr1);
                 let option2 = self.validate_expression(&b.expr2);
                 // We extract from the option later to collect as many problems as possible.
@@ -87,6 +87,6 @@ impl Validator {
     }
 }
 
-fn ok_expr(expr: Expr, expression: &stmt::Expression) -> Option<Expression> {
+fn ok_expr(expr: Expr, expression: &ast::Expression) -> Option<Expression> {
     Some(valid(expr, expression.position()))
 }

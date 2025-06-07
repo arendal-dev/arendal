@@ -1,12 +1,11 @@
 mod lexer;
 
 use ast::{
-    EMPTY,
+    Binary, Expr, Expression, Statement, TypeAnnotation,
     common::BinaryOp,
     input::StringInput,
     position::Position,
     problem::{self, ErrorType, Problems, ProblemsResult, Result},
-    stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
 
@@ -19,7 +18,7 @@ type EResult = Result<Expression>;
 
 fn parse_statements(lexemes: &Lexemes) -> Result<Vec<Statement>> {
     let mut statements = Vec::<Statement>::new();
-    let mut result = Problems::ok(());
+    let mut result: std::result::Result<problem::Warnings<()>, problem::Errors> = Problems::ok(());
     let mut index: usize = 0;
     while index < lexemes.len() {
         result = result.merge(rule_statement(&mut index, lexemes), |_, s| {
@@ -88,7 +87,7 @@ where
                             expr1,
                             expr2,
                         })
-                        .to_expression(position, None, EMPTY),
+                        .to_expression(position, None),
                     )
                 });
         } else {
@@ -188,7 +187,7 @@ fn rule_primary(index: &mut usize, lexemes: &Lexemes) -> EResult {
         panic!("TODO: error")
     }
     .and_then(|(position, expr)| {
-        Problems::ok(expr.to_expression(position, rule_type_ann(index, lexemes)?.value, EMPTY))
+        Problems::ok(expr.to_expression(position, rule_type_ann(index, lexemes)?.value))
     })
 }
 

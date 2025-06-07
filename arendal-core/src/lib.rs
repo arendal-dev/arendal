@@ -9,7 +9,7 @@ pub mod tst;
 pub mod visibility;
 
 pub use arcstr::{ArcStr, Substr, literal};
-use ast::{problem::Result, stmt::Statement};
+use ast::{Statement, problem::Result};
 pub use num::Integer;
 
 mod itr;

@@ -1,8 +1,5 @@
 use ast::{
-    EMPTY,
-    common::BinaryOp,
-    position::EqNoPosition,
-    stmt::{Binary, Expr, Expression, Statement, TypeAnnotation},
+    Binary, Expr, Expression, Statement, TypeAnnotation, common::BinaryOp, position::EqNoPosition,
     symbol::TSymbol,
 };
 
@@ -20,7 +17,7 @@ fn check_expression(input: &str, expected: Expression) {
 }
 
 fn e(expr: Expr) -> Expression {
-    expr.to_expression(ast::position::Position::NoPosition, None, EMPTY)
+    expr.to_expression(ast::position::Position::NoPosition, None)
 }
 
 fn e_i64(value: i64) -> Expression {
@@ -40,9 +37,7 @@ fn e_add_i64(v1: i64, v2: i64) -> Expression {
 }
 
 fn tai(e: Expression) -> Expression {
-    e.annotate(Some(TypeAnnotation::LocalType(
-        TSymbol::new("Integer").unwrap(),
-    )))
+    e.annotate(TypeAnnotation::LocalType(TSymbol::new("Integer").unwrap()))
 }
 
 #[test]
