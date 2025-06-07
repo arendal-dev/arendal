@@ -1,4 +1,4 @@
-use ast::Payload;
+use crate::itr::Payload;
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Type {
@@ -9,3 +9,10 @@ pub(crate) enum Type {
 }
 
 impl Payload for Type {}
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum TypeExpr {
+    Type(Type),
+}
+
+impl Payload for TypeExpr {}

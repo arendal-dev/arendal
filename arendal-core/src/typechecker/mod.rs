@@ -1,14 +1,15 @@
 use ast::{
-    Payload,
     problem::{Problems, Result},
     symbol::{FQSym, FQType},
 };
 
+use crate::itr;
+
 use crate::types::Type;
 use crate::validator;
 
-pub(super) fn typecheck(ast: validator::AST) -> Result<AST> {
-    TypeChecker::default().typecheck(ast)
+pub(super) fn typecheck(tree: validator::ITR) -> Result<ITR> {
+    TypeChecker::default().typecheck(tree)
 }
 
 #[derive(Debug, Eq)]
@@ -28,12 +29,12 @@ impl PartialEq for Checked {
     }
 }
 
-impl Payload for Checked {}
+impl itr::Payload for Checked {}
 
-pub(crate) type Expression = ast::Expression<Type, Checked, FQSym, FQType>;
-pub(crate) type Expr = ast::Expr<Type, Checked, FQSym, FQType>;
-pub(crate) type AST = ast::AST<Type, Checked, FQSym, FQType>;
-pub(crate) type Binary = ast::Binary<Type, Checked, FQSym, FQType>;
+pub(crate) type Expression = itr::Expression<Type, Checked, FQSym, FQType>;
+pub(crate) type Expr = itr::Expr<Type, Checked, FQSym, FQType>;
+pub(crate) type ITR = itr::ITR<Type, Checked, FQSym, FQType>;
+pub(crate) type Binary = itr::Binary<Type, Checked, FQSym, FQType>;
 
 #[derive(Default)]
 struct TypeChecker {
@@ -41,7 +42,7 @@ struct TypeChecker {
 }
 
 impl TypeChecker {
-    fn typecheck(mut self, input: validator::AST) -> Result<AST> {
+    fn typecheck(mut self, input: validator::ITR) -> Result<ITR> {
         panic!("TODO")
     }
 

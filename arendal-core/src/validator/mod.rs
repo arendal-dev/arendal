@@ -1,14 +1,17 @@
 use std::marker::PhantomData;
 
 use ast::{
-    EMPTY, Empty, Payload,
     position::Position,
     problem::{Problems, Result},
-    stmt::{self, Statement, TypeAnnotation},
+    stmt::{self, Statement},
     symbol::{FQSym, FQType},
 };
 
-pub(super) fn validate(statements: Vec<Statement>) -> Result<AST> {
+use crate::itr::{self, EMPTY, Empty, Payload};
+
+use crate::types::TypeExpr;
+
+pub(super) fn validate(statements: Vec<Statement>) -> Result<ITR> {
     Validator::default().validate(statements)
 }
 
@@ -33,19 +36,13 @@ impl PartialEq for Valid {
 
 impl Payload for Valid {}
 
-pub(crate) type Expression = ast::Expression<Option<TypeAnnotation>, Valid, FQSym, FQType>;
-pub(crate) type Expr = ast::Expr<Option<TypeAnnotation>, Valid, FQSym, FQType>;
-pub(crate) type AST = ast::AST<Option<TypeAnnotation>, Valid, FQSym, FQType>;
-pub(crate) type Binary = ast::Binary<Option<TypeAnnotation>, Valid, FQSym, FQType>;
+pub(crate) type Expression = itr::Expression<Option<TypeExpr>, Valid, FQSym, FQType>;
+pub(crate) type Expr = itr::Expr<Option<TypeExpr>, Valid, FQSym, FQType>;
+pub(crate) type ITR = itr::ITR<Option<TypeExpr>, Valid, FQSym, FQType>;
+pub(crate) type Binary = itr::Binary<Option<TypeExpr>, Valid, FQSym, FQType>;
 
-trait Lift<T> {
-    fn lift(self, position: &Position) -> T;
-}
-
-impl Lift<Expression> for Expr {
-    fn lift(self, position: &Position) -> Expression {
-        self.to_expression(position.clone(), None, Valid::new())
-    }
+fn valid(expr: Expr, position: &Position) -> Expression {
+    expr.to_expression(position.clone(), None, Valid::new())
 }
 
 #[derive(Default)]
@@ -54,7 +51,7 @@ struct Validator {
 }
 
 impl Validator {
-    fn validate(mut self, statements: Vec<Statement>) -> Result<AST> {
+    fn validate(mut self, statements: Vec<Statement>) -> Result<ITR> {
         let option = if statements.is_empty() {
             None
         } else if statements.len() > 1 {
@@ -64,7 +61,7 @@ impl Validator {
                 Statement::Expression(expression) => self.validate_expression(&expression),
             }
         };
-        self.problems.to_result(AST { expression: option })
+        self.problems.to_result(ITR { expression: option })
     }
 
     fn validate_expression(&mut self, expression: &stmt::Expression) -> Option<Expression> {
@@ -91,5 +88,5 @@ impl Validator {
 }
 
 fn ok_expr(expr: Expr, expression: &stmt::Expression) -> Option<Expression> {
-    Some(expr.lift(expression.position()))
+    Some(valid(expr, expression.position()))
 }
