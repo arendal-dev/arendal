@@ -11,7 +11,7 @@ use crate::context::{Context, Type};
 use crate::error::{Error, Errors, L, Loc, Result};
 use crate::symbol::{FQPath, FQSym, FQType, Pkg, Symbol, TSymbol};
 
-use crate::env::{Env, Symbols};
+use crate::env0::{Env, Symbols};
 
 use self::fqresolver::FQResolvers;
 

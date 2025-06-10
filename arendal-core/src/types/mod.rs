@@ -1,6 +1,11 @@
+use std::collections::HashMap;
+
+use ast::{position::Position, symbol::FQType};
+use num::Integer;
+
 use crate::itr::Payload;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Type {
     Unit,
     True,
@@ -16,3 +21,28 @@ pub(crate) enum TypeExpr {
 }
 
 impl Payload for TypeExpr {}
+
+#[derive(Debug)]
+pub(crate) struct TypeDfn {
+    position: Position,
+    type_expr: TypeExpr,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Types {
+    values: HashMap<FQType, TypeDfn>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Value {
+    Unit,
+    True,
+    False,
+    Integer(Integer),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypedValue {
+    value: Value,
+    value_type: Type,
+}

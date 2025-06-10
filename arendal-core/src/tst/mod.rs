@@ -3,7 +3,7 @@ mod typecheck;
 use crate::Integer;
 use crate::ast0::UnaryOp;
 use crate::context::{Context, Type, Value};
-use crate::env::{Env, Symbols};
+use crate::env0::{Env, Symbols};
 use crate::error::{Error, L, Loc, Result};
 use crate::symbol::{FQSym, Pkg, Symbol};
 use std::fmt;

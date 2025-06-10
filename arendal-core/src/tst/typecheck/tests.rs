@@ -1,5 +1,5 @@
 use super::{Package, Type};
-use crate::env::Env;
+use crate::env0::Env;
 use crate::error::{Error, Result};
 use crate::symbol::Pkg;
 
