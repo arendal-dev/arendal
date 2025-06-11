@@ -33,7 +33,7 @@ impl Symbols {
             Error::DuplicateSymbol(symbol).at(dfn.position).to_err()
         } else {
             self.values.insert(symbol, dfn);
-            Problems::ok(())
+            problem::ok(())
         }
     }
 }
@@ -43,8 +43,4 @@ enum Error {
     DuplicateSymbol(FQSym),
 }
 
-impl ErrorType for Error {
-    fn at(self, position: Position) -> problem::Error {
-        problem::Error::new(position, self)
-    }
-}
+impl ErrorType for Error {}

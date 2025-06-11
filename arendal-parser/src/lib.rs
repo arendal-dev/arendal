@@ -5,7 +5,7 @@ use ast::{
     common::BinaryOp,
     input::StringInput,
     position::Position,
-    problem::{self, ErrorType, Problems, ProblemsResult, Result},
+    problem::{self, ErrorType, Problems, Result},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
 
@@ -18,14 +18,14 @@ type EResult = Result<Expression>;
 
 fn parse_statements(lexemes: &Lexemes) -> Result<Vec<Statement>> {
     let mut statements = Vec::<Statement>::new();
-    let mut result: std::result::Result<problem::Warnings<()>, problem::Errors> = Problems::ok(());
+    let mut problems = Problems::default();
     let mut index: usize = 0;
     while index < lexemes.len() {
-        result = result.merge(rule_statement(&mut index, lexemes), |_, s| {
-            statements.push(s)
-        });
+        problems
+            .add_result(rule_statement(&mut index, lexemes))
+            .and_then(|s| Some(statements.push(s)));
     }
-    result.and_then_wp(|_| Problems::ok(statements))
+    problems.to_result(statements)
 }
 
 // Returns whether the current lexeme is EOS (end of statement)
@@ -55,11 +55,11 @@ fn get_and_advance<'a>(&mut self, lexemes: &'a Lexemes) -> Option<&'a Lexeme> {
 */
 
 fn rule_statement(index: &mut usize, lexemes: &Lexemes) -> Result<Statement> {
-    rule_expression(index, lexemes).and_then_wp(|e| {
+    rule_expression(index, lexemes)?.and_then(|e| {
         if !is_eos(*index, lexemes) {
             Error::EndOfStatementExpected.to_err(lexemes.get(*index).unwrap())
         } else {
-            Problems::ok(Statement::Expression(e))
+            problem::ok(Statement::Expression(e))
         }
     })
 }
@@ -78,18 +78,16 @@ where
         if let Some(bop) = op(&lexeme.data) {
             let position = lexeme.position.clone();
             *index += 1;
-            left = left
-                .merge(rule(index, lexemes), |e1, e2| (e1, e2))
-                .and_then_wp(|(expr1, expr2)| {
-                    Problems::ok(
-                        Expr::Binary(Binary {
-                            op: bop,
-                            expr1,
-                            expr2,
-                        })
-                        .to_expression(position, None),
-                    )
-                });
+            left = problem::merge(left, rule(index, lexemes))?.and_then(|(expr1, expr2)| {
+                problem::ok(
+                    Expr::Binary(Binary {
+                        op: bop,
+                        expr1,
+                        expr2,
+                    })
+                    .to_expression(position, None),
+                )
+            })
         } else {
             break;
         }
@@ -187,7 +185,7 @@ fn rule_primary(index: &mut usize, lexemes: &Lexemes) -> EResult {
         panic!("TODO: error")
     }
     .and_then(|(position, expr)| {
-        Problems::ok(expr.to_expression(position, rule_type_ann(index, lexemes)?.value))
+        problem::ok(expr.to_expression(position, rule_type_ann(index, lexemes)?.value))
     })
 }
 
@@ -198,7 +196,7 @@ fn rule_type_ann(index: &mut usize, lexemes: &Lexemes) -> Result<Option<TypeAnno
             if let Some(lexeme) = lexemes.get(*index) {
                 if let LexemeData::TSymbol(s) = &lexeme.data {
                     *index += 1;
-                    Problems::ok(Some(TypeAnnotation::LocalType(s.clone())))
+                    problem::ok(Some(TypeAnnotation::LocalType(s.clone())))
                 } else {
                     Error::TypeAnnotationExpected.to_err(&lexeme)
                 }
@@ -206,10 +204,10 @@ fn rule_type_ann(index: &mut usize, lexemes: &Lexemes) -> Result<Option<TypeAnno
                 Error::TypeAnnotationExpected.to_err(&seplex)
             }
         } else {
-            Problems::ok(None)
+            problem::ok(None)
         }
     } else {
-        Problems::ok(None)
+        problem::ok(None)
     }
 }
 
@@ -225,11 +223,7 @@ impl Error {
     }
 }
 
-impl ErrorType for Error {
-    fn at(self, position: Position) -> problem::Error {
-        problem::Error::new(position, self)
-    }
-}
+impl ErrorType for Error {}
 
 #[cfg(test)]
 mod tests;

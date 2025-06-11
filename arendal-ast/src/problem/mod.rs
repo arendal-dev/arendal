@@ -2,8 +2,13 @@ use std::sync::Arc;
 
 use crate::position::Position;
 
-pub trait ErrorType: std::fmt::Debug {
-    fn at(self, position: Position) -> Error;
+pub trait ErrorType: std::fmt::Debug + 'static {
+    fn at(self, position: Position) -> Error
+    where
+        Self: Sized,
+    {
+        Error::new(position, self)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -13,7 +18,7 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn new<E: ErrorType + 'static>(position: Position, error: E) -> Self {
+    pub fn new<E: ErrorType>(position: Position, error: E) -> Self {
         Error {
             position,
             error: Arc::new(error) as Arc<dyn ErrorType>,
@@ -21,21 +26,20 @@ impl Error {
     }
 
     pub fn to_err<T>(self) -> Result<T> {
-        Err(Errors {
+        Err(Problems {
             errors: vec![self],
             warnings: Vec::new(),
         })
     }
 }
 
-#[derive(Debug, Default)]
-pub struct Errors {
-    errors: Vec<Error>,
-    warnings: Vec<Warning>,
-}
-
-pub trait WarningType: std::fmt::Debug {
-    fn at(self, position: Position) -> Error;
+pub trait WarningType: std::fmt::Debug + 'static {
+    fn at(self, position: Position) -> Warning
+    where
+        Self: Sized,
+    {
+        Warning::new(position, self)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -45,7 +49,7 @@ pub struct Warning {
 }
 
 impl Warning {
-    pub fn new<W: WarningType + 'static>(position: Position, warning: W) -> Self {
+    pub fn new<W: WarningType>(position: Position, warning: W) -> Self {
         Warning {
             position,
             warning: Arc::new(warning) as Arc<dyn WarningType>,
@@ -54,7 +58,7 @@ impl Warning {
 
     pub fn to_ok<T>(self, value: T) -> Result<T> {
         Ok(Warnings {
-            warnings: Vec::new(),
+            warnings: vec![self],
             value,
         })
     }
@@ -101,7 +105,7 @@ impl<T> Warnings<T> {
                 }
                 Err(mut e2) => {
                     self.warnings.append(&mut e2.warnings);
-                    Err(Errors {
+                    Err(Problems {
                         errors: e2.errors,
                         warnings: self.warnings,
                     })
@@ -118,61 +122,7 @@ impl<T> Warnings<T> {
     }
 }
 
-pub type Result<T> = std::result::Result<Warnings<T>, Errors>;
-
-pub trait ProblemsResult<T> {
-    fn and_then_wp<U, F: FnOnce(T) -> Result<U>>(self, op: F) -> Result<U>;
-    fn merge<U, V, F: FnOnce(T, U) -> V>(self, other: Result<U>, op: F) -> Result<V>;
-}
-
-impl<T> ProblemsResult<T> for Result<T> {
-    fn and_then_wp<U, F: FnOnce(T) -> Result<U>>(self, op: F) -> Result<U> {
-        match self {
-            Ok(w) => w.and_then(op),
-            Err(e) => Err(e),
-        }
-    }
-
-    fn merge<U, V, F: FnOnce(T, U) -> V>(self, other: Result<U>, op: F) -> Result<V> {
-        let mut errors: Vec<Error>;
-        let mut warnings: Vec<Warning>;
-        match self {
-            Ok(w1) => {
-                warnings = w1.warnings;
-                match other {
-                    Ok(mut w2) => {
-                        warnings.append(&mut w2.warnings);
-                        Ok(Warnings {
-                            warnings,
-                            value: op(w1.value, w2.value),
-                        })
-                    }
-                    Err(mut e2) => {
-                        warnings.append(&mut e2.warnings);
-                        Err(Errors {
-                            errors: e2.errors,
-                            warnings,
-                        })
-                    }
-                }
-            }
-            Err(e1) => {
-                errors = e1.errors;
-                warnings = e1.warnings;
-                match other {
-                    Ok(mut w2) => {
-                        warnings.append(&mut w2.warnings);
-                    }
-                    Err(mut e2) => {
-                        errors.append(&mut e2.errors);
-                        warnings.append(&mut e2.warnings);
-                    }
-                }
-                Err(Errors { errors, warnings })
-            }
-        }
-    }
-}
+pub type Result<T> = std::result::Result<Warnings<T>, Problems>;
 
 #[derive(Default, Debug)]
 pub struct Problems {
@@ -181,20 +131,12 @@ pub struct Problems {
 }
 
 impl Problems {
-    // Creates an ok result with no warnings
-    pub fn ok<T>(value: T) -> Result<T> {
-        Ok(Warnings {
-            warnings: Vec::new(),
-            value,
-        })
-    }
-
     pub fn add_problems(&mut self, mut problems: Problems) {
         self.errors.append(&mut problems.errors);
         self.warnings.append(&mut problems.warnings);
     }
 
-    pub fn add_result<T>(&mut self, mut result: Result<T>) -> Option<T> {
+    pub fn add_result<T>(&mut self, result: Result<T>) -> Option<T> {
         match result {
             Ok(mut w) => {
                 self.warnings.append(&mut w.warnings);
@@ -216,7 +158,7 @@ impl Problems {
     }
 
     fn to_err<T>(self) -> Result<T> {
-        Err(Errors {
+        Err(Problems {
             errors: self.errors,
             warnings: self.warnings,
         })
@@ -242,6 +184,54 @@ impl Problems {
             self.to_ok(supplier())
         } else {
             self.to_err()
+        }
+    }
+}
+
+// Creates an ok result with no warnings
+pub fn ok<T>(value: T) -> Result<T> {
+    Ok(Warnings {
+        warnings: Vec::new(),
+        value,
+    })
+}
+
+pub fn merge<U, V>(one: Result<U>, two: Result<V>) -> Result<(U, V)> {
+    let mut errors: Vec<Error>;
+    let mut warnings: Vec<Warning>;
+    match one {
+        Ok(w1) => {
+            warnings = w1.warnings;
+            match two {
+                Ok(mut w2) => {
+                    warnings.append(&mut w2.warnings);
+                    Ok(Warnings {
+                        warnings,
+                        value: (w1.value, w2.value),
+                    })
+                }
+                Err(mut e2) => {
+                    warnings.append(&mut e2.warnings);
+                    Err(Problems {
+                        errors: e2.errors,
+                        warnings,
+                    })
+                }
+            }
+        }
+        Err(e1) => {
+            errors = e1.errors;
+            warnings = e1.warnings;
+            match two {
+                Ok(mut w2) => {
+                    warnings.append(&mut w2.warnings);
+                }
+                Err(mut e2) => {
+                    errors.append(&mut e2.errors);
+                    warnings.append(&mut e2.warnings);
+                }
+            }
+            Err(Problems { errors, warnings })
         }
     }
 }

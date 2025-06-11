@@ -148,11 +148,7 @@ enum Error {
     InvalidOpenEnclosure,
 }
 
-impl ErrorType for Error {
-    fn at(self, position: Position) -> problem::Error {
-        problem::Error::new(position, self)
-    }
-}
+impl ErrorType for Error {}
 
 impl<'me> Lexer<'me> {
     fn new(tokens: &Tokens) -> Lexer {
