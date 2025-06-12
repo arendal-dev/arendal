@@ -29,8 +29,8 @@ impl<T> Q<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TypeAnnotation {
-    LocalType(TSymbol),
+pub enum TypeExpr {
+    Type(Q<TSymbol>),
 }
 
 pub type Unary = common::Unary<Expression>;
@@ -42,7 +42,7 @@ pub type Conditional = common::Conditional<Expression>;
 struct ExprData {
     position: Position,
     expr: Expr,
-    type_annotation: Option<TypeAnnotation>,
+    type_annotation: Option<TypeExpr>,
 }
 
 #[derive(Debug)]
@@ -57,7 +57,7 @@ impl Expr {
     pub fn to_expression(
         self,
         position: Position,
-        type_annotation: Option<TypeAnnotation>,
+        type_annotation: Option<TypeExpr>,
     ) -> Expression {
         Expression::new(position, self, type_annotation)
     }
@@ -90,7 +90,7 @@ pub struct Expression {
 }
 
 impl Expression {
-    pub fn new(position: Position, expr: Expr, type_annotation: Option<TypeAnnotation>) -> Self {
+    pub fn new(position: Position, expr: Expr, type_annotation: Option<TypeExpr>) -> Self {
         Self {
             data: Box::new(ExprData {
                 position,
@@ -108,7 +108,7 @@ impl Expression {
         &self.data.expr
     }
 
-    pub fn annotate(self, type_annotation: TypeAnnotation) -> Self {
+    pub fn annotate(self, type_annotation: TypeExpr) -> Self {
         Self::new(self.data.position, self.data.expr, Some(type_annotation))
     }
 }

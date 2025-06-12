@@ -1,5 +1,5 @@
 use ast::{
-    Binary, Expr, Expression, Statement, TypeAnnotation, common::BinaryOp, position::EqNoPosition,
+    Binary, Expr, Expression, Q, Statement, TypeExpr, common::BinaryOp, position::EqNoPosition,
     symbol::TSymbol,
 };
 
@@ -37,7 +37,7 @@ fn e_add_i64(v1: i64, v2: i64) -> Expression {
 }
 
 fn tai(e: Expression) -> Expression {
-    e.annotate(TypeAnnotation::LocalType(TSymbol::new("Integer").unwrap()))
+    e.annotate(TypeExpr::Type(Q::of(TSymbol::new("Integer").unwrap())))
 }
 
 #[test]

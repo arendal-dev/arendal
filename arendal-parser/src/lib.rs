@@ -1,7 +1,7 @@
 mod lexer;
 
 use ast::{
-    Binary, Expr, Expression, Statement, TypeAnnotation,
+    Binary, Expr, Expression, Q, Statement, TypeExpr,
     common::BinaryOp,
     input::StringInput,
     position::Position,
@@ -189,14 +189,14 @@ fn rule_primary(index: &mut usize, lexemes: &Lexemes) -> EResult {
     })
 }
 
-fn rule_type_ann(index: &mut usize, lexemes: &Lexemes) -> Result<Option<TypeAnnotation>> {
+fn rule_type_ann(index: &mut usize, lexemes: &Lexemes) -> Result<Option<TypeExpr>> {
     if let Some(seplex) = lexemes.get(*index) {
         if LexemeData::TypeAnnSeparator == seplex.data {
             *index += 1;
             if let Some(lexeme) = lexemes.get(*index) {
                 if let LexemeData::TSymbol(s) = &lexeme.data {
                     *index += 1;
-                    problem::ok(Some(TypeAnnotation::LocalType(s.clone())))
+                    problem::ok(Some(TypeExpr::Type(Q::of(s.clone()))))
                 } else {
                     Error::TypeAnnotationExpected.to_err(&lexeme)
                 }
