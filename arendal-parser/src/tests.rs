@@ -25,7 +25,11 @@ fn e_i64(value: i64) -> Expression {
 }
 
 fn e_binary(expr1: Expression, op: BinaryOp, expr2: Expression) -> Expression {
-    e(Expr::Binary(Binary { op, expr1, expr2 }))
+    e(Expr::Binary(Binary {
+        op,
+        expr1: expr1.into(),
+        expr2: expr2.into(),
+    }))
 }
 
 fn e_add(expr1: Expression, expr2: Expression) -> Expression {
@@ -36,8 +40,9 @@ fn e_add_i64(v1: i64, v2: i64) -> Expression {
     e_add(e_i64(v1), e_i64(v2))
 }
 
-fn tai(e: Expression) -> Expression {
-    e.annotate(TypeExpr::Type(Q::of(TSymbol::new("Integer").unwrap())))
+fn tai(mut e: Expression) -> Expression {
+    e.type_expr = Some(TypeExpr::Type(Q::of(TSymbol::new("Integer").unwrap())));
+    e
 }
 
 #[test]

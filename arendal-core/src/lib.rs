@@ -17,12 +17,12 @@ use crate::{
     types::{TypedValue, Types},
 };
 
-mod itr;
+mod resolved;
+mod resolver;
 mod symbols;
-mod ttr;
+mod typechecked;
 mod typechecker;
 mod types;
-mod validator;
 
 pub(crate) struct Env {
     symbols: Symbols,
@@ -41,8 +41,8 @@ impl Env {
         Self::empty()
     }
 
-    pub fn validate(statements: Vec<Statement>) -> Result<validator::ITR> {
-        validator::validate(statements)
+    pub fn validate(statements: Vec<Statement>) -> Result<resolved::Resolved> {
+        resolver::resolve(statements)
     }
 }
 

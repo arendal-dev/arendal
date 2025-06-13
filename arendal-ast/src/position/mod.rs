@@ -1,4 +1,7 @@
-use std::fmt::{self, Debug};
+use std::{
+    fmt::{self, Debug},
+    ops::Deref,
+};
 
 use crate::input::StrRange;
 
@@ -57,5 +60,11 @@ impl<T: EqNoPosition> EqNoPosition for Vec<T> {
             }
         }
         true
+    }
+}
+
+impl<T: EqNoPosition> EqNoPosition for Box<T> {
+    fn eq_nopos(&self, other: &Self) -> bool {
+        self.as_ref().eq_nopos(other.as_ref())
     }
 }

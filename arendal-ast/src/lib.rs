@@ -33,17 +33,11 @@ pub enum TypeExpr {
     Type(Q<TSymbol>),
 }
 
-pub type Unary = common::Unary<Expression>;
-pub type Binary = common::Binary<Expression>;
-pub type Seq = common::Seq<Expression>;
-pub type Conditional = common::Conditional<Expression>;
-
-#[derive(Debug)]
-struct ExprData {
-    position: Position,
-    expr: Expr,
-    type_annotation: Option<TypeExpr>,
-}
+pub type ERef = Box<Expression>;
+pub type Unary = common::Unary<ERef>;
+pub type Binary = common::Binary<ERef>;
+pub type Seq = common::Seq<ERef>;
+pub type Conditional = common::Conditional<ERef>;
 
 #[derive(Debug)]
 pub enum Expr {
@@ -54,12 +48,12 @@ pub enum Expr {
 }
 
 impl Expr {
-    pub fn to_expression(
-        self,
-        position: Position,
-        type_annotation: Option<TypeExpr>,
-    ) -> Expression {
-        Expression::new(position, self, type_annotation)
+    pub fn to_expression(self, position: Position, type_expr: Option<TypeExpr>) -> Expression {
+        Expression {
+            position,
+            expr: self,
+            type_expr,
+        }
     }
 }
 
@@ -86,47 +80,20 @@ impl EqNoPosition for Expr {
 }
 
 pub struct Expression {
-    data: Box<ExprData>,
-}
-
-impl Expression {
-    pub fn new(position: Position, expr: Expr, type_annotation: Option<TypeExpr>) -> Self {
-        Self {
-            data: Box::new(ExprData {
-                position,
-                expr,
-                type_annotation,
-            }),
-        }
-    }
-
-    pub fn position(&self) -> &Position {
-        &self.data.position
-    }
-
-    pub fn expr(&self) -> &Expr {
-        &self.data.expr
-    }
-
-    pub fn annotate(self, type_annotation: TypeExpr) -> Self {
-        Self::new(self.data.position, self.data.expr, Some(type_annotation))
-    }
+    pub position: Position,
+    pub expr: Expr,
+    pub type_expr: Option<TypeExpr>,
 }
 
 impl EqNoPosition for Expression {
     fn eq_nopos(&self, other: &Self) -> bool {
-        self.data.expr.eq_nopos(&other.data.expr)
-            && self.data.type_annotation == other.data.type_annotation
+        self.expr.eq_nopos(&other.expr) && self.type_expr == other.type_expr
     }
 }
 
 impl fmt::Debug for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{:?}[{:?}]{}",
-            self.data.expr, self.data.type_annotation, self.data.position
-        )
+        write!(f, "{:?}[{:?}]{}", self.expr, self.type_expr, self.position)
     }
 }
 

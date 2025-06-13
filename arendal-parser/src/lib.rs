@@ -4,7 +4,6 @@ use ast::{
     Binary, Expr, Expression, Q, Statement, TypeExpr,
     common::BinaryOp,
     input::StringInput,
-    position::Position,
     problem::{self, ErrorType, Problems, Result},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
@@ -82,8 +81,8 @@ where
                 problem::ok(
                     Expr::Binary(Binary {
                         op: bop,
-                        expr1,
-                        expr2,
+                        expr1: expr1.into(),
+                        expr2: expr2.into(),
                     })
                     .to_expression(position, None),
                 )

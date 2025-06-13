@@ -6,7 +6,7 @@ use ast::{
 };
 use num::Integer;
 
-use crate::{symbol::FQSym, ttr::Expression, types::Type};
+use crate::{symbol::FQSym, typechecked::Expression, types::Type};
 
 #[derive(Debug)]
 pub struct SymbolDfn {

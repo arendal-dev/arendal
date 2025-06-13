@@ -3,6 +3,7 @@ use std::fmt::{self, Debug};
 use ast::position::{EqNoPosition, Position};
 use ast::symbol::{Symbol, TSymbol};
 
+use crate::resolved;
 use crate::types::{TypeExpr, Value};
 
 #[derive(Debug)]
@@ -11,12 +12,20 @@ pub(crate) enum Expr {
 }
 
 impl Expr {
-    pub(crate) fn to_expression(self, position: Position, type_expr: TypeExpr) -> Expression {
+    pub(crate) fn wrap(self, position: Position, type_expr: TypeExpr) -> Expression {
         Expression {
             position,
             expr: self,
             type_expr,
         }
+    }
+
+    pub(crate) fn wrap_from(
+        self,
+        expression: &resolved::Expression,
+        type_expr: TypeExpr,
+    ) -> Expression {
+        self.wrap(expression.position.clone(), type_expr)
     }
 }
 
@@ -54,6 +63,6 @@ impl fmt::Debug for Expression {
 }
 
 #[derive(Debug)]
-pub(crate) struct TTR {
+pub(crate) struct TypeChecked {
     pub(crate) expression: Option<Expression>,
 }

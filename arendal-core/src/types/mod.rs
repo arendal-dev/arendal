@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use ast::{position::Position, symbol::FQType};
 use num::Integer;
 
-use crate::itr::Payload;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Type {
     Unit,
@@ -13,14 +11,10 @@ pub(crate) enum Type {
     Integer, // Temporary
 }
 
-impl Payload for Type {}
-
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum TypeExpr {
     Type(Type),
 }
-
-impl Payload for TypeExpr {}
 
 #[derive(Debug)]
 pub(crate) struct TypeDfn {
