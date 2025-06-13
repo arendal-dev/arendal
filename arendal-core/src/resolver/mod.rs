@@ -1,54 +1,42 @@
 use ast::{
     self, Statement,
-    problem::{Problems, Result},
+    problem::{Result, merge, ok},
 };
 
 use crate::resolved::{Binary, Expr, Expression, Resolved};
 
-use crate::types::TypeExpr;
-
 pub(super) fn resolve(statements: Vec<Statement>) -> Result<Resolved> {
-    Validator::default().validate(statements)
-}
-
-#[derive(Default)]
-struct Validator {
-    problems: Problems,
-}
-
-impl Validator {
-    fn validate(mut self, statements: Vec<Statement>) -> Result<Resolved> {
-        let option = if statements.is_empty() {
-            None
-        } else if statements.len() > 1 {
-            panic!("TODO");
-        } else {
-            match &statements[0] {
-                Statement::Expression(expression) => self.validate_expression(&expression),
+    if statements.is_empty() {
+        ok(None)
+    } else if statements.len() > 1 {
+        panic!("TODO");
+    } else {
+        match &statements[0] {
+            Statement::Expression(expression) => {
+                validate_expression(&expression)?.and_then(|e| ok(Some(e)))
             }
-        };
-        self.problems.to_result(Resolved { expression: option })
-    }
+        }
+    }?
+    .and_then(|e| ok(Resolved { expression: e }))
+}
 
-    fn validate_expression(&mut self, expression: &ast::Expression) -> Option<Expression> {
-        match &expression.expr {
-            ast::Expr::LitInteger(num) => Some(Expr::LitInteger(num.clone()).wrap_from(expression)),
-            ast::Expr::Binary(b) => {
-                let option1 = self.validate_expression(&b.expr1);
-                let option2 = self.validate_expression(&b.expr2);
+fn validate_expression(expression: &ast::Expression) -> Result<Expression> {
+    match &expression.expr {
+        ast::Expr::LitInteger(num) => ok(Expr::LitInteger(num.clone()).wrap_from(expression)),
+        ast::Expr::Binary(b) => {
+            merge(validate_expression(&b.expr1), validate_expression(&b.expr2))?.and_then(
+                |(e1,e2)|
                 // We extract from the option later to collect as many problems as possible.
-                let expr1 = option1?;
-                let expr2 = option2?;
-                Some(
+                ok(
                     Expr::Binary(Binary {
                         op: b.op,
-                        expr1: expr1.into(),
-                        expr2: expr2.into(),
+                        expr1: e1.into(),
+                        expr2: e2.into(),
                     })
                     .wrap_from(expression),
-                )
-            }
-            _ => panic!("TODO"),
+                ),
+            )
         }
+        _ => panic!("TODO"),
     }
 }
