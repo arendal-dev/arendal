@@ -24,25 +24,33 @@ mod typechecked;
 mod typechecker;
 mod types;
 
-pub(crate) struct Env {
+pub(crate) struct GlobalScope {
     symbols: Symbols,
     types: Types,
 }
 
-impl Env {
+impl GlobalScope {
     fn empty() -> Self {
         Self {
             symbols: Symbols::default(),
             types: Types::default(),
         }
     }
+}
 
-    fn with_prelude() -> Self {
-        Self::empty()
+pub(crate) struct Env {
+    global: GlobalScope,
+}
+
+impl Env {
+    fn new() -> Self {
+        let global = GlobalScope::empty();
+        // TODO: add prelude
+        Env { global }
     }
 
-    pub fn validate(statements: Vec<Statement>) -> Result<resolved::Resolved> {
-        resolver::resolve(statements)
+    fn resolve(&self, statements: Vec<Statement>) -> Result<resolved::Resolved> {
+        resolver::resolve(&self.global, &statements)
     }
 }
 
@@ -52,9 +60,7 @@ pub struct Interactive {
 
 impl Interactive {
     pub fn new() -> Self {
-        Self {
-            env: Env::with_prelude(),
-        }
+        Self { env: Env::new() }
     }
 
     pub fn eval(input: &str) -> Option<TypedValue> {

@@ -3,9 +3,12 @@ use ast::{
     problem::{Result, merge, ok},
 };
 
-use crate::resolved::{Binary, Expr, Expression, Resolved};
+use crate::{
+    GlobalScope,
+    resolved::{Binary, Expr, Expression, Resolved},
+};
 
-pub(super) fn resolve(statements: Vec<Statement>) -> Result<Resolved> {
+pub(super) fn resolve(global: &GlobalScope, statements: &Vec<Statement>) -> Result<Resolved> {
     if statements.is_empty() {
         ok(None)
     } else if statements.len() > 1 {
@@ -13,18 +16,18 @@ pub(super) fn resolve(statements: Vec<Statement>) -> Result<Resolved> {
     } else {
         match &statements[0] {
             Statement::Expression(expression) => {
-                validate_expression(&expression)?.and_then(|e| ok(Some(e)))
+                resolve_expression(&expression)?.and_then(|e| ok(Some(e)))
             }
         }
     }?
     .and_then(|e| ok(Resolved { expression: e }))
 }
 
-fn validate_expression(expression: &ast::Expression) -> Result<Expression> {
+fn resolve_expression(expression: &ast::Expression) -> Result<Expression> {
     match &expression.expr {
         ast::Expr::LitInteger(num) => ok(Expr::LitInteger(num.clone()).wrap_from(expression)),
         ast::Expr::Binary(b) => {
-            merge(validate_expression(&b.expr1), validate_expression(&b.expr2))?.and_then(
+            merge(resolve_expression(&b.expr1), resolve_expression(&b.expr2))?.and_then(
                 |(e1,e2)|
                 // We extract from the option later to collect as many problems as possible.
                 ok(
