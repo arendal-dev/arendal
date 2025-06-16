@@ -4,7 +4,7 @@ use ast::{
 };
 
 fn check_statements(input: &str, expected: Vec<Statement>) {
-    let warnings = super::parse(input).unwrap();
+    let warnings = super::parse_statements(input).unwrap();
     warnings.value.assert_eq_nopos(&expected);
 }
 

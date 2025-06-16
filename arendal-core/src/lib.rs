@@ -9,7 +9,7 @@ pub mod tst;
 pub mod visibility;
 
 pub use arcstr::{ArcStr, Substr, literal};
-use ast::{Statement, problem::Result};
+use ast::{AST, Statement, problem::Result};
 pub use num::Integer;
 
 use crate::{
@@ -49,8 +49,8 @@ impl Env {
         Env { global }
     }
 
-    fn resolve(&self, statements: Vec<Statement>) -> Result<resolved::Resolved> {
-        resolver::resolve(&self.global, &statements)
+    fn resolve(&self, ast: &AST) -> Result<resolved::Resolved> {
+        resolver::resolve(&self.global, ast)
     }
 }
 

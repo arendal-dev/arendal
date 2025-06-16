@@ -1,5 +1,5 @@
 use ast::{
-    self, Statement,
+    self, AST,
     problem::{Result, merge, ok},
 };
 
@@ -8,17 +8,10 @@ use crate::{
     resolved::{Binary, Expr, Expression, Resolved},
 };
 
-pub(super) fn resolve(global: &GlobalScope, statements: &Vec<Statement>) -> Result<Resolved> {
-    if statements.is_empty() {
-        ok(None)
-    } else if statements.len() > 1 {
-        panic!("TODO");
-    } else {
-        match &statements[0] {
-            Statement::Expression(expression) => {
-                resolve_expression(&expression)?.and_then(|e| ok(Some(e)))
-            }
-        }
+pub(super) fn resolve(global: &GlobalScope, ast: &AST) -> Result<Resolved> {
+    match &ast.expression {
+        None => ok(None),
+        Some(e) => resolve_expression(&e)?.and_then(|e| ok(Some(e))),
     }?
     .and_then(|e| ok(Resolved { expression: e }))
 }

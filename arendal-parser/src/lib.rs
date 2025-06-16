@@ -1,21 +1,41 @@
 mod lexer;
 
 use ast::{
-    Binary, Expr, Expression, Q, Statement, TypeExpr,
+    AST, Binary, Expr, Expression, Q, Statement, TypeExpr,
     common::BinaryOp,
     input::StringInput,
     problem::{self, ErrorType, Problems, Result},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
 
-pub fn parse(input: &str) -> Result<Vec<Statement>> {
+pub fn parse(input: &str) -> Result<AST> {
+    parse_statements(input)?.and_then(|stmts| stmts_to_ast(stmts))
+}
+
+fn stmts_to_ast(stmts: Vec<Statement>) -> Result<AST> {
+    let mut problems = Problems::default();
+    let mut ast = AST { expression: None };
+    for s in stmts {
+        match s {
+            Statement::Expression(e) => match ast.expression {
+                None => ast.expression = Some(e),
+                _ => problems
+                    .errors
+                    .push(Error::OnlyOneExpressionAllowed.at(e.position)),
+            },
+        }
+    }
+    problems.to_result(ast)
+}
+
+pub fn parse_statements(input: &str) -> Result<Vec<Statement>> {
     let input = StringInput::from_str(input);
-    lexer::lex(input)?.and_then(|lexemes| parse_statements(&lexemes))
+    lexer::lex(input)?.and_then(|lexemes| parse_lexemes(&lexemes))
 }
 
 type EResult = Result<Expression>;
 
-fn parse_statements(lexemes: &Lexemes) -> Result<Vec<Statement>> {
+fn parse_lexemes(lexemes: &Lexemes) -> Result<Vec<Statement>> {
     let mut statements = Vec::<Statement>::new();
     let mut problems = Problems::default();
     let mut index: usize = 0;
@@ -214,6 +234,8 @@ fn rule_type_ann(index: &mut usize, lexemes: &Lexemes) -> Result<Option<TypeExpr
 enum Error {
     EndOfStatementExpected,
     TypeAnnotationExpected,
+    OnlyOneExpressionAllowed,
+    UnexpectedStatement,
 }
 
 impl Error {
