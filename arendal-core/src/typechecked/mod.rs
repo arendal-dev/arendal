@@ -1,7 +1,7 @@
 use std::fmt::{self, Debug};
 
 use ast::position::{EqNoPosition, Position};
-use ast::symbol::{Symbol, TSymbol};
+use ast::symbol::{FQPath, Symbol, TSymbol};
 
 use crate::resolved;
 use crate::types::{TypeExpr, Value};
@@ -64,5 +64,6 @@ impl fmt::Debug for Expression {
 
 #[derive(Debug)]
 pub(crate) struct TypeChecked {
+    pub(crate) path: FQPath,
     pub(crate) expression: Option<Expression>,
 }

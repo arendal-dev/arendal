@@ -1,6 +1,7 @@
 use ast::{
     self, AST,
     problem::{Result, merge, ok},
+    symbol::FQPath,
 };
 
 use crate::{
@@ -8,12 +9,17 @@ use crate::{
     resolved::{Binary, Expr, Expression, Resolved},
 };
 
-pub(super) fn resolve(global: &GlobalScope, ast: &AST) -> Result<Resolved> {
+pub(super) fn resolve(path: FQPath, global: &GlobalScope, ast: &AST) -> Result<Resolved> {
     match &ast.expression {
         None => ok(None),
         Some(e) => resolve_expression(&e)?.and_then(|e| ok(Some(e))),
     }?
-    .and_then(|e| ok(Resolved { expression: e }))
+    .and_then(|e| {
+        ok(Resolved {
+            path,
+            expression: e,
+        })
+    })
 }
 
 fn resolve_expression(expression: &ast::Expression) -> Result<Expression> {

@@ -11,5 +11,6 @@ data-encoding = { workspace = true }
 im = "15.1.0"
 num = { path = "../arendal-num", package = "arendal-num" }
 ast = { path = "../arendal-ast", package = "arendal-ast" }
+parser = { path = "../arendal-parser", package = "arendal-parser" }
 phf = { workspace = true }
 # unicode-segmentation = "1.10.0"

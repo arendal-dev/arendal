@@ -122,6 +122,15 @@ impl<T> Warnings<T> {
     }
 }
 
+impl<T> Warnings<Option<T>> {
+    pub fn and_then_map<U, F: FnOnce(T) -> Result<U>>(self, op: F) -> Result<Option<U>> {
+        self.and_then(|oinput| match oinput {
+            Some(input) => op(input)?.and_then(|o| ok(Some(o))),
+            None => ok(None),
+        })
+    }
+}
+
 pub type Result<T> = std::result::Result<Warnings<T>, Problems>;
 
 #[derive(Default, Debug)]

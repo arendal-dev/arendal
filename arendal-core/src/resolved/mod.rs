@@ -1,7 +1,7 @@
 use std::fmt::{self, Debug};
 
 use ast::position::{EqNoPosition, Position};
-use ast::symbol::{FQSym, FQType, Symbol};
+use ast::symbol::{FQPath, FQSym, FQType, Symbol};
 use num::Integer;
 
 pub(crate) type ERef = Box<Expression>;
@@ -74,5 +74,6 @@ impl fmt::Debug for Expression {
 
 #[derive(Debug)]
 pub(crate) struct Resolved {
+    pub(crate) path: FQPath,
     pub(crate) expression: Option<Expression>,
 }
