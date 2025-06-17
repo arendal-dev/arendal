@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use super::{
-    Enclosure, Keyword, Level, Lexeme, LexemeData, Lexemes, Position, Result, Separator, Symbol,
+    Enclosure, Keyword, Level, Lexeme, LexemeData, Lexemes, Output, Position, Separator, Symbol,
     TSymbol,
 };
 use arcstr::ArcStr;
@@ -88,14 +88,14 @@ impl TestCase {
         self.token(separator, LexemeData::Keyword(keyword))
     }
 
-    fn lex(&self) -> Result<Lexemes> {
+    fn lex(&self) -> Output<Lexemes> {
         assert!(self.parent.is_none());
         super::lex(StringInput::from_arcstr(self.input.clone()))
     }
 
     fn ok_without_pos(self) {
         match self.parent {
-            None => match self.lex() {
+            None => match self.lex().to_result() {
                 Ok(wl) => wl.value.lexemes.assert_eq_nopos(&self.lexemes),
                 Err(problems) => panic!("{:?}", problems),
             },
@@ -105,7 +105,7 @@ impl TestCase {
 
     fn err(self) {
         match self.parent {
-            None => match self.lex() {
+            None => match self.lex().to_result() {
                 Ok(_) => panic!(),
                 Err(_) => (),
             },

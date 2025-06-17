@@ -5,12 +5,12 @@ use std::fmt;
 use ast::input::StringInput;
 use ast::keyword::Keyword;
 use ast::position::{EqNoPosition, Position};
-use ast::problem::{self, ErrorType, Problems, Result};
+use ast::problem::{ErrorType, Output};
 use ast::symbol::{Symbol, TSymbol};
 use num::Integer;
 use tokenizer::{Token, TokenKind, Tokens, tokenize};
 
-pub(super) fn lex(input: StringInput) -> Result<Lexemes> {
+pub(super) fn lex(input: StringInput) -> Output<Lexemes> {
     let tokens = tokenize(input);
     Lexer::new(&tokens).lex().0
 }
@@ -134,8 +134,7 @@ pub(super) enum LexemeData {
 struct Lexer<'me> {
     separator: Separator,
     tokens: &'me Tokens,
-    lexemes: Vec<Lexeme>,
-    problems: Problems,
+    output: Output<Vec<Lexeme>>,
     index: usize,        // Index of the current input token
     lexeme_start: usize, // Index of the start token of the current lexeme
     enclosed_by: Option<Enclosure>,
@@ -155,8 +154,7 @@ impl<'me> Lexer<'me> {
         Lexer {
             separator: Separator::Start,
             tokens,
-            lexemes: Vec::default(),
-            problems: Problems::default(),
+            output: Output::empty(),
             index: 0,
             lexeme_start: 0,
             enclosed_by: None,
@@ -178,16 +176,11 @@ impl<'me> Lexer<'me> {
         self.tokens.get(self.index + n)
     }
 
-    fn output(self) -> (Result<Lexemes>, usize) {
-        (
-            self.problems.to_lazy_result(|| Lexemes {
-                lexemes: self.lexemes,
-            }),
-            self.index,
-        )
+    fn output(self) -> (Output<Lexemes>, usize) {
+        (self.output.map(|v| Lexemes { lexemes: v }), self.index)
     }
 
-    fn lex(mut self) -> (Result<Lexemes>, usize) {
+    fn lex(mut self) -> (Output<Lexemes>, usize) {
         while let Some(t) = self.peek().cloned() {
             self.lexeme_start = self.index;
             match t.kind {
@@ -233,7 +226,7 @@ impl<'me> Lexer<'me> {
                 .merge(&self.tokens.get(self.index + tokens - 1).unwrap().range)
                 .unwrap()
         };
-        self.lexemes.push(Lexeme {
+        self.output.add_value(Lexeme {
             position: Position::String(range),
             separator: self.separator,
             data,
@@ -252,8 +245,7 @@ impl<'me> Lexer<'me> {
         let (result, end_index) = Lexer {
             separator: Separator::Nothing,
             tokens: self.tokens,
-            lexemes: Vec::default(),
-            problems: Problems::default(),
+            output: Output::empty(),
             index: start_index,
             lexeme_start: start_index,
             enclosed_by: Some(enclosure),
@@ -265,15 +257,19 @@ impl<'me> Lexer<'me> {
         // - end_index = 1
         // - Tokens to consume = 1 + (end_index - start_index) + 1
         let ntokens = 2 + end_index - start_index;
+        self.output.merge_problems(result).map(|lexemes| {
+            self.add_lexeme(LexemeData::Level(Level { enclosure, lexemes }), ntokens)
+        });
+        /*
         match self.problems.add_result(result) {
             Some(lexemes) => {
                 self.add_lexeme(LexemeData::Level(Level { enclosure, lexemes }), ntokens);
             }
             _ => panic!("TODO"),
-        }
+        } */
     }
 
-    fn close(mut self, token: Token, enclosure: Enclosure) -> (Result<Lexemes>, usize) {
+    fn close(mut self, token: Token, enclosure: Enclosure) -> (Output<Lexemes>, usize) {
         match self.enclosed_by {
             None => self.add_error(&token, Error::NoOpenEnclosure, 0),
             Some(e) => {
@@ -318,9 +314,8 @@ impl<'me> Lexer<'me> {
     }
 
     fn add_error(&mut self, token: &Token, error: Error, tokens: usize) {
-        self.problems
-            .errors
-            .push(error.at(Position::String(token.range.clone())));
+        self.output
+            .add_error(error.at(Position::String(token.range.clone())));
         self.advance(tokens)
     }
 }

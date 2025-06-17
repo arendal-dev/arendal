@@ -1,5 +1,5 @@
 use ast::{
-    problem::{Result, ok},
+    problem::Output,
     symbol::{FQSym, FQType},
 };
 
@@ -11,30 +11,32 @@ use crate::{
 
 use crate::types::TypeExpr;
 
-pub(super) fn typecheck(tree: resolved::Resolved) -> Result<TypeChecked> {
+pub(super) fn typecheck(tree: resolved::Resolved) -> Output<TypeChecked> {
     let mut type_checked = TypeChecked {
         path: tree.path,
         expression: None,
     };
     match tree.expression {
-        Some(e) => typecheck_expression(&e)?.and_then(|te| {
+        Some(e) => typecheck_expression(&e).map(|te| {
             type_checked.expression = Some(te);
-            ok(type_checked)
+            type_checked
         }),
-        _ => ok(type_checked),
+        _ => Output::ok(type_checked),
     }
 }
 
-fn typecheck_expression(expression: &resolved::Expression) -> Result<Expression> {
+fn typecheck_expression(expression: &resolved::Expression) -> Output<Expression> {
     match &expression.expr {
-        resolved::Expr::LitInteger(num) => ok(Expr::Value(Value::Integer(num.clone()))
-            .wrap_from(expression, TypeExpr::Type(Type::Integer))),
+        resolved::Expr::LitInteger(num) => Output::ok(
+            Expr::Value(Value::Integer(num.clone()))
+                .wrap_from(expression, TypeExpr::Type(Type::Integer)),
+        ),
         resolved::Expr::Binary(b) => {
-            let option1 = typecheck_expression(&b.expr1);
-            let option2 = typecheck_expression(&b.expr2);
+            let _option1 = typecheck_expression(&b.expr1);
+            let _option2 = typecheck_expression(&b.expr2);
             // We extract from the option later to collect as many problems as possible.
-            let expr1 = option1?;
-            let expr2 = option2?;
+            // let expr1 = option1?;
+            // let expr2 = option2?;
             panic!("TODO")
         }
         _ => panic!("TODO"),

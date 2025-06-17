@@ -4,47 +4,43 @@ use ast::{
     AST, Binary, Expr, Expression, Q, Statement, TypeExpr,
     common::BinaryOp,
     input::StringInput,
-    problem::{self, ErrorType, Problems, Result},
+    problem::{ErrorType, Output, Result},
 };
 use lexer::{Lexeme, LexemeData, Lexemes, Separator};
 
-pub fn parse(input: &str) -> Result<AST> {
-    parse_statements(input)?.and_then(|stmts| stmts_to_ast(stmts))
+pub fn parse(input: &str) -> Output<AST> {
+    parse_statements(input).and_then(|stmts| stmts_to_ast(stmts))
 }
 
-fn stmts_to_ast(stmts: Vec<Statement>) -> Result<AST> {
-    let mut problems = Problems::default();
+fn stmts_to_ast(stmts: Vec<Statement>) -> Output<AST> {
+    let mut output: Output<AST> = Output::new();
     let mut ast = AST { expression: None };
     for s in stmts {
         match s {
             Statement::Expression(e) => match ast.expression {
                 None => ast.expression = Some(e),
-                _ => problems
-                    .errors
-                    .push(Error::OnlyOneExpressionAllowed.at(e.position)),
+                _ => output.add_error(Error::OnlyOneExpressionAllowed.at(e.position)),
             },
         }
     }
-    problems.to_result(ast)
+    output.replace(ast);
+    output
 }
 
-pub fn parse_statements(input: &str) -> Result<Vec<Statement>> {
+pub fn parse_statements(input: &str) -> Output<Vec<Statement>> {
     let input = StringInput::from_str(input);
-    lexer::lex(input)?.and_then(|lexemes| parse_lexemes(&lexemes))
+    lexer::lex(input).and_then(|lexemes| parse_lexemes(&lexemes))
 }
 
-type EResult = Result<Expression>;
+type EResult = Output<Expression>;
 
-fn parse_lexemes(lexemes: &Lexemes) -> Result<Vec<Statement>> {
-    let mut statements = Vec::<Statement>::new();
-    let mut problems = Problems::default();
+fn parse_lexemes(lexemes: &Lexemes) -> Output<Vec<Statement>> {
+    let mut output: Output<Vec<Statement>> = Output::empty();
     let mut index: usize = 0;
     while index < lexemes.len() {
-        problems
-            .add_result(rule_statement(&mut index, lexemes))
-            .and_then(|s| Some(statements.push(s)));
+        output.add_output(rule_statement(&mut index, lexemes));
     }
-    problems.to_result(statements)
+    output
 }
 
 // Returns whether the current lexeme is EOS (end of statement)
@@ -73,12 +69,12 @@ fn get_and_advance<'a>(&mut self, lexemes: &'a Lexemes) -> Option<&'a Lexeme> {
 
 */
 
-fn rule_statement(index: &mut usize, lexemes: &Lexemes) -> Result<Statement> {
-    rule_expression(index, lexemes)?.and_then(|e| {
+fn rule_statement(index: &mut usize, lexemes: &Lexemes) -> Output<Statement> {
+    rule_expression(index, lexemes).and_then(|e| {
         if !is_eos(*index, lexemes) {
-            Error::EndOfStatementExpected.to_err(lexemes.get(*index).unwrap())
+            Error::EndOfStatementExpected.to_output(lexemes.get(*index).unwrap())
         } else {
-            problem::ok(Statement::Expression(e))
+            Output::ok(Statement::Expression(e))
         }
     })
 }
@@ -97,16 +93,18 @@ where
         if let Some(bop) = op(&lexeme.data) {
             let position = lexeme.position.clone();
             *index += 1;
-            left = problem::merge(left, rule(index, lexemes))?.and_then(|(expr1, expr2)| {
-                problem::ok(
-                    Expr::Binary(Binary {
-                        op: bop,
-                        expr1: expr1.into(),
-                        expr2: expr2.into(),
-                    })
-                    .to_expression(position, None),
-                )
-            })
+            left = left
+                .merge_to_tuple(rule(index, lexemes))
+                .and_then(|(expr1, expr2)| {
+                    Output::ok(
+                        Expr::Binary(Binary {
+                            op: bop,
+                            expr1: expr1.into(),
+                            expr2: expr2.into(),
+                        })
+                        .to_expression(position, None),
+                    )
+                })
         } else {
             break;
         }
@@ -197,36 +195,38 @@ fn rule_primary(index: &mut usize, lexemes: &Lexemes) -> EResult {
     *index += 1;
     if let Some(lexeme) = current {
         match &lexeme.data {
-            LexemeData::Integer(n) => Ok((lexeme.position.clone(), Expr::LitInteger(n.clone()))),
+            LexemeData::Integer(n) => {
+                Output::ok((lexeme.position.clone(), Expr::LitInteger(n.clone())))
+            }
             _ => panic!("TODO: error"),
         }
     } else {
         panic!("TODO: error")
     }
     .and_then(|(position, expr)| {
-        problem::ok(expr.to_expression(position, rule_type_ann(index, lexemes)?.value))
+        rule_type_ann(index, lexemes).map(|type_expr| expr.to_expression(position, type_expr))
     })
 }
 
-fn rule_type_ann(index: &mut usize, lexemes: &Lexemes) -> Result<Option<TypeExpr>> {
+fn rule_type_ann(index: &mut usize, lexemes: &Lexemes) -> Output<Option<TypeExpr>> {
     if let Some(seplex) = lexemes.get(*index) {
         if LexemeData::TypeAnnSeparator == seplex.data {
             *index += 1;
             if let Some(lexeme) = lexemes.get(*index) {
                 if let LexemeData::TSymbol(s) = &lexeme.data {
                     *index += 1;
-                    problem::ok(Some(TypeExpr::Type(Q::of(s.clone()))))
+                    Output::ok(Some(TypeExpr::Type(Q::of(s.clone()))))
                 } else {
-                    Error::TypeAnnotationExpected.to_err(&lexeme)
+                    Error::TypeAnnotationExpected.to_output(&lexeme)
                 }
             } else {
-                Error::TypeAnnotationExpected.to_err(&seplex)
+                Error::TypeAnnotationExpected.to_output(&seplex)
             }
         } else {
-            problem::ok(None)
+            Output::ok(None)
         }
     } else {
-        problem::ok(None)
+        Output::ok(None)
     }
 }
 
@@ -239,8 +239,8 @@ enum Error {
 }
 
 impl Error {
-    fn to_err<T>(self, lexeme: &Lexeme) -> Result<T> {
-        self.at(lexeme.position.clone()).to_err()
+    fn to_output<T>(self, lexeme: &Lexeme) -> Output<T> {
+        self.at(lexeme.position.clone()).into()
     }
 }
 

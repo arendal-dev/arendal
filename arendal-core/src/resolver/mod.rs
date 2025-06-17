@@ -1,44 +1,36 @@
-use ast::{
-    self, AST,
-    problem::{Result, merge, ok},
-    symbol::FQPath,
-};
+use ast::{self, AST, problem::Output, symbol::FQPath};
 
 use crate::{
     GlobalScope,
     resolved::{Binary, Expr, Expression, Resolved},
 };
 
-pub(super) fn resolve(path: FQPath, global: &GlobalScope, ast: &AST) -> Result<Resolved> {
+pub(super) fn resolve(path: FQPath, global: &GlobalScope, ast: &AST) -> Output<Resolved> {
     match &ast.expression {
-        None => ok(None),
-        Some(e) => resolve_expression(&e)?.and_then(|e| ok(Some(e))),
-    }?
-    .and_then(|e| {
-        ok(Resolved {
-            path,
-            expression: e,
-        })
+        None => Output::ok(None),
+        Some(e) => resolve_expression(&e).map(|e| Some(e)),
+    }
+    .map(|e| Resolved {
+        path,
+        expression: e,
     })
 }
 
-fn resolve_expression(expression: &ast::Expression) -> Result<Expression> {
+fn resolve_expression(expression: &ast::Expression) -> Output<Expression> {
     match &expression.expr {
-        ast::Expr::LitInteger(num) => ok(Expr::LitInteger(num.clone()).wrap_from(expression)),
-        ast::Expr::Binary(b) => {
-            merge(resolve_expression(&b.expr1), resolve_expression(&b.expr2))?.and_then(
-                |(e1,e2)|
-                // We extract from the option later to collect as many problems as possible.
-                ok(
-                    Expr::Binary(Binary {
-                        op: b.op,
-                        expr1: e1.into(),
-                        expr2: e2.into(),
-                    })
-                    .wrap_from(expression),
-                ),
-            )
+        ast::Expr::LitInteger(num) => {
+            Output::ok(Expr::LitInteger(num.clone()).wrap_from(expression))
         }
+        ast::Expr::Binary(b) => resolve_expression(&b.expr1)
+            .merge_to_tuple(resolve_expression(&b.expr2))
+            .map(|(e1, e2)| {
+                Expr::Binary(Binary {
+                    op: b.op,
+                    expr1: e1.into(),
+                    expr2: e2.into(),
+                })
+                .wrap_from(expression)
+            }),
         _ => panic!("TODO"),
     }
 }

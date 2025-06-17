@@ -11,7 +11,7 @@ pub mod visibility;
 pub use arcstr::{ArcStr, Substr, literal};
 use ast::{
     AST,
-    problem::{Result, ok},
+    problem::Output,
     symbol::{FQPath, Lib, ModulePath},
 };
 pub use num::Integer;
@@ -56,37 +56,37 @@ impl Env {
         Env { global }
     }
 
-    fn resolve(&self, path: FQPath, ast: &AST) -> Result<resolved::Resolved> {
+    fn resolve(&self, path: FQPath, ast: &AST) -> Output<resolved::Resolved> {
         resolver::resolve(path, &self.global, ast)
     }
 
-    fn typecheck(&self, resolved: resolved::Resolved) -> Result<typechecked::TypeChecked> {
+    fn typecheck(&self, resolved: resolved::Resolved) -> Output<typechecked::TypeChecked> {
         typechecker::typecheck(resolved)
     }
 
-    fn add_input(&mut self, path: FQPath, input: &str) -> Result<Option<typechecked::Expression>> {
-        parse(input)?.and_then(|ast| self.add_ast(path, &ast))
+    fn add_input(&mut self, path: FQPath, input: &str) -> Output<Option<typechecked::Expression>> {
+        parse(input).and_then(|ast| self.add_ast(path, &ast))
     }
 
-    fn add_ast(&mut self, path: FQPath, ast: &AST) -> Result<Option<typechecked::Expression>> {
-        self.resolve(path, ast)?.and_then(|r| self.add_resolved(r))
+    fn add_ast(&mut self, path: FQPath, ast: &AST) -> Output<Option<typechecked::Expression>> {
+        self.resolve(path, ast).and_then(|r| self.add_resolved(r))
     }
 
     fn add_resolved(
         &mut self,
         resolved: resolved::Resolved,
-    ) -> Result<Option<typechecked::Expression>> {
-        self.typecheck(resolved)?
-            .and_then(|c| self.add_typechecked(c))?;
+    ) -> Output<Option<typechecked::Expression>> {
+        self.typecheck(resolved)
+            .and_then(|c| self.add_typechecked(c));
         panic!("TODO")
     }
 
     fn add_typechecked(
         &mut self,
         typechecked: TypeChecked,
-    ) -> Result<Option<typechecked::Expression>> {
+    ) -> Output<Option<typechecked::Expression>> {
         // TODO
-        ok(typechecked.expression)
+        Output::ok(typechecked.expression)
     }
 }
 
@@ -104,8 +104,8 @@ impl Interactive {
         }
     }
 
-    pub fn eval(&mut self, input: &str) -> Result<Option<TypedValue>> {
-        self.env.add_input(self.path.clone(), input)?;
+    pub fn eval(&mut self, input: &str) -> Output<Option<TypedValue>> {
+        self.env.add_input(self.path.clone(), input);
         panic!("TODO")
     }
 }

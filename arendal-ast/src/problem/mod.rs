@@ -197,6 +197,15 @@ impl Problems {
     }
 }
 
+impl From<Error> for Problems {
+    fn from(value: Error) -> Self {
+        Problems {
+            errors: vec![value],
+            warnings: Vec::new(),
+        }
+    }
+}
+
 // Creates an ok result with no warnings
 pub fn ok<T>(value: T) -> Result<T> {
     Ok(Warnings {
@@ -241,6 +250,125 @@ pub fn merge<U, V>(one: Result<U>, two: Result<V>) -> Result<(U, V)> {
                 }
             }
             Err(Problems { errors, warnings })
+        }
+    }
+}
+
+pub struct Output<T> {
+    value: Option<T>,
+    problems: Problems,
+}
+
+impl<T> Output<T> {
+    pub fn new() -> Output<T> {
+        Output {
+            value: None,
+            problems: Problems::default(),
+        }
+    }
+
+    pub fn ok(value: T) -> Output<T> {
+        Output {
+            value: Some(value),
+            problems: Problems::default(),
+        }
+    }
+
+    pub fn replace(&mut self, value: T) -> Option<T> {
+        self.value.replace(value)
+    }
+
+    pub fn map<U, F: FnOnce(T) -> U>(self, op: F) -> Output<U> {
+        Output {
+            value: self.value.map(op),
+            problems: self.problems,
+        }
+    }
+
+    pub fn and_then<U, F: FnOnce(T) -> Output<U>>(mut self, op: F) -> Output<U> {
+        match self.value {
+            None => Output {
+                value: None,
+                problems: self.problems,
+            },
+            Some(t) => {
+                let other = op(t);
+                self.problems.add_problems(other.problems);
+                Output {
+                    value: other.value,
+                    problems: self.problems,
+                }
+            }
+        }
+    }
+
+    pub fn merge<U, V, F: FnOnce(T, U) -> V>(mut self, other: Output<U>, op: F) -> Output<V> {
+        self.problems.add_problems(other.problems);
+        let value = match self.value {
+            Some(t) => match other.value {
+                Some(u) => Some(op(t, u)),
+                _ => None,
+            },
+            _ => None,
+        };
+        Output {
+            value,
+            problems: self.problems,
+        }
+    }
+
+    pub fn merge_to_tuple<U>(self, other: Output<U>) -> Output<(T, U)> {
+        self.merge(other, |t, u| (t, u))
+    }
+
+    pub fn merge_problems<U>(&mut self, other: Output<U>) -> Option<U> {
+        self.problems.add_problems(other.problems);
+        other.value
+    }
+
+    pub fn to_result(self) -> Result<T> {
+        if self.value.is_some() && self.problems.errors.is_empty() {
+            Ok(Warnings {
+                warnings: self.problems.warnings,
+                value: self.value.unwrap(),
+            })
+        } else {
+            Err(self.problems)
+        }
+    }
+
+    pub fn add_error(&mut self, error: Error) {
+        self.problems.errors.push(error);
+    }
+
+    pub fn add_warning(&mut self, warning: Warning) {
+        self.problems.warnings.push(warning);
+    }
+}
+
+impl<T> Output<Vec<T>> {
+    pub fn empty() -> Self {
+        Output {
+            value: Some(Vec::new()),
+            problems: Problems::default(),
+        }
+    }
+
+    pub fn add_value(&mut self, value: T) {
+        self.value.as_mut().unwrap().push(value);
+    }
+
+    pub fn add_output(&mut self, output: Output<T>) {
+        self.problems.add_problems(output.problems);
+        output.value.map(|t| self.add_value(t));
+    }
+}
+
+impl<T> From<Error> for Output<T> {
+    fn from(value: Error) -> Output<T> {
+        Output {
+            value: None,
+            problems: value.into(),
         }
     }
 }
