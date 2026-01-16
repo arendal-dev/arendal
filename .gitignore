@@ -13,3 +13,12 @@ debug/
 # IDEA
 .idea/
 
+# Ignore the entire .vscode folder
+.vscode/*
+
+# But do NOT ignore these specific shared files
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+

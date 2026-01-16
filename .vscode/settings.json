@@ -1,0 +1,12 @@
+{
+    		"editor.fontFamily": "'Fira Code', Menlo, Monaco, 'Courier New', monospace",
+		"editor.fontLigatures": true,
+		"terminal.integrated.profiles.osx": {
+			"Fish": {
+			  "path": "/usr/local/bin/fish",
+			  "fontFamily": "Fira Code"
+			}
+		  },
+		  "terminal.integrated.defaultProfile.osx": "Fish",
+		  "go.toolsManagement.autoUpdate": true,
+}

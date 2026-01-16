@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Integer {
-    value: i64, // Temporary
+    value: i64, // Temporary type
 }
 
 impl Integer {
